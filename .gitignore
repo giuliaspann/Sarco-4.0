@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Django
+staticfiles/
+media/
+*.sqlite3
+
+# Segreti e configurazione locale
+.env
+.env.*
+!.env.example
+
+# Dati contabili esportati: non vanno mai nel repository
+data/
+exports/
+*.xlsx
+*.xls
+*.csv
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
