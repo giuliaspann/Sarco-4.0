@@ -219,10 +219,14 @@ def da_sessione(dati):
 
 def salva_settimana(letta, utente=None, nome_file=''):
     """Crea o aggiorna la settimana. Ricaricare il file corretto a settimana iniziata
-    aggiorna i turni senza perdere le pulizie già registrate."""
+    aggiorna i turni senza perdere le pulizie già registrate.
+
+    I turni modificati nell'app (cambi e ferie approvati) restano come sono: la terza
+    lista restituita dice quali differivano dal file, per avvisare l'ufficio."""
     from django.db import transaction
 
     from .models import Dipendente, NotaSettimana, Settimana, Turno
+    from .richieste import ferie_approvate, segna_ferie_sui_turni
 
     with transaction.atomic():
         settimana, _ = Settimana.objects.update_or_create(
@@ -230,7 +234,7 @@ def salva_settimana(letta, utente=None, nome_file=''):
             defaults={'file_originale': nome_file, 'foglio': letta.foglio, 'caricata_da': utente},
         )
         dipendenti = list(Dipendente.objects.all())
-        nuovi, visti = [], set()
+        nuovi, visti, mantenuti = [], set(), []
         for riga in letta.righe:
             dip = trova_dipendente(riga.nome, dipendenti)
             if dip is None:
@@ -238,8 +242,15 @@ def salva_settimana(letta, utente=None, nome_file=''):
                 dipendenti.append(dip)
                 nuovi.append(dip.nome)
             visti.add(dip.pk)
+            esistenti = {t.data: t for t in Turno.objects.filter(dipendente=dip, data__in=settimana.giorni)}
             for giorno, t in zip(settimana.giorni, riga.turni):
-                Turno.objects.update_or_create(
+                vecchio = esistenti.get(giorno)
+                if vecchio and vecchio.nota_modifica:
+                    # cambio turno o ferie approvati nell'app: hanno la precedenza sul file
+                    if (vecchio.fascia, vecchio.postazione, vecchio.capoturno) != (t.fascia, t.postazione, t.capoturno):
+                        mantenuti.append(f'{dip.nome_breve} {giorno:%d/%m}: {vecchio.descrizione} ({vecchio.nota_modifica})')
+                    continue
+                nuovo, _ = Turno.objects.update_or_create(
                     dipendente=dip,
                     data=giorno,
                     defaults={
@@ -250,8 +261,12 @@ def salva_settimana(letta, utente=None, nome_file=''):
                         'capoturno': t.capoturno,
                     },
                 )
+                ferie = ferie_approvate(dip, giorno)
+                if ferie and nuovo.fascia != ferie.fascia:
+                    segna_ferie_sui_turni(ferie, [nuovo])
+                    mantenuti.append(f'{dip.nome_breve} {giorno:%d/%m}: {ferie.get_tipo_display()} approvate')
         # chi non è più nel file perde i turni della settimana, a meno che abbia già pulizie registrate
-        settimana.turni.exclude(dipendente__in=visti).filter(pulizie__isnull=True).delete()
+        settimana.turni.exclude(dipendente__in=visti).filter(pulizie__isnull=True, nota_modifica='').delete()
 
         settimana.note.all().delete()
         NotaSettimana.objects.bulk_create(
@@ -263,4 +278,4 @@ def salva_settimana(letta, utente=None, nome_file=''):
             if dip and dip.tutor != tutor:
                 dip.tutor = tutor
                 dip.save(update_fields=['tutor'])
-    return settimana, nuovi
+    return settimana, nuovi, mantenuti

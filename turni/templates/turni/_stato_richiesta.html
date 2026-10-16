@@ -1,0 +1,1 @@
+<span class="stato-richiesta {% if r.stato == 'APPROVATO' or r.stato == 'APPROVATA' %}ok{% elif 'RIFIUTAT' in r.stato %}no{% elif 'ATTESA' in r.stato %}attesa{% endif %}">{% if r.scaduto %}Scaduta{% else %}{{ r.get_stato_display }}{% endif %}</span>

@@ -1,0 +1,80 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richieste{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Richieste</h1></div>
+
+<div class="azioni-pagina">
+  <a class="bottone pieno" href="{% url 'turni:nuovo_cambio' %}">Cambio turno</a>
+  <a class="bottone" href="{% url 'turni:nuove_ferie' %}">Ferie / permesso</a>
+</div>
+
+{% for c in da_rispondere %}
+<section class="scheda">
+  <h2>{{ c.richiedente.nome_breve }} ti chiede un cambio</h2>
+  <table class="scambio">
+    <tr><th>Giorno</th><th>Tu ora</th><td></td><th>Tu dopo</th></tr>
+    {% for r in c.righe %}
+    <tr>
+      <td>{{ r.giorno|date:'D j M' }}</td>
+      <td>{% include 'turni/_pillola.html' with t=r.prima %}</td>
+      <td class="freccia-cella">→</td>
+      <td>{% include 'turni/_pillola.html' with t=r.dopo %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if c.motivo %}<p class="tenue piccolo">“{{ c.motivo }}”</p>{% endif %}
+  <form method="post" class="riga-form">{% csrf_token %}
+    <input type="hidden" name="cambio" value="{{ c.pk }}">
+    <button class="bottone pieno" name="azione" value="accetta">Accetto</button>
+    <button class="bottone avviso-btn" name="azione" value="rifiuta">Rifiuto</button>
+  </form>
+  <p class="tenue piccolo">Se accetti, il cambio vale solo dopo l'approvazione dell'ufficio.</p>
+</section>
+{% endfor %}
+
+<section class="scheda">
+  <h2>Cambi turno</h2>
+  <ul class="elenco">
+  {% for c in cambi %}
+    <li>
+      <span>
+        {% if c.mio %}Con{% else %}Da{% endif %} <b>{{ c.altro.nome_breve }}</b><br>
+        <span class="tenue piccolo">{{ c.giorno1|date:'D j M' }}{% if c.giorno2 %} e {{ c.giorno2|date:'D j M' }}{% endif %}{% if c.nota_ufficio %} · Ufficio: {{ c.nota_ufficio }}{% endif %}</span>
+      </span>
+      <span class="azioni">
+        {% include 'turni/_stato_richiesta.html' with r=c %}
+        {% if c.mio and c.in_corso and not c.scaduto %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="cambio" value="{{ c.pk }}">
+          <button class="bottone leggero" name="azione" value="annulla_cambio">Annulla</button></form>
+        {% endif %}
+      </span>
+    </li>
+  {% empty %}
+    <li class="tenue">Nessun cambio turno.</li>
+  {% endfor %}
+  </ul>
+</section>
+
+<section class="scheda">
+  <h2>Ferie e permessi</h2>
+  <ul class="elenco">
+  {% for f in ferie %}
+    <li>
+      <span>
+        <b>{{ f.get_tipo_display }}</b> dal {{ f.dal|date:'j M' }} al {{ f.al|date:'j M Y' }}<br>
+        <span class="tenue piccolo">{{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}{% if f.nota_ufficio %} · Ufficio: {{ f.nota_ufficio }}{% endif %}</span>
+      </span>
+      <span class="azioni">
+        {% include 'turni/_stato_richiesta.html' with r=f %}
+        {% if f.stato == 'ATTESA' %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="ferie" value="{{ f.pk }}">
+          <button class="bottone leggero" name="azione" value="annulla_ferie">Annulla</button></form>
+        {% endif %}
+      </span>
+    </li>
+  {% empty %}
+    <li class="tenue">Nessuna richiesta.</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}

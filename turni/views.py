@@ -49,8 +49,13 @@ def leggi_data(valore, predefinita):
 
 @login_required
 def home(request):
-    if dipendente_di(request) is None and request.user.is_staff:
-        return redirect('turni:importa')
+    if dipendente_di(request) is None:
+        from .richieste import e_responsabile
+
+        if e_responsabile(request.user):
+            return redirect('turni:ufficio_richieste')
+        if request.user.is_staff:
+            return redirect('turni:importa')
     return redirect('turni:miei_turni')
 
 
@@ -73,7 +78,7 @@ def miei_turni(request):
         for g in settimana.giorni:
             t = turni.get(g)
             colleghi = stessi.get((g, t.fascia, t.postazione), []) if t and t.lavora and t.postazione else []
-            giorni.append({'data': g, 'turno': t, 'oggi': g == oggi, 'colleghi': colleghi})
+            giorni.append({'data': g, 'turno': t, 'oggi': g == oggi, 'futuro': g > oggi, 'colleghi': colleghi})
         note = [n for n in settimana.note.all() if importa.stesso_nome(n.dipendente, dip.nome)]
     else:
         note = []
@@ -285,11 +290,17 @@ def anteprima(request):
         return redirect('turni:importa')
     letta = importa.da_sessione(dati)
     if request.method == 'POST':
-        settimana, nuovi = importa.salva_settimana(letta, request.user, request.session.get('import_nome_file', ''))
+        settimana, nuovi, mantenuti = importa.salva_settimana(
+            letta, request.user, request.session.get('import_nome_file', '')
+        )
         del request.session['import_turni']
         messages.success(request, f'Turni caricati: {settimana}.')
         if nuovi:
             messages.info(request, f'Nuovi dipendenti: {", ".join(nuovi)}. Ricorda di creare il loro PIN.')
+        if mantenuti:
+            messages.warning(
+                request, "Tenuti i cambi e le ferie approvati nell'app, diversi dal file: " + '; '.join(mantenuti)
+            )
         return redirect('turni:importa')
 
     esistenti = list(Dipendente.objects.all())

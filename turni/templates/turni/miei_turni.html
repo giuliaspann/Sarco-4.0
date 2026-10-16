@@ -23,6 +23,7 @@
       <div class="dettaglio">
         {% if g.turno %}
           <strong>{{ g.turno.descrizione }}</strong>
+          {% if g.turno.nota_modifica %}<span class="tenue piccolo">{{ g.turno.nota_modifica }}</span>{% endif %}
           {% if g.colleghi %}
             <span class="tenue piccolo">con {% for c in g.colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
           {% endif %}
@@ -30,7 +31,8 @@
           <span class="tenue">—</span>
         {% endif %}
       </div>
-      {% if g.oggi %}<span class="etichetta">Oggi</span>{% endif %}
+      {% if g.oggi %}<span class="etichetta">Oggi</span>
+      {% elif g.futuro and g.turno %}<a class="cambia" href="{% url 'turni:nuovo_cambio' %}?giorno={{ g.data|date:'Y-m-d' }}">Cambia</a>{% endif %}
     </li>
   {% endfor %}
   </ol>

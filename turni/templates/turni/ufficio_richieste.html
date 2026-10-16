@@ -1,0 +1,69 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richieste da approvare{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+
+{% if not cambi and not ferie %}
+  <div class="vuoto"><p>Nessuna richiesta da approvare.{% if in_attesa_collega %} {{ in_attesa_collega }} cambi aspettano ancora la risposta del collega.{% endif %}</p></div>
+{% endif %}
+
+{% for c in cambi %}
+<section class="scheda">
+  <h2>Cambio: {{ c.richiedente.nome_breve }} ↔ {{ c.collega.nome_breve }}</h2>
+  <p class="tenue piccolo">Chiesto il {{ c.creato_il|date:'d/m H:i' }} · accettato da {{ c.collega.nome_breve }} il {{ c.risposta_collega_il|date:'d/m H:i' }}</p>
+  <table class="scambio">
+    <tr><th>Giorno</th><th>{{ c.richiedente.nome_breve }}</th><th>{{ c.collega.nome_breve }}</th></tr>
+    {% for r in c.righe %}
+    <tr>
+      <td>{{ r.giorno|date:'D j M' }}</td>
+      <td>{% include 'turni/_pillola.html' with t=r.prima %} → {% include 'turni/_pillola.html' with t=r.dopo %}</td>
+      <td>{% include 'turni/_pillola.html' with t=r.dopo %} → {% include 'turni/_pillola.html' with t=r.prima %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if c.motivo %}<p class="tenue piccolo">Motivo: “{{ c.motivo }}”</p>{% endif %}
+  {% if c.scaduto %}<div class="avviso avviso-warning">Il giorno del cambio è già arrivato: si può solo rifiutare.</div>{% endif %}
+  <form method="post" class="form-voce" style="margin-left:0">{% csrf_token %}
+    <input type="hidden" name="cambio" value="{{ c.pk }}">
+    <input type="text" name="nota" placeholder="Nota per i dipendenti (facoltativa)" maxlength="300">
+    {% if not c.scaduto %}<button class="bottone pieno" name="azione" value="approva">Approva</button>{% endif %}
+    <button class="bottone avviso-btn" name="azione" value="rifiuta">Rifiuta</button>
+  </form>
+</section>
+{% endfor %}
+
+{% for f in ferie %}
+<section class="scheda">
+  <h2>{{ f.get_tipo_display }}: {{ f.dipendente.nome_breve }}</h2>
+  <p>Dal <b>{{ f.dal|date:'D j M' }}</b> al <b>{{ f.al|date:'D j M Y' }}</b> · {{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}</p>
+  <p class="tenue piccolo">
+    {% if f.turni_lavoro %}Giorni in cui era in turno: {% for t in f.turni_lavoro %}{{ t.data|date:'D j' }} ({{ t.descrizione }}){% if not forloop.last %}, {% endif %}{% endfor %}.{% elif f.non_caricati < f.giorni %}Nei giorni già caricati non era in turno.{% endif %}
+    {% if f.non_caricati %} {{ f.non_caricati }} giorn{{ f.non_caricati|pluralize:'o,i' }} non {{ f.non_caricati|pluralize:'è,sono' }} ancora nei turni caricati: verranno segnati come ferie all'import.{% endif %}
+  </p>
+  {% if f.colleghi_assenti %}
+    <p class="avviso avviso-warning">Già in ferie in quei giorni: {% for a in f.colleghi_assenti %}{{ a.dipendente.nome_breve }} ({{ a.dal|date:'j/m' }}–{{ a.al|date:'j/m' }}){% if not forloop.last %}, {% endif %}{% endfor %}</p>
+  {% endif %}
+  {% if f.motivo %}<p class="tenue piccolo">Note: “{{ f.motivo }}”</p>{% endif %}
+  <form method="post" class="form-voce" style="margin-left:0">{% csrf_token %}
+    <input type="hidden" name="ferie" value="{{ f.pk }}">
+    <input type="text" name="nota" placeholder="Nota per il dipendente (facoltativa)" maxlength="300">
+    <button class="bottone pieno" name="azione" value="approva">Approva</button>
+    <button class="bottone avviso-btn" name="azione" value="rifiuta">Rifiuta</button>
+  </form>
+</section>
+{% endfor %}
+
+{% if storico_cambi or storico_ferie %}
+<details class="scheda">
+  <summary><b>Storico</b></summary>
+  <ul class="elenco">
+    {% for c in storico_cambi %}
+      <li><span>{{ c.richiedente.nome_breve }} ↔ {{ c.collega.nome_breve }} <span class="tenue piccolo">{{ c.giorno1|date:'j/m' }}{% if c.giorno2 %} e {{ c.giorno2|date:'j/m' }}{% endif %}</span></span>{% include 'turni/_stato_richiesta.html' with r=c %}</li>
+    {% endfor %}
+    {% for f in storico_ferie %}
+      <li><span>{{ f.dipendente.nome_breve }} {{ f.get_tipo_display|lower }} <span class="tenue piccolo">{{ f.dal|date:'j/m' }}–{{ f.al|date:'j/m' }}</span></span>{% include 'turni/_stato_richiesta.html' with r=f %}</li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+{% endblock %}

@@ -94,7 +94,7 @@ class ImportTest(TestCase):
         letta = importa.leggi_file(file_turni(RIGHE, note), LUNEDI)
         self.assertEqual(letta.foglio, 'Sett.42')
         self.assertEqual(len(letta.righe), 3)
-        settimana, nuovi = importa.salva_settimana(letta)
+        settimana, nuovi, _ = importa.salva_settimana(letta)
         self.assertEqual(len(nuovi), 3)
         self.assertEqual(Turno.objects.count(), 21)
         crimi = Turno.objects.get(dipendente__nome='CRIMI BENITO', data=LUNEDI + timedelta(days=1))

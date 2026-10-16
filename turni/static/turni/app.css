@@ -217,3 +217,34 @@ input[type=text], input[type=password], input[type=date], input[type=file], sele
 body.accesso .menu { display: none; }
 .modifica { margin: 6px 0 0 38px; }
 .modifica .form-voce { margin-left: 0; }
+
+/* ------------------------------------------------ richieste */
+.icona-badge { position: relative; display: inline-flex; }
+.badge {
+  position: absolute; top: -4px; right: -10px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 99px; background: var(--errore); color: #fff; font-size: .7rem; line-height: 18px; text-align: center;
+}
+.azioni-pagina { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.scambio { width: 100%; border-collapse: collapse; font-size: .88rem; margin: 6px 0 10px; }
+.scambio th, .scambio td { padding: 6px 4px; border-bottom: 1px solid var(--bordo); text-align: left; vertical-align: top; }
+.scambio td.freccia-cella { color: var(--tenue); width: 1.2em; text-align: center; }
+.pillola { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--altro); font-size: .82rem; }
+.pillola.imp1 { background: var(--imp1); }
+.pillola.imp2 { background: var(--imp2); }
+.pillola.notte { background: var(--notte); color: var(--notte-testo); }
+.pillola.off { background: transparent; border: 1px dashed var(--bordo); color: var(--tenue); }
+.stato-richiesta { font-size: .78rem; font-weight: 600; color: var(--tenue); white-space: nowrap; }
+.stato-richiesta.ok { color: var(--ok); }
+.stato-richiesta.no { color: var(--errore); }
+.stato-richiesta.attesa { color: var(--attenzione); }
+.scelte { list-style: none; padding: 0; margin: 0; }
+.scelte li { border-bottom: 1px solid var(--bordo); }
+.scelte li:last-child { border-bottom: 0; }
+.scelte a, .scelte label { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 2px; margin: 0; text-decoration: none; color: var(--testo); font-weight: 400; }
+.scelte label { justify-content: flex-start; }
+.scelte input[type=radio] { width: 20px; height: 20px; flex: none; }
+.scelte .spento { opacity: .45; pointer-events: none; }
+.riga-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.riga-form > * { flex: 1; }
+.giorno .cambia { font-size: .8rem; text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--bordo); white-space: nowrap; }
+textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--bordo); background: var(--sfondo); color: var(--testo); }

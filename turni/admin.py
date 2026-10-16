@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Dipendente, ElementoPulizia, NotaSettimana, Pulizia, RegolaPulizia, Settimana, Turno
+from .models import CambioTurno, Dipendente, RichiestaFerie, ElementoPulizia, NotaSettimana, Pulizia, RegolaPulizia, Settimana, Turno
 
 admin.site.site_header = 'Sarco 4.0'
 
@@ -56,3 +56,17 @@ class PuliziaAdmin(admin.ModelAdmin):
     list_display = ['turno', 'elemento', 'stato', 'fatta_il', 'verificata_da']
     list_filter = ['stato', 'elemento', 'turno__data']
     search_fields = ['turno__dipendente__nome']
+
+
+@admin.register(CambioTurno)
+class CambioTurnoAdmin(admin.ModelAdmin):
+    list_display = ['richiedente', 'collega', 'giorno1', 'giorno2', 'stato', 'creato_il', 'gestito_da']
+    list_filter = ['stato']
+    search_fields = ['richiedente__nome', 'collega__nome']
+
+
+@admin.register(RichiestaFerie)
+class RichiestaFerieAdmin(admin.ModelAdmin):
+    list_display = ['dipendente', 'tipo', 'dal', 'al', 'stato', 'creata_il', 'gestita_da']
+    list_filter = ['stato', 'tipo']
+    search_fields = ['dipendente__nome']
