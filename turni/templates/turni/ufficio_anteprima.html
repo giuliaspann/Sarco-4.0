@@ -1,0 +1,41 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Anteprima turni{% endblock %}
+{% block classe_body %}larga{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <h1>Anteprima: {{ letta.lunedi|date:'d/m' }} – {{ domenica|date:'d/m/Y' }}</h1>
+  <p class="tenue piccolo">Foglio «{{ letta.foglio }}» · {{ righe|length }} dipendenti</p>
+</div>
+{% for a in letta.avvisi %}<div class="avviso avviso-warning">{{ a }}</div>{% endfor %}
+{% if esiste %}<div class="avviso avviso-info">Questa settimana è già caricata: confermando la aggiorni (le pulizie già registrate restano).</div>{% endif %}
+
+<form method="post" class="conferma">{% csrf_token %}
+  <a class="bottone leggero" href="{% url 'turni:importa' %}">Annulla</a>
+  <button class="bottone pieno">Pubblica i turni</button>
+</form>
+
+<div class="tabella-scorre">
+<table class="tabella">
+  <thead><tr><th>Dipendente</th>{% for g in giorni %}<th>{{ g|date:'D j' }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in righe %}
+    <tr>
+      <th>{{ r.nome }}
+        {% if r.nuovo %}<span class="etichetta">nuovo</span>{% elif r.come %}<span class="tenue piccolo">= {{ r.come }}</span>{% endif %}
+      </th>
+      {% for t in r.turni %}
+        <td class="{{ t.colore }}" title="{{ t.codice }}">{{ t.descrizione }}</td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if letta.note %}
+<section class="scheda">
+  <h2>Note e ferie</h2>
+  <ul class="elenco">{% for rif, dip, testo in letta.note %}<li><span><b>{{ dip }}</b> {{ testo }}</span><span class="tenue piccolo">{{ rif }}</span></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

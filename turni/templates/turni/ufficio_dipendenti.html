@@ -1,0 +1,27 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Dipendenti{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+
+<section class="scheda">
+  <h2>Dipendenti e PIN</h2>
+  <p class="tenue piccolo">I dipendenti si aggiungono da soli caricando il file turni. «Nuovo PIN» crea l'accesso (o lo reimposta se è stato dimenticato).</p>
+  <ul class="elenco">
+  {% for d in elenco %}
+    <li class="{% if not d.attivo %}spento{% endif %}">
+      <span>
+        <b>{{ d.nome_breve }}</b><br>
+        <span class="tenue piccolo">{% if d.utente %}utente: {{ d.utente.username }}{% else %}nessun accesso{% endif %}{% if d.tutor %} · tutor: {{ d.tutor|title }}{% endif %}</span>
+      </span>
+      <form method="post" class="azioni">{% csrf_token %}
+        <input type="hidden" name="dipendente" value="{{ d.pk }}">
+        {% if d.attivo %}<button class="bottone" name="azione" value="pin">{% if d.utente %}Nuovo PIN{% else %}Crea accesso{% endif %}</button>{% endif %}
+        <button class="bottone leggero" name="azione" value="attivo">{% if d.attivo %}Disattiva{% else %}Riattiva{% endif %}</button>
+      </form>
+    </li>
+  {% empty %}
+    <li>Nessun dipendente: carica prima un file turni.</li>
+  {% endfor %}
+  </ul>
+</section>
+{% endblock %}

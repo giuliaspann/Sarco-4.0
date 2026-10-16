@@ -1,0 +1,5 @@
+<div class="filtri">
+  <a href="{% url 'turni:importa' %}" class="{% if request.resolver_match.url_name != 'dipendenti' %}attivo{% endif %}">Carica turni</a>
+  <a href="{% url 'turni:dipendenti' %}" class="{% if request.resolver_match.url_name == 'dipendenti' %}attivo{% endif %}">Dipendenti e PIN</a>
+  <a href="{% url 'admin:turni_elementopulizia_changelist' %}">Mezzi e zone</a>
+</div>

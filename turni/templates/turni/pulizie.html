@@ -1,0 +1,75 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Pulizie{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <h1>Pulizie di fine turno</h1>
+  {% if turno %}<p class="tenue">{{ turno.data|date:'l j F' }} · {{ turno.descrizione }}</p>{% endif %}
+</div>
+
+{% if not turno or not turno.lavora %}
+  <div class="vuoto">
+    <p>{% if turno %}Oggi sei in {{ turno.get_fascia_display|lower }}.{% else %}Oggi non hai turni.{% endif %} Nessuna pulizia da fare.</p>
+  </div>
+{% else %}
+  {% if voci %}
+    <div class="avanzamento" role="progressbar" aria-valuenow="{{ fatte }}" aria-valuemax="{{ voci|length }}">
+      <span style="width: {% widthratio fatte voci|length 100 %}%"></span>
+    </div>
+    <p class="tenue piccolo">{{ fatte }} di {{ voci|length }} fatte</p>
+  {% else %}
+    <div class="vuoto"><p>Per il tuo ruolo non ci sono pulizie previste. Se hai usato un mezzo, aggiungilo qui sotto.</p></div>
+  {% endif %}
+
+  <ul class="voci">
+  {% for v in voci %}
+    <li class="voce stato-{{ v.stato|lower }}">
+      <div class="voce-testa">
+        <span class="spunta" aria-hidden="true"></span>
+        <div>
+          <strong>{{ v.elemento.nome }}</strong>
+          <span class="tenue piccolo">{{ v.elemento.get_tipo_display }}{% if v.aggiunta_da_operaio %} · mezzo usato{% endif %}</span>
+        </div>
+        <span class="stato">{{ v.get_stato_display }}</span>
+      </div>
+      {% if v.elemento.istruzioni %}<p class="istruzioni">{{ v.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
+      {% if v.stato == 'SEGNALATA' and v.nota_verifica %}<p class="avviso avviso-warning">Capo turno: {{ v.nota_verifica }}</p>{% endif %}
+      {% if v.foto %}<img class="miniatura" src="{% url 'turni:foto' v.pk %}" alt="Foto pulizia {{ v.elemento.nome }}" loading="lazy">{% endif %}
+
+      {% if v.stato != 'VERIFICATA' %}
+      {% if v.stato == 'FATTA' %}<details class="modifica"><summary class="tenue piccolo">Modifica</summary>{% endif %}
+      <form method="post" enctype="multipart/form-data" class="form-voce">{% csrf_token %}
+        <input type="hidden" name="pulizia" value="{{ v.pk }}">
+        <label class="bottone foto-btn">
+          <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+          <span>{% if v.foto %}Cambia foto{% else %}Scatta foto{% endif %}</span>
+        </label>
+        <input type="text" name="nota" placeholder="Nota (facoltativa)" value="{{ v.nota }}" maxlength="300">
+        <button class="bottone pieno" name="azione" value="fatta">{% if v.stato == 'DA_FARE' %}Fatto{% else %}Aggiorna{% endif %}</button>
+        {% if v.aggiunta_da_operaio and v.stato == 'DA_FARE' %}
+          <button class="bottone leggero" name="azione" value="rimuovi">Togli</button>
+        {% endif %}
+      </form>
+      {% if v.stato == 'FATTA' %}</details>{% endif %}
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+
+  {% if mezzi %}
+  <form method="post" class="scheda aggiungi">{% csrf_token %}
+    <h2>Hai usato un mezzo?</h2>
+    <select name="elemento" required>
+      <option value="">Scegli il mezzo…</option>
+      {% for m in mezzi %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}
+    </select>
+    <button class="bottone" name="azione" value="aggiungi">Aggiungi alla lista</button>
+  </form>
+  {% endif %}
+{% endif %}
+
+{% if recenti|length > 1 %}
+<p class="tenue piccolo centrato">Altri turni:
+  {% for r in recenti %}{% if r.pk != turno.pk %}<a href="{% url 'turni:pulizie_turno' r.pk %}">{{ r.data|date:'D j' }}</a> {% endif %}{% endfor %}
+</p>
+{% endif %}
+{% endblock %}

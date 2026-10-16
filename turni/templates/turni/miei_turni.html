@@ -1,0 +1,48 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}I miei turni{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <p class="tenue">Ciao {{ dip.nome_breve }}</p>
+  <div class="naviga">
+    <a class="freccia {% if not esiste_prec %}spento{% endif %}" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana precedente">‹</a>
+    <h1>Settimana dal {{ lunedi|date:'j M' }}</h1>
+    <a class="freccia {% if not esiste_succ %}spento{% endif %}" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana successiva">›</a>
+  </div>
+</div>
+
+{% if not settimana %}
+  <div class="vuoto"><p>I turni di questa settimana non sono ancora stati pubblicati.</p></div>
+{% else %}
+  <ol class="giorni">
+  {% for g in giorni %}
+    <li class="giorno {% if g.oggi %}oggi{% endif %} {{ g.turno.colore|default:'off' }}">
+      <div class="data">
+        <span class="dow">{{ g.data|date:'D' }}</span>
+        <span class="num">{{ g.data|date:'j' }}</span>
+      </div>
+      <div class="dettaglio">
+        {% if g.turno %}
+          <strong>{{ g.turno.descrizione }}</strong>
+          {% if g.colleghi %}
+            <span class="tenue piccolo">con {% for c in g.colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+          {% endif %}
+        {% else %}
+          <span class="tenue">—</span>
+        {% endif %}
+      </div>
+      {% if g.oggi %}<span class="etichetta">Oggi</span>{% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+
+  {% if note %}
+  <section class="scheda">
+    <h2>Note per te</h2>
+    <ul class="note">{% for n in note %}<li>{{ n.testo }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+  {% if dip.tutor %}
+  <p class="tenue piccolo centrato">I tuoi tutor: {{ dip.tutor|title }}</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

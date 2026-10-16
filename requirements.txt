@@ -4,3 +4,5 @@ whitenoise==6.12.0
 dj-database-url==3.1.2
 psycopg[binary]==3.3.6
 python-dotenv==1.2.4
+openpyxl==3.1.5
+Pillow==12.3.0

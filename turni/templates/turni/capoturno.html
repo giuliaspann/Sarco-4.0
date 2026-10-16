@@ -1,0 +1,54 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Verifica pulizie{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <div class="naviga">
+    <a class="freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno precedente">‹</a>
+    <h1>Verifica · {{ giorno|date:'D j M' }}</h1>
+    <a class="freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno successivo">›</a>
+  </div>
+  <div class="filtri">
+    <a href="?giorno={{ giorno|date:'Y-m-d' }}" class="{% if not fascia %}attivo{% endif %}">Tutti</a>
+    {% for f, nome in fasce %}<a href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}" class="{% if fascia == f %}attivo{% endif %}">{{ nome }}</a>{% endfor %}
+  </div>
+</div>
+
+{% for t in turni %}
+<details class="scheda persona" id="d{{ t.pk }}" {% if t.n_da_verificare %}open{% endif %}>
+  <summary>
+    <span>
+      <strong>{{ t.dipendente.nome_breve }}</strong>
+      <span class="tenue piccolo">{{ t.descrizione }}</span>
+    </span>
+    <span class="conteggio {% if t.n_voci and t.n_fatte == t.n_voci %}completo{% elif t.n_da_verificare %}da-vedere{% endif %}">
+      {{ t.n_fatte }}/{{ t.n_voci }}
+    </span>
+  </summary>
+  {% for p in t.pulizie.all %}
+    <div class="voce stato-{{ p.stato|lower }}">
+      <div class="voce-testa">
+        <span class="spunta" aria-hidden="true"></span>
+        <div><strong>{{ p.elemento.nome }}</strong>
+          {% if p.fatta_il %}<span class="tenue piccolo">alle {{ p.fatta_il|time:'H:i' }}</span>{% endif %}
+        </div>
+        <span class="stato">{{ p.get_stato_display }}</span>
+      </div>
+      {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
+      {% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto {{ p.elemento.nome }}" loading="lazy"></a>{% endif %}
+      {% if p.stato == 'FATTA' or p.stato == 'SEGNALATA' %}
+      <form method="post" class="form-voce">{% csrf_token %}
+        <input type="hidden" name="pulizia" value="{{ p.pk }}">
+        <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">
+        <button class="bottone pieno" name="azione" value="verifica">Ok</button>
+        <button class="bottone avviso-btn" name="azione" value="segnala">Da rifare</button>
+      </form>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="tenue piccolo">Nessuna pulizia prevista.</p>
+  {% endfor %}
+</details>
+{% empty %}
+  <div class="vuoto"><p>Nessuno in turno questo giorno.</p></div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Carica turni{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+
+<form method="post" enctype="multipart/form-data" class="scheda">{% csrf_token %}
+  <h2>Carica il file della settimana</h2>
+  <p class="tenue piccolo">Lo stesso Excel che mandate su WhatsApp. Prima di pubblicarlo vedi l'anteprima.</p>
+  {{ form.non_field_errors }}
+  <label>{{ form.file.label }}{{ form.file }}</label>
+  {% for e in form.file.errors %}<p class="errore">{{ e }}</p>{% endfor %}
+  <label>{{ form.lunedi.label }}{{ form.lunedi }}<span class="tenue piccolo">{{ form.lunedi.help_text }}</span></label>
+  {% for e in form.lunedi.errors %}<p class="errore">{{ e }}</p>{% endfor %}
+  <button class="bottone pieno">Leggi il file</button>
+</form>
+
+{% if settimane %}
+<section class="scheda">
+  <h2>Settimane caricate</h2>
+  <ul class="elenco">
+    {% for s in settimane %}
+      <li><span>{{ s }}</span><span class="tenue piccolo">{{ s.n }} persone · {{ s.caricata_il|date:'d/m H:i' }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

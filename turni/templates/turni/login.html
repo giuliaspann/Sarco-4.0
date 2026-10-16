@@ -1,0 +1,16 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Accesso{% endblock %}
+{% block classe_body %}accesso{% endblock %}
+{% block contenuto %}
+<div class="scheda scheda-accesso">
+  <h1>Accedi</h1>
+  <p class="tenue">Nome utente e PIN te li dà l'ufficio.</p>
+  <form method="post">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="avviso avviso-error">{{ form.non_field_errors.0 }}</div>{% endif %}
+    <label>{{ form.username.label }}{{ form.username }}</label>
+    <label>{{ form.password.label }}{{ form.password }}</label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="bottone pieno" type="submit">Entra</button>
+  </form>
+</div>
+{% endblock %}

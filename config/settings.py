@@ -6,6 +6,7 @@ su Railway dalle variabili del servizio (DATABASE_URL viene dal servizio Postgre
 """
 
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'turni',
 ]
 
 MIDDLEWARE = [
@@ -68,6 +70,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'turni.context.navigazione',
             ],
         },
     },
@@ -106,8 +109,24 @@ STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
+# Nei test non c'è collectstatic: niente manifest
+if 'test' in sys.argv:
+    STORAGES['staticfiles'] = {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Foto delle pulizie: su Railway MEDIA_ROOT punta al volume montato (es. /data/media)
+MEDIA_URL = 'media/'
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', BASE_DIR / 'media'))
+# Le foto arrivano già ridotte dal telefono; margine per quelle non ridotte
+DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
+
+LOGIN_URL = 'turni:login'
+LOGIN_REDIRECT_URL = 'turni:home'
+LOGOUT_REDIRECT_URL = 'turni:login'
+# Gli operai restano collegati sul telefono per sei mesi
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 180
 
 
 # Dietro il proxy HTTPS di Railway

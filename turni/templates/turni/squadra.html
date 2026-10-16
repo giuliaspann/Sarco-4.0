@@ -1,0 +1,41 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Squadra{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <div class="naviga">
+    <a class="freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno precedente">‹</a>
+    <h1>{% if oggi %}Oggi, {% endif %}{{ giorno|date:'l j F' }}</h1>
+    <a class="freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno successivo">›</a>
+  </div>
+</div>
+
+{% if not gruppi and not assenti %}
+  <div class="vuoto"><p>Nessun turno pubblicato per questo giorno.</p></div>
+{% endif %}
+
+{% for fascia, sottogruppi in gruppi %}
+<section class="scheda">
+  <h2>{{ fascia }}</h2>
+  {% for postazione, turni in sottogruppi %}
+    <h3 class="postazione {{ turni.0.colore }}">{{ postazione }}</h3>
+    <ul class="persone">
+      {% for t in turni %}
+        <li class="{% if mio and t.dipendente_id == mio.pk %}io{% endif %}">
+          {{ t.dipendente.nome_breve }}
+          {% if t.capoturno %}<span class="etichetta">Capo turno</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
+</section>
+{% endfor %}
+
+{% if assenti %}
+<section class="scheda">
+  <h2>Non in turno</h2>
+  <ul class="persone compatto">
+    {% for t in assenti %}<li>{{ t.dipendente.nome_breve }} <span class="tenue piccolo">{{ t.get_fascia_display }}</span></li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}
