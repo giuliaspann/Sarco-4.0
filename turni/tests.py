@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from io import BytesIO
+from io import BytesIO, StringIO
 from unittest import mock
 
 import openpyxl
@@ -264,3 +264,18 @@ class AccessoTest(TestCase):
         crimi = Dipendente.objects.get(nome='CRIMI BENITO')
         r = self.client.post(reverse('turni:dipendenti'), {'dipendente': crimi.pk, 'azione': 'pin'}, follow=True)
         self.assertContains(r, 'crimi.benito')
+
+
+class DeployTest(TestCase):
+    def test_crea_utente_ufficio_una_volta(self):
+        from django.core.management import call_command
+
+        with mock.patch.dict('os.environ', {'SARCO_ADMIN_USER': 'ufficio', 'SARCO_ADMIN_PASSWORD': 'segreta-1'}):
+            call_command('prepara_deploy', stdout=StringIO())
+            u = get_user_model().objects.get(username='ufficio')
+            self.assertTrue(u.is_superuser and u.check_password('segreta-1'))
+            u.set_password('cambiata')
+            u.save()
+            call_command('prepara_deploy', stdout=StringIO())
+            u.refresh_from_db()
+            self.assertTrue(u.check_password('cambiata'))
