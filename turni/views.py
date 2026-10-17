@@ -61,33 +61,31 @@ def home(request):
 
 @login_required
 def miei_turni(request):
-    """Calendario del mese: una sigla colorata per giorno, sotto il dettaglio del giorno scelto."""
+    """Calendario di due settimane (come il file settimanale, più la successiva):
+    una sigla colorata per giorno, sotto il dettaglio del giorno scelto."""
     dip = dipendente_di(request)
     if dip is None:
         return render(request, 'turni/nessun_dipendente.html')
     oggi = timezone.localdate()
-    scelto = leggi_data(request.GET.get('giorno'), oggi)
-    primo = scelto.replace(day=1)
-    if request.GET.get('mese'):
-        try:
-            anno, mese = map(int, request.GET['mese'].split('-'))
-            primo = date(anno, mese, 1)
-            if (scelto.year, scelto.month) != (anno, mese):
-                scelto = oggi if (oggi.year, oggi.month) == (anno, mese) else primo
-        except ValueError:
-            pass
-    ultimo = (primo + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-    inizio = primo - timedelta(days=primo.weekday())
-    fine = ultimo + timedelta(days=6 - ultimo.weekday())
+    giorno = leggi_data(request.GET.get('giorno'), None)
+    base = leggi_data(request.GET.get('settimana'), giorno or oggi)
+    inizio = base - timedelta(days=base.weekday())
+    fine = inizio + timedelta(days=13)
+    if giorno and inizio <= giorno <= fine:
+        scelto = giorno
+    else:
+        scelto = oggi if inizio <= oggi <= fine else inizio
 
     turni = {t.data: t for t in dip.turni.filter(data__range=(inizio, fine), settimana__pubblicata=True)}
+    lunedi_oggi = oggi - timedelta(days=oggi.weekday())
     settimane = []
-    g = inizio
-    while g <= fine:
-        settimane.append(
-            [{'data': g + timedelta(days=i), 'turno': turni.get(g + timedelta(days=i))} for i in range(7)]
+    for lun in (inizio, inizio + timedelta(days=7)):
+        distanza = (lun - lunedi_oggi).days // 7
+        nome = {0: 'Questa settimana', 1: 'Prossima settimana', -1: 'Settimana scorsa'}.get(
+            distanza, f'Dal {lun:%d/%m}'
         )
-        g += timedelta(days=7)
+        giorni = [{'data': lun + timedelta(days=i), 'turno': turni.get(lun + timedelta(days=i))} for i in range(7)]
+        settimane.append({'nome': nome, 'giorni': giorni, 'caricata': any(c['turno'] for c in giorni)})
 
     turno = turni.get(scelto)
     colleghi = []
@@ -104,21 +102,21 @@ def miei_turni(request):
         for n in s.note.all()
         if importa.stesso_nome(n.dipendente, dip.nome)
     ]
-    mese_prec = primo - timedelta(days=1)
     return render(
         request,
         'turni/miei_turni.html',
         {
             'dip': dip,
-            'primo': primo,
+            'inizio': inizio,
+            'fine': fine,
             'settimane': settimane,
             'oggi': oggi,
             'scelto': scelto,
             'turno': turno,
             'colleghi': colleghi,
             'note': note,
-            'mese_prec': f'{mese_prec:%Y-%m}',
-            'mese_succ': f'{ultimo + timedelta(days=1):%Y-%m}',
+            'prec': inizio - timedelta(days=7),
+            'succ': inizio + timedelta(days=7),
         },
     )
 

@@ -315,3 +315,14 @@ h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
   width: 86%; text-align: center; padding: 3px 0; border-radius: 5px;
   background: var(--carta); color: var(--testo); border: 1.5px solid var(--testo);
 }
+
+/* due settimane: caselle più grandi */
+.cal-nome { margin: 8px 4px 2px; font-size: .78rem; font-weight: 700; color: var(--tenue); text-transform: uppercase; letter-spacing: .03em; }
+.cal-nome:first-child { margin-top: 2px; }
+.cal-testa span { text-transform: capitalize; }
+.cal-giorno { min-height: 84px; gap: 4px; padding: 6px 0; }
+.cal-giorno.passato .cal-num { color: var(--tenue); font-weight: 500; }
+.cal-vuota { text-align: center; color: var(--tenue); font-size: .88rem; padding: 18px 8px 22px; margin: 0; }
+.cal-num { font-size: .95rem; }
+.cal-sigla { font-size: .95rem; padding: 5px 0; }
+.cal-posto { font-size: .64rem; padding: 4px 0; }

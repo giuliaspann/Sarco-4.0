@@ -2,9 +2,9 @@
 {% block titolo %}Turni{% endblock %}
 {% block contenuto %}
 <div class="naviga mese">
-  <a class="freccia" href="?mese={{ mese_prec }}" aria-label="Mese precedente">‹</a>
-  <h1>{{ primo|date:'F Y'|capfirst }}</h1>
-  <a class="freccia" href="?mese={{ mese_succ }}" aria-label="Mese successivo">›</a>
+  <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
+  <h1>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</h1>
+  <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
 </div>
 
 <ul class="legenda">
@@ -18,18 +18,23 @@
 </ul>
 
 <div class="calendario">
-  <div class="cal-testa">{% for g in 'LMMGVSD' %}<span>{{ g }}</span>{% endfor %}</div>
   {% for settimana in settimane %}
+  <p class="cal-nome">{{ settimana.nome }}</p>
+  {% if not settimana.caricata %}
+  <p class="cal-vuota">{{ settimana.giorni.0.data|date:'j M' }} – {{ settimana.giorni.6.data|date:'j M' }}: turni non ancora pubblicati</p>
+  {% else %}
+  <div class="cal-testa">{% for c in settimana.giorni %}<span>{{ c.data|date:'D'|slice:':3' }}</span>{% endfor %}</div>
   <div class="cal-riga">
-    {% for c in settimana %}
-      <a href="?giorno={{ c.data|date:'Y-m-d' }}"
-         class="cal-giorno{% if c.data.month != primo.month %} fuori{% endif %}{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}">
+    {% for c in settimana.giorni %}
+      <a href="?settimana={{ inizio|date:'Y-m-d' }}&giorno={{ c.data|date:'Y-m-d' }}"
+         class="cal-giorno{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}{% if c.data < oggi %} passato{% endif %}">
         <span class="cal-num">{{ c.data.day }}</span>
         {% if c.turno %}<span class="cal-sigla {{ c.turno.classe_fascia }}">{{ c.turno.sigla }}</span>{% endif %}
         {% if c.turno.sigla_postazione %}<span class="cal-posto">{{ c.turno.sigla_postazione }}</span>{% endif %}
       </a>
     {% endfor %}
   </div>
+  {% endif %}
   {% endfor %}
 </div>
 

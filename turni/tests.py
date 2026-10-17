@@ -289,16 +289,25 @@ class CalendarioTest(TestCase):
         d.save()
         self.client.login(username='crimi', password='123456')
 
-    def test_mese_con_sigle_e_dettaglio_del_giorno(self):
+    def test_due_settimane_con_sigle_e_dettaglio_del_giorno(self):
         r = self.client.get(reverse('turni:miei_turni'), {'giorno': LUNEDI + timedelta(days=1)})
         self.assertEqual(r.status_code, 200)
-        self.assertContains(r, 'Ottobre 2026')
-        sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s if c['turno']]
+        self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI, LUNEDI + timedelta(days=7)])
+        sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
         self.assertEqual(sigle, ['N', 'N', 'N', 'N', 'G', 'G', '1T'])
+        posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
+        self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2', '', 'ANAL.', 'MUL.', 'PALA'])
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
         self.assertTrue(r.context['turno'].capoturno)
 
-    def test_cambio_mese(self):
-        r = self.client.get(reverse('turni:miei_turni'), {'mese': '2026-11'})
-        self.assertContains(r, 'Novembre 2026')
+    def test_frecce_spostano_di_una_settimana(self):
+        r = self.client.get(reverse('turni:miei_turni'), {'settimana': LUNEDI + timedelta(days=7)})
+        self.assertEqual(r.context['inizio'], LUNEDI + timedelta(days=7))
+        self.assertEqual(r.context['prec'], LUNEDI)
         self.assertIsNone(r.context['turno'])
+        # toccare un giorno della seconda riga non sposta la finestra
+        r = self.client.get(
+            reverse('turni:miei_turni'), {'settimana': LUNEDI, 'giorno': LUNEDI + timedelta(days=9)}
+        )
+        self.assertEqual(r.context['inizio'], LUNEDI)
+        self.assertEqual(r.context['scelto'], LUNEDI + timedelta(days=9))
