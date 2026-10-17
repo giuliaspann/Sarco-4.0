@@ -279,3 +279,26 @@ class DeployTest(TestCase):
             call_command('prepara_deploy', stdout=StringIO())
             u.refresh_from_db()
             self.assertTrue(u.check_password('cambiata'))
+
+
+class CalendarioTest(TestCase):
+    def setUp(self):
+        importa.salva_settimana(importa.leggi_file(file_turni(RIGHE), LUNEDI))
+        d = Dipendente.objects.get(nome='CRIMI BENITO')
+        d.utente = get_user_model().objects.create_user('crimi', password='123456')
+        d.save()
+        self.client.login(username='crimi', password='123456')
+
+    def test_mese_con_sigle_e_dettaglio_del_giorno(self):
+        r = self.client.get(reverse('turni:miei_turni'), {'giorno': LUNEDI + timedelta(days=1)})
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Ottobre 2026')
+        sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s if c['turno']]
+        self.assertEqual(sigle, ['N', 'N', 'N', 'N', 'G', 'G', '1T'])
+        self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
+        self.assertTrue(r.context['turno'].capoturno)
+
+    def test_cambio_mese(self):
+        r = self.client.get(reverse('turni:miei_turni'), {'mese': '2026-11'})
+        self.assertContains(r, 'Novembre 2026')
+        self.assertIsNone(r.context['turno'])

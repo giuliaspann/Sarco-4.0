@@ -1,50 +1,56 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}I miei turni{% endblock %}
+{% block titolo %}Turni{% endblock %}
 {% block contenuto %}
-<div class="intestazione">
-  <p class="tenue">Ciao {{ dip.nome_breve }}</p>
-  <div class="naviga">
-    <a class="freccia {% if not esiste_prec %}spento{% endif %}" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana precedente">‹</a>
-    <h1>Settimana dal {{ lunedi|date:'j M' }}</h1>
-    <a class="freccia {% if not esiste_succ %}spento{% endif %}" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana successiva">›</a>
-  </div>
+<div class="naviga mese">
+  <a class="freccia" href="?mese={{ mese_prec }}" aria-label="Mese precedente">‹</a>
+  <h1>{{ primo|date:'F Y'|capfirst }}</h1>
+  <a class="freccia" href="?mese={{ mese_succ }}" aria-label="Mese successivo">›</a>
 </div>
 
-{% if not settimana %}
-  <div class="vuoto"><p>I turni di questa settimana non sono ancora stati pubblicati.</p></div>
-{% else %}
-  <ol class="giorni">
-  {% for g in giorni %}
-    <li class="giorno {% if g.oggi %}oggi{% endif %} {{ g.turno.colore|default:'off' }}">
-      <div class="data">
-        <span class="dow">{{ g.data|date:'D' }}</span>
-        <span class="num">{{ g.data|date:'j' }}</span>
-      </div>
-      <div class="dettaglio">
-        {% if g.turno %}
-          <strong>{{ g.turno.descrizione }}</strong>
-          {% if g.turno.nota_modifica %}<span class="tenue piccolo">{{ g.turno.nota_modifica }}</span>{% endif %}
-          {% if g.colleghi %}
-            <span class="tenue piccolo">con {% for c in g.colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
-          {% endif %}
-        {% else %}
-          <span class="tenue">—</span>
-        {% endif %}
-      </div>
-      {% if g.oggi %}<span class="etichetta">Oggi</span>
-      {% elif g.futuro and g.turno %}<a class="cambia" href="{% url 'turni:nuovo_cambio' %}?giorno={{ g.data|date:'Y-m-d' }}">Cambia</a>{% endif %}
-    </li>
-  {% endfor %}
-  </ol>
+<ul class="legenda">
+  <li><i class="f-mattina">1T</i>Mattina</li>
+  <li><i class="f-pomeriggio">2T</i>Pomeriggio</li>
+  <li><i class="f-notte">N</i>Notte</li>
+  <li><i class="f-giorno">G</i>Giornata</li>
+  <li><i class="f-giorno">CT</i>Capo turno</li>
+  <li><i class="f-riposo">R</i>Riposo</li>
+  <li><i class="f-ferie">F</i>Ferie</li>
+</ul>
 
-  {% if note %}
-  <section class="scheda">
-    <h2>Note per te</h2>
-    <ul class="note">{% for n in note %}<li>{{ n.testo }}</li>{% endfor %}</ul>
-  </section>
+<div class="calendario">
+  <div class="cal-testa">{% for g in 'LMMGVSD' %}<span>{{ g }}</span>{% endfor %}</div>
+  {% for settimana in settimane %}
+  <div class="cal-riga">
+    {% for c in settimana %}
+      <a href="?giorno={{ c.data|date:'Y-m-d' }}"
+         class="cal-giorno{% if c.data.month != primo.month %} fuori{% endif %}{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}">
+        <span class="cal-num">{{ c.data.day }}</span>
+        {% if c.turno %}<span class="cal-sigla {{ c.turno.classe_fascia }}">{{ c.turno.sigla }}</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<section class="scheda dettaglio-giorno {% if turno %}{{ turno.classe_fascia }}-bordo{% endif %}">
+  <p class="tenue piccolo">{% if scelto == oggi %}Oggi, {% endif %}{{ scelto|date:'l j F'|capfirst }}</p>
+  {% if turno %}
+    <h2 class="grande">{{ turno.descrizione }}</h2>
+    {% if turno.nota_modifica %}<p class="tenue piccolo">{{ turno.nota_modifica }}</p>{% endif %}
+    {% if colleghi %}<p>Con: {% for c in colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    <div class="azioni-giorno">
+      {% if scelto == oggi and turno.lavora %}<a class="bottone pieno" href="{% url 'turni:pulizie' %}">Pulizie di fine turno</a>{% endif %}
+      {% if scelto > oggi %}<a class="bottone" href="{% url 'turni:nuovo_cambio' %}?giorno={{ scelto|date:'Y-m-d' }}">Chiedi cambio</a>{% endif %}
+    </div>
+  {% else %}
+    <p class="tenue">Turno non ancora pubblicato.</p>
   {% endif %}
-  {% if dip.tutor %}
-  <p class="tenue piccolo centrato">I tuoi tutor: {{ dip.tutor|title }}</p>
-  {% endif %}
+</section>
+
+{% if note %}
+<section class="scheda">
+  <h2>Note per te</h2>
+  <ul class="note">{% for n in note %}<li>{{ n.testo }}</li>{% endfor %}</ul>
+</section>
 {% endif %}
 {% endblock %}

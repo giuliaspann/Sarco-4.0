@@ -130,6 +130,36 @@ class Turno(models.Model):
             parti.append(self.get_postazione_display())
         return ' · '.join(parti) or self.codice
 
+    SIGLE = {
+        Fascia.MATTINA: '1T',
+        Fascia.POMERIGGIO: '2T',
+        Fascia.NOTTE: 'N',
+        Fascia.GIORNALIERO: 'G',
+        Fascia.RIPOSO: 'R',
+        Fascia.FERIE: 'F',
+        Fascia.FESTA: 'FS',
+        Fascia.PERMESSO: 'P',
+        Fascia.ALTRO: 'CT',
+    }
+
+    @property
+    def sigla(self):
+        """Sigla corta per la casella del calendario."""
+        return self.SIGLE.get(self.fascia, '?')
+
+    @property
+    def classe_fascia(self):
+        """Colore della casella del calendario: dipende solo dalla fascia, per leggerlo a colpo d'occhio."""
+        return {
+            Fascia.MATTINA: 'f-mattina',
+            Fascia.POMERIGGIO: 'f-pomeriggio',
+            Fascia.NOTTE: 'f-notte',
+            Fascia.GIORNALIERO: 'f-giorno',
+            Fascia.ALTRO: 'f-giorno',
+            Fascia.FERIE: 'f-ferie',
+            Fascia.PERMESSO: 'f-ferie',
+        }.get(self.fascia, 'f-riposo')
+
     @property
     def colore(self):
         """Classe CSS che richiama i colori dell'Excel."""

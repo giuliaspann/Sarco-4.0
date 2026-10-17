@@ -61,41 +61,64 @@ def home(request):
 
 @login_required
 def miei_turni(request):
+    """Calendario del mese: una sigla colorata per giorno, sotto il dettaglio del giorno scelto."""
     dip = dipendente_di(request)
     if dip is None:
         return render(request, 'turni/nessun_dipendente.html')
     oggi = timezone.localdate()
-    lunedi = leggi_data(request.GET.get('settimana'), oggi - timedelta(days=oggi.weekday()))
-    lunedi -= timedelta(days=lunedi.weekday())
-    settimana = Settimana.objects.filter(lunedi=lunedi, pubblicata=True).first()
+    scelto = leggi_data(request.GET.get('giorno'), oggi)
+    primo = scelto.replace(day=1)
+    if request.GET.get('mese'):
+        try:
+            anno, mese = map(int, request.GET['mese'].split('-'))
+            primo = date(anno, mese, 1)
+            if (scelto.year, scelto.month) != (anno, mese):
+                scelto = oggi if (oggi.year, oggi.month) == (anno, mese) else primo
+        except ValueError:
+            pass
+    ultimo = (primo + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    inizio = primo - timedelta(days=primo.weekday())
+    fine = ultimo + timedelta(days=6 - ultimo.weekday())
 
-    giorni = []
-    if settimana:
-        turni = {t.data: t for t in dip.turni.filter(settimana=settimana)}
-        stessi = {}
-        for t in Turno.objects.filter(settimana=settimana).exclude(dipendente=dip).select_related('dipendente'):
-            stessi.setdefault((t.data, t.fascia, t.postazione), []).append(t)
-        for g in settimana.giorni:
-            t = turni.get(g)
-            colleghi = stessi.get((g, t.fascia, t.postazione), []) if t and t.lavora and t.postazione else []
-            giorni.append({'data': g, 'turno': t, 'oggi': g == oggi, 'futuro': g > oggi, 'colleghi': colleghi})
-        note = [n for n in settimana.note.all() if importa.stesso_nome(n.dipendente, dip.nome)]
-    else:
-        note = []
+    turni = {t.data: t for t in dip.turni.filter(data__range=(inizio, fine), settimana__pubblicata=True)}
+    settimane = []
+    g = inizio
+    while g <= fine:
+        settimane.append(
+            [{'data': g + timedelta(days=i), 'turno': turni.get(g + timedelta(days=i))} for i in range(7)]
+        )
+        g += timedelta(days=7)
 
+    turno = turni.get(scelto)
+    colleghi = []
+    if turno and turno.lavora:
+        colleghi = (
+            Turno.objects.filter(data=scelto, fascia=turno.fascia, postazione=turno.postazione)
+            .exclude(dipendente=dip)
+            .select_related('dipendente')
+            .order_by('dipendente__nome')
+        )
+    note = [
+        n
+        for s in Settimana.objects.filter(lunedi__range=(inizio, fine), pubblicata=True).prefetch_related('note')
+        for n in s.note.all()
+        if importa.stesso_nome(n.dipendente, dip.nome)
+    ]
+    mese_prec = primo - timedelta(days=1)
     return render(
         request,
         'turni/miei_turni.html',
         {
             'dip': dip,
-            'settimana': settimana,
-            'lunedi': lunedi,
-            'giorni': giorni,
+            'primo': primo,
+            'settimane': settimane,
+            'oggi': oggi,
+            'scelto': scelto,
+            'turno': turno,
+            'colleghi': colleghi,
             'note': note,
-            'prec': lunedi - timedelta(days=7),
-            'succ': lunedi + timedelta(days=7),
-            'esiste_succ': Settimana.objects.filter(lunedi=lunedi + timedelta(days=7), pubblicata=True).exists(),
-            'esiste_prec': Settimana.objects.filter(lunedi=lunedi - timedelta(days=7), pubblicata=True).exists(),
+            'mese_prec': f'{mese_prec:%Y-%m}',
+            'mese_succ': f'{ultimo + timedelta(days=1):%Y-%m}',
         },
     )
 
@@ -237,7 +260,8 @@ def capoturno(request):
             'giorno': giorno,
             'turni': turni,
             'fascia': fascia,
-            'fasce': [(f, Fascia(f).label) for f in ORDINE_FASCE if f != Fascia.ALTRO],
+            # sigle come nel calendario, così la barra sta su una riga
+            'fasce': [(f, Turno.SIGLE[f]) for f in (Fascia.MATTINA, Fascia.POMERIGGIO, Fascia.NOTTE, Fascia.GIORNALIERO)],
             'prec': giorno - timedelta(days=1),
             'succ': giorno + timedelta(days=1),
         },

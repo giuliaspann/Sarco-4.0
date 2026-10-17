@@ -43,6 +43,9 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
+  /* sul telefono si scorre solo in verticale */
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
   background: var(--sfondo);
   color: var(--testo);
   font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -162,8 +165,17 @@ body.larga .pagina { max-width: 1200px; }
 .conteggio.completo { background: var(--ok); color: #fff; }
 .conteggio.da-vedere { background: var(--imp2); }
 
-.filtri { display: flex; gap: 6px; overflow-x: auto; margin-top: 10px; padding-bottom: 2px; }
-.filtri a { white-space: nowrap; padding: 7px 12px; border-radius: 99px; background: var(--carta); border: 1px solid var(--bordo); text-decoration: none; color: var(--testo); font-size: .88rem; }
+/* barra a segmenti: tutti i pulsanti su una riga, larghezze uguali, niente buchi */
+.filtri {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; margin-top: 10px;
+  padding: 3px; border-radius: 12px; background: var(--altro); border: 1px solid var(--bordo);
+}
+.filtri.due { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+.filtri.due a:last-child:nth-child(odd) { grid-column: span 2; }
+.filtri a {
+  text-align: center; padding: 8px 4px; border-radius: 9px; text-decoration: none; color: var(--testo);
+  font-size: .88rem; font-weight: 600; border: 0; background: transparent;
+}
 .filtri a.attivo { background: var(--primario); border-color: var(--primario); color: #fff; }
 @media (prefers-color-scheme: dark) { .filtri a.attivo { color: #10261a; } }
 
@@ -192,7 +204,7 @@ input[type=text], input[type=password], input[type=date], input[type=file], sele
 .azioni { display: flex; gap: 6px; flex: none; }
 
 .conferma { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 12px; }
-.tabella-scorre { overflow-x: auto; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); margin-bottom: 14px; }
+.tabella-scorre { background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); margin-bottom: 14px; }
 .tabella { border-collapse: collapse; font-size: .82rem; width: 100%; }
 .tabella th, .tabella td { padding: 6px 8px; border-bottom: 1px solid var(--bordo); text-align: left; white-space: nowrap; }
 .tabella thead th { position: sticky; top: 0; background: var(--carta); }
@@ -248,3 +260,49 @@ body.accesso .menu { display: none; }
 .riga-form > * { flex: 1; }
 .giorno .cambia { font-size: .8rem; text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--bordo); white-space: nowrap; }
 textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--bordo); background: var(--sfondo); color: var(--testo); }
+
+/* Anteprima turni sul telefono: una scheda per dipendente invece della tabella larga */
+@media (max-width: 760px) {
+  .tabella, .tabella tbody, .tabella tr, .tabella th, .tabella td { display: block; }
+  .tabella thead { display: none; }
+  .tabella tr { padding: 10px 12px; border-bottom: 1px solid var(--bordo); display: flex; flex-wrap: wrap; gap: 4px; }
+  .tabella tbody th { flex: 1 1 100%; border: 0; padding: 0 0 4px; white-space: normal; }
+  .tabella td { border: 0; border-radius: 6px; padding: 3px 7px; white-space: normal; font-size: .78rem; background: var(--altro); }
+  .tabella td::before { content: attr(data-giorno) " "; font-weight: 700; }
+}
+
+/* ------------------------------------------------ calendario */
+.f-mattina { background: #f6d84a; color: #3d3200; }
+.f-pomeriggio { background: #f4a64a; color: #3f2300; }
+.f-notte { background: #2f5fa8; color: #fff; }
+.f-giorno { background: #4f9c6c; color: #fff; }
+.f-riposo { background: var(--altro); color: var(--tenue); }
+.f-ferie { background: #b48ad8; color: #fff; }
+
+.naviga.mese { margin-bottom: 10px; }
+.legenda { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .78rem; color: var(--tenue); }
+.legenda li { display: flex; align-items: center; gap: 4px; }
+.legenda i { font-style: normal; font-weight: 700; font-size: .7rem; min-width: 22px; text-align: center; padding: 1px 3px; border-radius: 5px; }
+
+.calendario { background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: 6px; margin-bottom: 14px; }
+.cal-testa, .cal-riga { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.cal-testa span { text-align: center; font-size: .72rem; font-weight: 700; color: var(--tenue); padding: 4px 0; }
+.cal-riga { margin-top: 3px; }
+.cal-giorno {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 5px;
+  border-radius: 9px; text-decoration: none; color: var(--testo); min-height: 52px; border: 2px solid transparent;
+}
+.cal-giorno.fuori { opacity: .35; }
+.cal-giorno.oggi .cal-num { background: var(--primario); color: #fff; border-radius: 99px; }
+.cal-giorno.scelto { border-color: var(--primario); background: var(--primario-chiaro); }
+.cal-num { font-size: .8rem; font-weight: 600; min-width: 22px; text-align: center; line-height: 20px; }
+.cal-sigla { font-size: .78rem; font-weight: 800; border-radius: 6px; width: 86%; text-align: center; padding: 3px 0; }
+
+.dettaglio-giorno { border-left-width: 6px; }
+.f-mattina-bordo { border-left-color: #f6d84a; }
+.f-pomeriggio-bordo { border-left-color: #f4a64a; }
+.f-notte-bordo { border-left-color: #2f5fa8; }
+.f-giorno-bordo { border-left-color: #4f9c6c; }
+.f-ferie-bordo { border-left-color: #b48ad8; }
+h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
+.azioni-giorno { display: grid; gap: 8px; margin-top: 10px; }

@@ -1,9 +1,9 @@
 {% with n=request.resolver_match.url_name %}
-<div class="filtri">
+<div class="filtri due">
   {% if nav_responsabile %}<a href="{% url 'turni:ufficio_richieste' %}" class="{% if n == 'ufficio_richieste' %}attivo{% endif %}">Richieste{% if nav_da_approvare %} ({{ nav_da_approvare }}){% endif %}</a>{% endif %}
   {% if user.is_staff %}
   <a href="{% url 'turni:importa' %}" class="{% if n == 'importa' or n == 'anteprima' %}attivo{% endif %}">Carica turni</a>
-  <a href="{% url 'turni:dipendenti' %}" class="{% if n == 'dipendenti' %}attivo{% endif %}">Dipendenti e PIN</a>
+  <a href="{% url 'turni:dipendenti' %}" class="{% if n == 'dipendenti' %}attivo{% endif %}">Dipendenti</a>
   <a href="{% url 'admin:turni_elementopulizia_changelist' %}">Mezzi e zone</a>
   {% endif %}
 </div>

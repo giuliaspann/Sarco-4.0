@@ -24,7 +24,7 @@
         {% if r.nuovo %}<span class="etichetta">nuovo</span>{% elif r.come %}<span class="tenue piccolo">= {{ r.come }}</span>{% endif %}
       </th>
       {% for t in r.turni %}
-        <td class="{{ t.colore }}" title="{{ t.codice }}">{{ t.descrizione }}</td>
+        <td class="{{ t.colore }}" title="{{ t.codice }}" data-giorno="{% cycle 'Lun' 'Mar' 'Mer' 'Gio' 'Ven' 'Sab' 'Dom' %}">{{ t.descrizione }}</td>
       {% endfor %}
     </tr>
   {% endfor %}

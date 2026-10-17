@@ -32,7 +32,7 @@
   <nav class="menu">
     {% if nav_dipendente %}
       <a href="{% url 'turni:miei_turni' %}" class="{% if request.resolver_match.url_name == 'miei_turni' %}attivo{% endif %}">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>I miei turni</a>
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Turni</a>
     {% endif %}
     <a href="{% url 'turni:squadra' %}" class="{% if request.resolver_match.url_name == 'squadra' %}attivo{% endif %}">
       <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 1.6 5.5 5"/></svg>Squadra</a>
