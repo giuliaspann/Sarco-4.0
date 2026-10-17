@@ -277,7 +277,7 @@ textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; 
 .f-pomeriggio { background: #ff7a00; color: #fff; }
 .f-notte { background: #1e3a8a; color: #fff; }
 .f-giorno { background: #16a34a; color: #fff; }
-.f-capo { background: #dc2626; color: #fff; }
+.f-capo { background: #38bdf8; color: #06283d; }
 .f-riposo { background: #6b7280; color: #fff; }
 .f-ferie { background: #c026d3; color: #fff; }
 
@@ -305,7 +305,7 @@ textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; 
 .f-pomeriggio-bordo { border-left-color: #ff7a00; }
 .f-notte-bordo { border-left-color: #1e3a8a; }
 .f-giorno-bordo { border-left-color: #16a34a; }
-.f-capo-bordo { border-left-color: #dc2626; }
+.f-capo-bordo { border-left-color: #38bdf8; }
 .f-riposo-bordo { border-left-color: #6b7280; }
 .f-ferie-bordo { border-left-color: #c026d3; }
 h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
