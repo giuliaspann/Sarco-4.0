@@ -310,3 +310,8 @@ textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; 
 .f-ferie-bordo { border-left-color: #c026d3; }
 h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
 .azioni-giorno { display: grid; gap: 8px; margin-top: 10px; }
+.cal-posto {
+  font-size: .58rem; font-weight: 800; letter-spacing: -.01em; line-height: 1; white-space: nowrap;
+  width: 86%; text-align: center; padding: 3px 0; border-radius: 5px;
+  background: var(--carta); color: var(--testo); border: 1.5px solid var(--testo);
+}

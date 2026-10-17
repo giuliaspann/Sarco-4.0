@@ -26,6 +26,7 @@
          class="cal-giorno{% if c.data.month != primo.month %} fuori{% endif %}{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}">
         <span class="cal-num">{{ c.data.day }}</span>
         {% if c.turno %}<span class="cal-sigla {{ c.turno.classe_fascia }}">{{ c.turno.sigla }}</span>{% endif %}
+        {% if c.turno.sigla_postazione %}<span class="cal-posto">{{ c.turno.sigla_postazione }}</span>{% endif %}
       </a>
     {% endfor %}
   </div>

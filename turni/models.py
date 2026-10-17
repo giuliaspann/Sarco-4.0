@@ -147,6 +147,21 @@ class Turno(models.Model):
         """Sigla corta per la casella del calendario."""
         return self.SIGLE.get(self.fascia, '?')
 
+    SIGLE_POSTAZIONE = {
+        Postazione.IMP1: 'IMP 1',
+        Postazione.IMP2: 'IMP 2',
+        Postazione.ANALISI: 'ANAL.',
+        Postazione.SUPERBI: 'SUP.',
+        Postazione.MULINO: 'MUL.',
+        Postazione.BARROTTI: 'BARR.',
+        Postazione.PALISTA: 'PALA',
+    }
+
+    @property
+    def sigla_postazione(self):
+        """Seconda casellina del calendario: dove si lavora, abbreviato per stare nella cella."""
+        return self.SIGLE_POSTAZIONE.get(self.postazione, '') if self.lavora else ''
+
     @property
     def classe_fascia(self):
         """Colore della casella del calendario: dipende solo dalla fascia, per leggerlo a colpo d'occhio."""
