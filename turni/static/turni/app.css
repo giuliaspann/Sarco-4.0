@@ -272,12 +272,14 @@ textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; 
 }
 
 /* ------------------------------------------------ calendario */
-.f-mattina { background: #f6d84a; color: #3d3200; }
-.f-pomeriggio { background: #f4a64a; color: #3f2300; }
-.f-notte { background: #2f5fa8; color: #fff; }
-.f-giorno { background: #4f9c6c; color: #fff; }
-.f-riposo { background: var(--altro); color: var(--tenue); }
-.f-ferie { background: #b48ad8; color: #fff; }
+/* un colore pieno e diverso per ogni sigla, leggibile anche al sole */
+.f-mattina { background: #ffd60a; color: #3a2f00; }
+.f-pomeriggio { background: #ff7a00; color: #fff; }
+.f-notte { background: #1e3a8a; color: #fff; }
+.f-giorno { background: #16a34a; color: #fff; }
+.f-capo { background: #dc2626; color: #fff; }
+.f-riposo { background: #6b7280; color: #fff; }
+.f-ferie { background: #c026d3; color: #fff; }
 
 .naviga.mese { margin-bottom: 10px; }
 .legenda { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .78rem; color: var(--tenue); }
@@ -299,10 +301,12 @@ textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; 
 .cal-sigla { font-size: .78rem; font-weight: 800; border-radius: 6px; width: 86%; text-align: center; padding: 3px 0; }
 
 .dettaglio-giorno { border-left-width: 6px; }
-.f-mattina-bordo { border-left-color: #f6d84a; }
-.f-pomeriggio-bordo { border-left-color: #f4a64a; }
-.f-notte-bordo { border-left-color: #2f5fa8; }
-.f-giorno-bordo { border-left-color: #4f9c6c; }
-.f-ferie-bordo { border-left-color: #b48ad8; }
+.f-mattina-bordo { border-left-color: #ffd60a; }
+.f-pomeriggio-bordo { border-left-color: #ff7a00; }
+.f-notte-bordo { border-left-color: #1e3a8a; }
+.f-giorno-bordo { border-left-color: #16a34a; }
+.f-capo-bordo { border-left-color: #dc2626; }
+.f-riposo-bordo { border-left-color: #6b7280; }
+.f-ferie-bordo { border-left-color: #c026d3; }
 h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
 .azioni-giorno { display: grid; gap: 8px; margin-top: 10px; }

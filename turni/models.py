@@ -155,7 +155,7 @@ class Turno(models.Model):
             Fascia.POMERIGGIO: 'f-pomeriggio',
             Fascia.NOTTE: 'f-notte',
             Fascia.GIORNALIERO: 'f-giorno',
-            Fascia.ALTRO: 'f-giorno',
+            Fascia.ALTRO: 'f-capo',
             Fascia.FERIE: 'f-ferie',
             Fascia.PERMESSO: 'f-ferie',
         }.get(self.fascia, 'f-riposo')
