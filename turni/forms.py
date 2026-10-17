@@ -18,9 +18,10 @@ class AccessoForm(AuthenticationForm):
         widget=forms.TextInput(attrs={'autocapitalize': 'none', 'autocomplete': 'username', 'autofocus': True}),
     )
     password = forms.CharField(
-        label='PIN',
+        label='PIN o password',
         strip=False,
-        widget=forms.PasswordInput(attrs={'inputmode': 'numeric', 'autocomplete': 'current-password'}),
+        # niente tastiera solo numerica: l'ufficio entra con una password che può contenere lettere
+        widget=forms.PasswordInput(attrs={'autocomplete': 'current-password'}),
     )
 
     error_messages = {
