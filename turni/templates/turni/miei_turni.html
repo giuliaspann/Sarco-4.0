@@ -13,7 +13,6 @@
   <p class="extra-titolo">{% if e.mia.confermata %}Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}Cercasi volontari{% endif %}</p>
   <h2 class="grande">{{ e.data|date:'l j F'|capfirst }}</h2>
   <p>{% include 'turni/_pillola.html' with t=e %} <span class="orario">{{ e.orario }}</span>{% if e.ruolo %} <span class="ruolo-cercato">Serve un {{ e.get_ruolo_display|lower }}</span>{% endif %}</p>
-  {% if e.nota %}<p>{{ e.nota }}</p>{% endif %}
   {% if not e.mia.confermata %}
   <form method="post" action="{% url 'turni:rispondi_extra' e.pk %}">{% csrf_token %}
     {% if e.mia %}
