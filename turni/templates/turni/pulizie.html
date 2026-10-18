@@ -4,12 +4,12 @@
 <div class="intestazione">
   <p class="occhiello">Fine turno</p>
   <h1>Pulizie</h1>
-  {% if turno %}<p class="tenue">{{ turno.data|date:'l j F'|capfirst }} · {{ turno.descrizione }} · scatta una foto a lavoro finito</p>{% endif %}
+  {% if turno %}<p class="tenue">{{ turno.data|date:'l j F'|capfirst }} · {% include 'turni/_pillola.html' with t=turno %}<br>Scatta una foto a lavoro finito</p>{% endif %}
 </div>
 
 {% if not turno or not turno.lavora %}
   <div class="vuoto">
-    <p>{% if turno %}Oggi sei in {{ turno.get_fascia_display|lower }}.{% else %}Oggi non hai turni.{% endif %} Nessuna pulizia da fare.</p>
+    <p>{% if turno %}Oggi: {% include 'turni/_pillola.html' with t=turno %}.{% else %}Oggi non hai turni.{% endif %} Nessuna pulizia da fare.</p>
   </div>
 {% else %}
   {% if voci %}

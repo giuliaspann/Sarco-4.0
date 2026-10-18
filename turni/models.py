@@ -410,6 +410,14 @@ class TurnoExtra(models.Model):
         return ' · '.join(parti)
 
     @property
+    def sigla(self):
+        return Turno.SIGLE.get(self.fascia, '?')
+
+    @property
+    def classe_fascia(self):
+        return Turno(fascia=self.fascia).classe_fascia
+
+    @property
     def confermati(self):
         return [d for d in self.disponibilita.all() if d.confermata]
 

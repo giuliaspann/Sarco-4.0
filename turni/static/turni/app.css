@@ -643,3 +643,18 @@ details.notifiche-barra p { margin: 6px 0; }
   .wa-avatar { background: #2a3942; }
   .wa-ora { color: #8696a0; }
 }
+
+/* filtri e scelte con i colori dei turni */
+.filtri-fasce a[class*="f-"] { font-weight: 800; }
+.filtri-fasce a.scelto { box-shadow: inset 0 0 0 3px var(--testo); }
+.scegli-fascia { border: 0; padding: 0; margin: 0 0 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.scegli-fascia legend { font-size: .9rem; font-weight: 600; margin-bottom: 4px; padding: 0; }
+.chip-fascia { display: flex; align-items: center; gap: 6px; margin: 0; padding: 10px; border-radius: 10px; font-size: .88rem; cursor: pointer; }
+.chip-fascia input { width: 18px; height: 18px; margin: 0; accent-color: currentColor; }
+.chip-fascia:has(input:checked) { box-shadow: inset 0 0 0 3px var(--testo); }
+.giorno-turno { display: inline-flex; align-items: center; gap: 4px; margin: 2px 8px 2px 0; }
+/* la barra dei filtri ha uno sfondo trasparente: per i filtri dei turni vincono i colori del calendario */
+.filtri.filtri-fasce a.f-mattina { background: #ffd60a; color: #3a2f00; }
+.filtri.filtri-fasce a.f-pomeriggio { background: #ff7a00; color: #fff; }
+.filtri.filtri-fasce a.f-notte { background: #1e3a8a; color: #fff; }
+.filtri.filtri-fasce a.f-giorno { background: #16a34a; color: #fff; }

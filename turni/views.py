@@ -366,7 +366,10 @@ def capoturno(request):
             'turni': turni,
             'fascia': fascia,
             # sigle come nel calendario, così la barra sta su una riga
-            'fasce': [(f, Turno.SIGLE[f]) for f in (Fascia.MATTINA, Fascia.POMERIGGIO, Fascia.NOTTE, Fascia.GIORNALIERO)],
+            'fasce': [
+                (f, Turno.SIGLE[f], Turno(fascia=f).classe_fascia)
+                for f in (Fascia.MATTINA, Fascia.POMERIGGIO, Fascia.NOTTE, Fascia.GIORNALIERO)
+            ],
             'prec': giorno - timedelta(days=1),
             'succ': giorno + timedelta(days=1),
         },

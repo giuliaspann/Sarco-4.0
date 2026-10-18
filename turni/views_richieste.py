@@ -332,7 +332,10 @@ def ufficio_extra(request):
         'turni/ufficio_extra.html',
         {
             'aperte': aperte,
-            'fasce': TurnoExtra._meta.get_field('fascia').choices,
+            'fasce': [
+                (v, nome, Turno.SIGLE[v], Turno(fascia=v).classe_fascia)
+                for v, nome in TurnoExtra._meta.get_field('fascia').choices
+            ],
             'postazioni': Postazione.choices,
             'oggi': oggi,
         },

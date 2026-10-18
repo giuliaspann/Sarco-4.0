@@ -11,7 +11,8 @@
 {% for e in extra %}
 <section class="scheda extra {% if e.mia.confermata %}extra-ok{% elif e.mia %}extra-offerto{% endif %}">
   <p class="extra-titolo">{% if e.mia.confermata %}Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}Cercasi volontari{% endif %}</p>
-  <h2 class="grande">{{ e.data|date:'l j F'|capfirst }} · {{ e.descrizione }}</h2>
+  <h2 class="grande">{{ e.data|date:'l j F'|capfirst }}</h2>
+  <p>{% include 'turni/_pillola.html' with t=e %}</p>
   {% if e.nota %}<p>{{ e.nota }}</p>{% endif %}
   {% if not e.mia.confermata %}
   <form method="post" action="{% url 'turni:rispondi_extra' e.pk %}">{% csrf_token %}

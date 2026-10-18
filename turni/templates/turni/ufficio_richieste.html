@@ -54,7 +54,7 @@
   <h2>{{ f.get_tipo_display }}: {{ f.dipendente.nome_breve }}</h2>
   <p>Dal <b>{{ f.dal|date:'D j M' }}</b> al <b>{{ f.al|date:'D j M Y' }}</b> · {{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}</p>
   <p class="tenue piccolo">
-    {% if f.turni_lavoro %}Giorni in cui era in turno: {% for t in f.turni_lavoro %}{{ t.data|date:'D j' }} ({{ t.descrizione }}){% if not forloop.last %}, {% endif %}{% endfor %}.{% elif f.non_caricati < f.giorni %}Nei giorni già caricati non era in turno.{% endif %}
+    {% if f.turni_lavoro %}Giorni in cui era in turno: {% for t in f.turni_lavoro %}<span class="giorno-turno">{{ t.data|date:'D j' }} {% include 'turni/_pillola.html' %}</span>{% endfor %}{% elif f.non_caricati < f.giorni %}Nei giorni già caricati non era in turno.{% endif %}
     {% if f.non_caricati %} {{ f.non_caricati }} giorn{{ f.non_caricati|pluralize:'o,i' }} non {{ f.non_caricati|pluralize:'è,sono' }} ancora nei turni caricati: verranno segnati come ferie all'import.{% endif %}
   </p>
   {% if f.colleghi_assenti %}

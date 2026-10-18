@@ -10,12 +10,12 @@
   {% else %}
     <span class="home-turno">Turno non pubblicato</span>
   {% endif %}
-  {% if domani %}<span class="home-domani">Domani: <b>{{ domani.descrizione }}</b></span>{% endif %}
+  {% if domani %}<span class="home-domani">Domani: {% include 'turni/_pillola.html' with t=domani %}</span>{% endif %}
 </a>
 
 {% for e in extra %}
 <a class="home-extra" href="{% url 'turni:miei_turni' %}">
-  <b>Cercasi volontari</b> · {{ e.data|date:'l j'|capfirst }} · {{ e.descrizione }} <span>Rispondi ›</span>
+  <b>Cercasi volontari</b> · {{ e.data|date:'l j'|capfirst }} {% include 'turni/_pillola.html' with t=e %} <span>Rispondi ›</span>
 </a>
 {% endfor %}
 

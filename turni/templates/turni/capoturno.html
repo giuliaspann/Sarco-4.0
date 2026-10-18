@@ -7,9 +7,9 @@
     <h1>Verifica · {{ giorno|date:'D j M' }}</h1>
     <a class="freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno successivo">›</a>
   </div>
-  <div class="filtri">
+  <div class="filtri filtri-fasce">
     <a href="?giorno={{ giorno|date:'Y-m-d' }}" class="{% if not fascia %}attivo{% endif %}">Tutti</a>
-    {% for f, nome in fasce %}<a href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}" class="{% if fascia == f %}attivo{% endif %}">{{ nome }}</a>{% endfor %}
+    {% for f, nome, classe in fasce %}<a href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}" class="{{ classe }}{% if fascia == f %} scelto{% endif %}">{{ nome }}</a>{% endfor %}
   </div>
 </div>
 
@@ -30,7 +30,7 @@
   <summary>
     <span>
       <strong>{{ t.dipendente.nome_breve }}</strong>
-      <span class="tenue piccolo">{{ t.descrizione }}</span>
+      <span>{% include 'turni/_pillola.html' %}</span>
     </span>
     <span class="conteggio {% if t.n_voci and t.n_fatte == t.n_voci %}completo{% elif t.n_da_verificare %}da-vedere{% endif %}">
       {{ t.n_fatte }}/{{ t.n_voci }}
