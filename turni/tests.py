@@ -441,3 +441,31 @@ class PostazioniOrariTest(TestCase):
         self.assertEqual(Turno(fascia=Fascia.GIORNALIERO).orario_pulizie, '17:00–17:30')
         self.assertEqual(Turno(fascia=Fascia.NOTTE).descrizione_fascia, 'Notturno')
         self.assertEqual(Turno(fascia=Fascia.RIPOSO).orario, '')
+
+
+class MansioniTest(TestCase):
+    def test_lista_e_piu_mansioni(self):
+        from .mansioni import LISTA, mansione_per
+        from . import richieste as svc
+
+        self.assertEqual(len(LISTA), 38)
+        self.assertEqual(mansione_per('GIACALONE VINCENZO'), 'OPERAIO,PALISTA')
+        self.assertEqual(mansione_per('SPANO MAURO'), 'OPERAIO')  # scritto diverso nel file
+        self.assertEqual(mansione_per('ALAGNA PIETRO'), 'OPERAIO')
+        self.assertEqual(mansione_per('ALAGNA GIUSEPPE'), 'AUTISTA')
+        self.assertIsNone(mansione_per('ROSSI MARIO'))
+
+        # chi arriva dall'Excel prende la mansione dalla lista
+        righe = [('INGRASSIA PAOLO', 'G', 'G', 'G', 'G', 'G', 'RIP', 'RIP')]
+        importa.salva_settimana(importa.leggi_file(file_turni(righe), LUNEDI))
+        d = Dipendente.objects.get(nome='INGRASSIA PAOLO')
+        self.assertEqual(d.mansioni, ['AUTISTA'])
+
+        # più mansioni dalla pagina Dipendenti
+        get_user_model().objects.create_user('uff', password='x', is_staff=True)
+        self.client.login(username='uff', password='x')
+        self.client.post(reverse('turni:dipendenti'), {'dipendente': d.pk, 'azione': 'mansione', 'mansione': ['AUTISTA', 'MANUTENTORE']})
+        d.refresh_from_db()
+        self.assertEqual(d.mansioni_display, 'Autista e Manutentore')
+        self.assertTrue(svc.ha_mansione(d, 'MANUTENTORE'))
+        self.assertFalse(svc.ha_mansione(d, 'PALISTA'))

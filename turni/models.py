@@ -59,6 +59,8 @@ class Mansione(models.TextChoices):
     MANUTENTORE = 'MANUTENTORE', 'Manutentore'
     PALISTA = 'PALISTA', 'Palista'
     AUTISTA = 'AUTISTA', 'Autista'
+    PIAZZALE = 'PIAZZALE', 'Piazzale'
+    UFFICIO = 'UFFICIO', 'Ufficio'
 
 
 class Dipendente(models.Model):
@@ -69,7 +71,8 @@ class Dipendente(models.Model):
     attivo = models.BooleanField(default=True)
     tutor = models.CharField('tutor (apprendisti)', max_length=200, blank=True)
     # Il file turni non la dice: la imposta l'ufficio (serve per cercare manutentori o palisti)
-    mansione = models.CharField(max_length=12, choices=Mansione.choices, default=Mansione.OPERAIO)
+    # una o più, separate da virgola (es. "OPERAIO,PALISTA")
+    mansione = models.CharField(max_length=80, default=Mansione.OPERAIO)
     # Il PIN è corto: dopo troppi tentativi sbagliati l'accesso si blocca per un po'
     tentativi_falliti = models.PositiveSmallIntegerField(default=0, editable=False)
     bloccato_fino = models.DateTimeField(null=True, blank=True, editable=False)
@@ -80,6 +83,15 @@ class Dipendente(models.Model):
 
     def __str__(self):
         return self.nome
+
+    @property
+    def mansioni(self):
+        return [m for m in self.mansione.split(',') if m]
+
+    @property
+    def mansioni_display(self):
+        nomi = dict(Mansione.choices)
+        return ' e '.join(nomi.get(m, m) for m in self.mansioni)
 
     @property
     def nome_breve(self):
@@ -453,7 +465,7 @@ class TurnoExtra(models.Model):
     # chi può offrirsi: vuoto = chiunque
     ruolo = models.CharField(
         'chi serve', max_length=12, blank=True,
-        choices=Mansione.choices,
+        choices=[c for c in Mansione.choices if c[0] != Mansione.UFFICIO],
     )
     posti = models.PositiveSmallIntegerField(default=1)
     nota = models.CharField(max_length=300, blank=True)

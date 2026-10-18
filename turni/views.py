@@ -521,10 +521,13 @@ def dipendenti(request):
         if azione == 'mansione':
             from .models import Mansione
 
-            if request.POST.get('mansione') in Mansione.values:
-                dip.mansione = request.POST['mansione']
+            scelte = [m for m in request.POST.getlist('mansione') if m in Mansione.values]
+            if scelte:
+                dip.mansione = ','.join(scelte)
                 dip.save(update_fields=['mansione'])
-                messages.success(request, f'{dip.nome_breve}: {dip.get_mansione_display().lower()}.')
+                messages.success(request, f'{dip.nome_breve}: {dip.mansioni_display.lower()}.')
+            else:
+                messages.error(request, 'Serve almeno una mansione.')
             return redirect('turni:dipendenti')
         if azione == 'turni_prova':
             if dip.turni.exists():

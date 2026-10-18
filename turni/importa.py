@@ -245,7 +245,9 @@ def salva_settimana(letta, utente=None, nome_file=''):
         for riga in letta.righe:
             dip = trova_dipendente(riga.nome, dipendenti)
             if dip is None:
-                dip = Dipendente.objects.create(nome=riga.nome)
+                from .mansioni import mansione_per
+
+                dip = Dipendente.objects.create(nome=riga.nome, mansione=mansione_per(riga.nome) or 'OPERAIO')
                 dipendenti.append(dip)
                 nuovi.append(dip.nome)
             visti.add(dip.pk)

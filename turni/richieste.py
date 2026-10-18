@@ -170,7 +170,7 @@ def ha_mansione(dipendente, ruolo):
     da palista dell'ultimo mese, così l'ufficio non deve impostarli tutti a mano."""
     from .models import Mansione, Postazione
 
-    if not ruolo or dipendente.mansione == ruolo:
+    if not ruolo or ruolo in dipendente.mansioni:
         return True
     if ruolo == Mansione.PALISTA:
         da = timezone.localdate() - timedelta(days=31)

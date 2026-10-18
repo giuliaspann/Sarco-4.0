@@ -37,7 +37,7 @@ document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
 });
 
 // Menu a tendina che salvano subito appena si sceglie
-document.querySelectorAll('select[data-invia]').forEach(s => s.addEventListener('change', () => s.form.submit()));
+document.querySelectorAll('select[data-invia], input[data-invia]').forEach(s => s.addEventListener('change', () => s.form.submit()));
 
 // Azioni irreversibili: chiedi conferma (il click arriva prima dell'invio del modulo)
 document.querySelectorAll('[data-conferma]').forEach(b => {

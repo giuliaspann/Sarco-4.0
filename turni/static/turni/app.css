@@ -711,3 +711,10 @@ p.orario { margin: 2px 0 6px; }
 .legenda small { color: var(--tenue); font-size: .7rem; }
 .ora-pulizie { margin: 6px 0 0; padding: 8px 12px; border-radius: 10px; background: #fff6ec; border: 1.5px solid #ff7a00; color: var(--testo); font-size: .88rem; }
 @media (prefers-color-scheme: dark) { .ora-pulizie { background: #33240f; } }
+
+/* mansioni del dipendente: caselle da spuntare (anche più di una) */
+.mansioni-scelta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.chip-mansione { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 0; padding: 6px 4px; border-radius: 8px;
+  border: 1.5px solid var(--bordo); background: var(--carta); font-size: .78rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.chip-mansione input { position: absolute; opacity: 0; pointer-events: none; }
+.chip-mansione:has(input:checked) { background: var(--testo); border-color: var(--testo); color: #fff; }

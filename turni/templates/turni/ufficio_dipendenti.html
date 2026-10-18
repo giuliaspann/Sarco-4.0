@@ -24,9 +24,9 @@
       </span>
       <form method="post" class="mansione-riga">{% csrf_token %}
         <input type="hidden" name="dipendente" value="{{ d.pk }}"><input type="hidden" name="azione" value="mansione">
-        <label>Mansione
-          <select name="mansione" data-invia>{% for v, nome in mansioni %}<option value="{{ v }}" {% if d.mansione == v %}selected{% endif %}>{{ nome }}</option>{% endfor %}</select>
-        </label>
+        <div class="mansioni-scelta">
+          {% for v, nome in mansioni %}<label class="chip-mansione"><input type="checkbox" name="mansione" value="{{ v }}" data-invia {% if v in d.mansioni %}checked{% endif %}>{{ nome }}</label>{% endfor %}
+        </div>
       </form>
       <form method="post" class="azioni-dipendente">{% csrf_token %}
         <input type="hidden" name="dipendente" value="{{ d.pk }}">
