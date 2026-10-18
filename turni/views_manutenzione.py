@@ -16,7 +16,7 @@ from django.utils import timezone
 from . import manutenzione as mn
 from .accessi import qr_svg
 from .esempi_manutenzione import togli
-from .models import Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
+from .models import FermoImpianto, Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
 
 # prima si sceglie il gruppo, poi il luogo
 GRUPPI = [
@@ -91,6 +91,7 @@ def manutenzione(request):
         badge_ordini += OrdineRicambio.objects.filter(stato=S.APPROVATO).count()
     entro = timezone.localdate() + timedelta(days=3)
     return render(request, 'turni/mn_home.html', {
+        'fermi_in_corso': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
         'aperti': aperti.count(),
         'ferme': aperti.filter(macchina_ferma=True, tipo=Intervento.Tipo.GUASTO).count(),
         'badge_interventi': badge_interventi, 'badge_ordini': badge_ordini,
@@ -441,3 +442,93 @@ def etichette(request):
         m.qr = qr_svg(f'{base}?macchina={m.pk}')
     return render(request, 'turni/mn_etichette.html', {'elenco': elenco, **filtro, 'mostra_gruppi': True})
 
+
+
+CAUSE_ICONE = {'NASTRO': '➰', 'TRAMOGGIA': '🧱', 'MACCHINA': '⚙️', 'ALTRO': '❓'}
+
+
+def _quando(valore):
+    """Ora inserita a mano (datetime-local); mai nel futuro, al massimo 2 giorni fa."""
+    from datetime import datetime
+
+    adesso = timezone.now()
+    try:
+        d = timezone.make_aware(datetime.fromisoformat(valore)) if valore else adesso
+    except (ValueError, TypeError):
+        return adesso
+    return min(max(d, adesso - timedelta(days=2)), adesso)
+
+
+@login_required
+def nuovo_fermo(request):
+    impianti = dict(FermoImpianto.IMPIANTI)
+    impianto = request.POST.get('impianto') or request.GET.get('impianto') or ''
+    if impianto not in impianti:
+        return render(request, 'turni/mn_fermo_nuovo.html', {
+            'impianti': [(v, n, ICONE_LUOGHI[v], FermoImpianto.objects.filter(impianto=v, ripartito_il__isnull=True).exists())
+                         for v, n in FermoImpianto.IMPIANTI],
+        })
+    macchine = Macchina.objects.filter(attiva=True, luogo=impianto)
+    if request.method == 'POST':
+        causa = request.POST.get('causa')
+        scelta = request.POST.get('macchina') or ''
+        macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
+        if causa not in FermoImpianto.Causa.values:
+            messages.error(request, 'Scegli la causa del fermo.')
+        else:
+            try:
+                f = mn.segnala_fermo(request.user, impianto, causa, macchina,
+                                     (request.POST.get('descrizione') or '').strip()[:500],
+                                     _quando(request.POST.get('dal')), request.FILES.get('foto'))
+            except (ValueError, OSError):
+                messages.error(request, 'La foto non è valida: riprova.')
+            else:
+                messages.success(request, 'Fermo segnalato: responsabile, capo turno e manutentori sono avvisati.')
+                return redirect('turni:fermo', f.pk)
+    return render(request, 'turni/mn_fermo_nuovo.html', {
+        'impianto': impianto, 'nome_impianto': impianti[impianto], 'macchine': macchine,
+        'cause': [(v, n, CAUSE_ICONE[v]) for v, n in FermoImpianto.Causa.choices],
+        'adesso': timezone.localtime().strftime('%Y-%m-%dT%H:%M'),
+    })
+
+
+@login_required
+def fermo(request, fermo_id):
+    f = get_object_or_404(FermoImpianto.objects.select_related('macchina', 'intervento', 'segnalato_da__dipendente', 'ripartenza_da__dipendente'), pk=fermo_id)
+    puo = mn.puo_far_ripartire(request.user, f)
+    if request.method == 'POST' and f.in_corso and puo:
+        quando = _quando(request.POST.get('quando'))
+        if quando < f.fermo_dal:
+            messages.error(request, "L'ora di ripartenza è prima dell'inizio del fermo.")
+        else:
+            try:
+                mn.fai_ripartire(request.user, f, quando, (request.POST.get('sistemazione') or '').strip()[:500], request.FILES.get('foto'))
+            except (ValueError, OSError):
+                messages.error(request, 'La foto non è valida: riprova.')
+            else:
+                messages.success(request, f'{f.get_impianto_display()} ripartito: fermo durato {f.durata}.')
+        return redirect('turni:fermo', f.pk)
+    return render(request, 'turni/mn_fermo.html', {
+        'f': f, 'puo': puo, 'adesso': timezone.localtime().strftime('%Y-%m-%dT%H:%M'),
+    })
+
+
+@login_required
+def fermi(request):
+    """Storico dei fermi con le ore perse per impianto negli ultimi 30 giorni."""
+    da = timezone.now() - timedelta(days=30)
+    recenti = list(FermoImpianto.objects.filter(fermo_dal__gte=da).select_related('macchina', 'segnalato_da__dipendente', 'ripartenza_da__dipendente'))
+    totali = []
+    for v, nome in FermoImpianto.IMPIANTI:
+        minuti = sum(f.minuti for f in recenti if f.impianto == v)
+        totali.append((nome, sum(1 for f in recenti if f.impianto == v), f'{minuti // 60} h {minuti % 60:02d}'))
+    return render(request, 'turni/mn_fermi.html', {'recenti': recenti, 'totali': totali})
+
+
+@login_required
+def foto_fermo(request, fermo_id, quale):
+    f = get_object_or_404(FermoImpianto, pk=fermo_id)
+    file = f.foto if quale == 'fermo' else f.foto_ripartenza if quale == 'ripartenza' else None
+    if not file:
+        raise Http404
+    return FileResponse(file.open('rb'), content_type='image/jpeg')

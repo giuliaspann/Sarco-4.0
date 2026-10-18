@@ -5,7 +5,20 @@
   <h1>Manutenzione</h1>
 </div>
 
+{% for f in fermi_in_corso %}
+<a class="fermo-banner" href="{% url 'turni:fermo' f.pk %}">
+  <span class="fermo-luce"></span>
+  <span><b>{{ f.get_impianto_display }} fermo da {{ f.durata }}</b><small>{{ f.get_causa_display }}{% if f.macchina %} · {{ f.macchina.nome }}{% endif %}</small></span>
+  <em>Ripartito?</em>
+</a>
+{% endfor %}
+
 <div class="home-griglia">
+  <a class="home-tasto tasto-fermo" href="{% url 'turni:nuovo_fermo' %}">
+    <span class="home-icona">⛔</span>
+    <b>Fermo impianto</b><small>Impianto 1, Impianto 2, sabbia, metalli</small>
+  </a>
+
   <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
     <span class="home-icona">⚠️</span>
     <b>Segnala un guasto</b><small>Foto e due righe, arriva subito</small>
@@ -37,6 +50,11 @@
     {% if badge_ordini %}<i class="home-badge">{{ badge_ordini }}</i>{% endif %}
     <span class="home-icona">📦</span>
     <b>Ordini pezzi</b><small>{% if ordini_aperti %}{{ ordini_aperti }} in corso{% else %}Nessun ordine in corso{% endif %}</small>
+  </a>
+
+  <a class="home-tasto" href="{% url 'turni:fermi' %}">
+    <span class="home-icona">⏱️</span>
+    <b>Storico fermi impianto</b><small>Quante ore si è fermato ogni impianto</small>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:programmate' %}">

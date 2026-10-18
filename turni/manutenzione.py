@@ -18,7 +18,7 @@ from PIL import Image, ImageOps
 
 from . import push
 from .models import (
-    Dipendente, EventoIntervento, Intervento, ManutenzioneProgrammata, Mansione, OrdineRicambio, Turno,
+    Dipendente, EventoIntervento, FermoImpianto, Intervento, ManutenzioneProgrammata, Mansione, OrdineRicambio, Turno,
 )
 from .pulizie import MAX_FOTO
 
@@ -307,3 +307,53 @@ def da_fare_per(utente):
         n += OrdineRicambio.objects.filter(stato=OrdineRicambio.Stato.APPROVATO).count()
     return n
 
+
+
+# ---------------------------------------------------------------- fermo impianto
+
+
+def chi_avvisare_fermo():
+    in_turno, _ = manutentori_di_turno()
+    return responsabili() + capiturno_oggi() + [d.utente_id for d in in_turno]
+
+
+def puo_far_ripartire(utente, fermo):
+    # chi è in impianto vede ripartire le macchine: può segnarlo chiunque, resta scritto chi l'ha fatto
+    return utente.is_authenticated
+
+
+def segnala_fermo(utente, impianto, causa, macchina, descrizione, dal, foto=None):
+    f = FermoImpianto(impianto=impianto, causa=causa, macchina=macchina, descrizione=descrizione,
+                      fermo_dal=dal, segnalato_da=utente)
+    dati = comprimi_foto(foto).read() if foto else None
+    if dati:
+        f.foto.save('fermo.jpg', ContentFile(dati), save=False)
+    if macchina:
+        # la macchina che ha fermato l'impianto diventa subito un intervento urgente per la manutenzione
+        i = Intervento.objects.create(
+            macchina=macchina, descrizione=f'Fermo {f.get_impianto_display()}: {f.get_causa_display()}'
+            + (f'. {descrizione}' if descrizione else ''),
+            macchina_ferma=True, priorita=Intervento.Priorita.URGENTE, segnalata_da=utente, segnalata_il=dal,
+        )
+        if dati:
+            i.foto_guasto.save('guasto.jpg', ContentFile(dati), save=True)
+        evento(i, utente, f'Guasto segnalato con il fermo di {f.get_impianto_display()}')
+        f.intervento = i
+    f.save()
+    avvisa(chi_avvisare_fermo(), utente, f'⛔ {f.get_impianto_display()} fermo',
+           f.get_causa_display() + (f' · {macchina.nome}' if macchina else '') + (f': {descrizione}' if descrizione else ''),
+           reverse('turni:fermo', args=[f.pk]))
+    return f
+
+
+def fai_ripartire(utente, f, quando, sistemazione, foto=None):
+    f.ripartito_il = quando
+    f.ripartenza_da = utente
+    f.sistemazione = sistemazione
+    if foto:
+        f.foto_ripartenza.save('ripartenza.jpg', comprimi_foto(foto), save=False)
+    f.save()
+    if f.intervento_id:
+        evento(f.intervento, utente, f'{f.get_impianto_display()} ripartito dopo {f.durata}' + (f': {sistemazione}' if sistemazione else ''))
+    avvisa(chi_avvisare_fermo() + [f.segnalato_da_id], utente, f'✅ {f.get_impianto_display()} ripartito',
+           f'Fermo durato {f.durata}' + (f' · {sistemazione}' if sistemazione else ''), reverse('turni:fermo', args=[f.pk]))

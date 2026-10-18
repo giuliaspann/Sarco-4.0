@@ -1,0 +1,44 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Fermo {{ f.get_impianto_display }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
+<div class="intestazione">
+  <p class="occhiello">Fermo impianto</p>
+  <h1>{{ f.get_impianto_display }}</h1>
+  {% if f.in_corso %}<span class="mn-stato ferma">Fermo da {{ f.durata }}</span>{% else %}<span class="mn-stato ok">Ripartito · fermo {{ f.durata }}</span>{% endif %}
+</div>
+
+<section class="scheda">
+  <p class="mn-descrizione"><b>{{ f.get_causa_display }}</b>{% if f.macchina %} · <a href="{% url 'turni:macchina' f.macchina.pk %}">{{ f.macchina.nome }}</a>{% endif %}</p>
+  {% if f.descrizione %}<p>{{ f.descrizione }}</p>{% endif %}
+  <dl class="mn-chi-scheda">
+    <div><dt>⛔ Fermo dalle</dt><dd>{{ f.fermo_dal|date:'H:i' }} <small>{{ f.fermo_dal|date:'D j M' }}</small></dd></div>
+    <div><dt>📣 Segnalato da</dt><dd>{{ f.chi_ha_segnalato|default:'—' }}</dd></div>
+    {% if not f.in_corso %}
+    <div><dt>✅ Ripartito alle</dt><dd>{{ f.ripartito_il|date:'H:i' }} <small>{{ f.ripartito_il|date:'D j M' }}</small></dd></div>
+    <div><dt>🔧 Fatto ripartire da</dt><dd>{{ f.chi_ha_fatto_ripartire }}</dd></div>
+    {% endif %}
+  </dl>
+  {% if f.sistemazione %}<div class="mn-fatto"><b>Cosa è stato sistemato</b><p>{{ f.sistemazione }}</p></div>{% endif %}
+  {% if f.foto or f.foto_ripartenza %}
+  <div class="mn-foto-coppia">
+    {% if f.foto %}<figure><img src="{% url 'turni:foto_fermo' f.pk 'fermo' %}" alt="Foto del fermo" loading="lazy"><figcaption>Fermo</figcaption></figure>{% endif %}
+    {% if f.foto_ripartenza %}<figure><img src="{% url 'turni:foto_fermo' f.pk 'ripartenza' %}" alt="Foto dopo la sistemazione" loading="lazy"><figcaption>Sistemato</figcaption></figure>{% endif %}
+  </div>
+  {% endif %}
+  {% if f.intervento %}<a class="cb-link" href="{% url 'turni:intervento' f.intervento.pk %}">🛠️ Intervento sulla macchina: {{ f.intervento.etichetta_stato|lower }}</a>{% endif %}
+</section>
+
+{% if f.in_corso and puo %}
+<form method="post" enctype="multipart/form-data" class="scheda mn-azione mn-form">{% csrf_token %}
+  <h2>L'impianto è ripartito?</h2>
+  <label>Ripartito alle<input type="datetime-local" name="quando" value="{{ adesso }}"></label>
+  <label>Cosa è stato sistemato (facoltativo)<textarea name="sistemazione" rows="2" maxlength="500" placeholder="Es. giuntato il nastro, sbloccata la tramoggia"></textarea></label>
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+    <span>📷 Foto (facoltativa)</span>
+  </label>
+  <button class="bottone pieno piena-larghezza">✅ Sì, è ripartito</button>
+</form>
+{% endif %}
+{% endblock %}

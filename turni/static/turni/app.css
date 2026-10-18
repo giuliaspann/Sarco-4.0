@@ -1134,3 +1134,32 @@ details.scheda summary { cursor: pointer; }
 .cb-motivo textarea { width: 100%; box-sizing: border-box; margin-top: 4px; }
 .cb-invia { min-height: 54px; font-size: 1.05rem; }
 @media (prefers-color-scheme: dark) { .cb-data { background: #2a3942; } }
+
+/* fermo impianto */
+.tasto-fermo { background: #1f2937; border-color: #1f2937; }
+.tasto-fermo .home-icona { background: #374151; }
+.tasto-fermo b { color: #fff; }
+.tasto-fermo small { color: #d1d5db; }
+.tasto-fermo::after { color: #9ca3af; }
+.fermo-banner { display: flex; align-items: center; gap: 12px; padding: 14px; margin-bottom: 10px; border-radius: 16px;
+  background: #b3261e; color: #fff; text-decoration: none; box-shadow: 0 2px 8px rgba(179,38,30,.3); }
+.fermo-banner > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
+.fermo-banner small { opacity: .9; font-size: .8rem; }
+.fermo-banner em { font-style: normal; font-weight: 800; font-size: .8rem; background: #fff; color: #b3261e; padding: 6px 10px; border-radius: 99px; white-space: nowrap; }
+.fermo-luce { width: 14px; height: 14px; border-radius: 50%; background: #fff; flex: none; animation: lampeggia 1.2s infinite; }
+@keyframes lampeggia { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .fermo-luce { animation: none; } }
+.fermo-cause { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.fermo-cause label { position: relative; margin: 0; }
+.fermo-cause input { position: absolute; opacity: 0; }
+.fermo-cause span { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px; min-height: 84px; justify-content: center;
+  border-radius: 14px; border: 2px solid var(--bordo); background: var(--carta); font-weight: 700; font-size: .9rem; text-align: center; }
+.fermo-cause i { font-style: normal; font-size: 1.6rem; }
+.fermo-cause input:checked + span { border-color: #b3261e; background: #fdecea; color: #b3261e; }
+.fermo-cause input:focus-visible + span { outline: 2px solid var(--primario); }
+.bottone-fermo { background: #b3261e; border-color: #b3261e; color: #fff; min-height: 54px; font-size: 1.05rem; }
+@media (prefers-color-scheme: dark) {
+  .tasto-fermo { background: #0b0f14; border-color: #374151; }
+  .fermo-cause input:checked + span { background: #3a1414; color: #fecaca; }
+}
+.mn-foto span { white-space: normal; text-align: center; }

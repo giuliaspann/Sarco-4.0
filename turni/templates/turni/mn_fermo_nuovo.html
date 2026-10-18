@@ -1,0 +1,45 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Fermo impianto{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  {% if impianto %}<a class="tasto-indietro" href="{% url 'turni:nuovo_fermo' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro impianto</a>
+  {% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
+  <h1>Fermo impianto</h1>
+</div>
+
+{% if not impianto %}
+  <h2 class="rq-sezione">Quale impianto si è fermato?</h2>
+  <div class="sg-gruppi">
+    {% for v, nome, icona, gia in impianti %}
+    <a href="?impianto={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{% if gia %}⛔ Già segnalato fermo{% else %}In funzione{% endif %}</small></a>
+    {% endfor %}
+  </div>
+{% else %}
+  <form method="post" enctype="multipart/form-data" class="mn-form">{% csrf_token %}
+    <input type="hidden" name="impianto" value="{{ impianto }}">
+    <p class="cb-giorno">⛔ {{ nome_impianto }}</p>
+    <h2 class="rq-sezione">Perché si è fermato?</h2>
+    <div class="fermo-cause">
+      {% for v, nome, icona in cause %}
+      <label><input type="radio" name="causa" value="{{ v }}" required><span><i>{{ icona }}</i>{{ nome }}</span></label>
+      {% endfor %}
+    </div>
+    {% if macchine %}
+    <label>Quale macchina? (se lo sai)
+      <select name="macchina">
+        <option value="">Non so / nessuna in particolare</option>
+        {% for m in macchine %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}
+      </select>
+    </label>
+    <p class="tenue piccolo">Se scegli la macchina, si apre anche l'intervento per il manutentore.</p>
+    {% endif %}
+    <label>Cosa è successo (facoltativo)<textarea name="descrizione" rows="2" maxlength="500" placeholder="Es. nastro strappato vicino al vaglio"></textarea></label>
+    <label>Fermo da<input type="datetime-local" name="dal" value="{{ adesso }}"></label>
+    <label class="bottone foto-btn mn-foto">
+      <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+      <span>📷 Foto (facoltativa)</span>
+    </label>
+    <button class="bottone piena-larghezza bottone-fermo">⛔ Segnala il fermo</button>
+  </form>
+{% endif %}
+{% endblock %}

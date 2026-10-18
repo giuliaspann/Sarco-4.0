@@ -241,3 +241,58 @@ class ManutenzioneTest(TestCase):
         self.assertFalse(Macchina.objects.exists())
         self.assertFalse(Ricambio.objects.exists())
 
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class FermoImpiantoTest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.operaio = User.objects.create_user('operaio', password='123456')
+        Dipendente.objects.create(nome='ROSSI MARCO', utente=self.operaio)
+        self.marchese = User.objects.create_user('marchese', password='123456')
+        d = Dipendente.objects.get(nome='MARCHESE LEONARDO')
+        d.utente = self.marchese
+        d.save()
+        IscrizionePush.objects.create(utente=self.marchese, endpoint='https://fcm.googleapis.com/fcm/send/marchese', p256dh='k', auth='a')
+        patcher = mock.patch('pywebpush.webpush')
+        self.webpush = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_fermo_e_ripartenza(self):
+        from .models import FermoImpianto
+
+        nastro = Macchina.objects.get(codice='IMP1-NAS1')
+        self.client.login(username='operaio', password='123456')
+        self.assertContains(self.client.get(reverse('turni:nuovo_fermo')), 'Impianto 1')
+        r = self.client.get(reverse('turni:nuovo_fermo'), {'impianto': 'IMP1'})
+        self.assertIn(nastro, r.context['macchine'])
+        self.client.post(reverse('turni:nuovo_fermo'), {
+            'impianto': 'IMP1', 'causa': 'NASTRO', 'macchina': nastro.pk, 'descrizione': 'strappato', 'foto': foto(),
+        })
+        f = FermoImpianto.objects.get()
+        self.assertTrue(f.in_corso)
+        self.assertEqual(f.chi_ha_segnalato, 'Rossi Marco')
+        # la macchina diventa un intervento urgente con la stessa foto
+        self.assertEqual((f.intervento.macchina, f.intervento.priorita, f.intervento.macchina_ferma), (nastro, 4, True))
+        self.assertTrue(f.intervento.foto_guasto)
+        self.assertEqual(self.webpush.call_count, 1)  # il responsabile manutenzione
+        self.assertContains(self.client.get(reverse('turni:manutenzione')), 'Impianto 1 fermo da')
+
+        # chi ha segnalato può segnare la ripartenza
+        self.client.post(reverse('turni:fermo', args=[f.pk]), {'sistemazione': 'giuntato il nastro'})
+        f.refresh_from_db()
+        self.assertFalse(f.in_corso)
+        self.assertEqual((f.sistemazione, f.chi_ha_fatto_ripartire), ('giuntato il nastro', 'Rossi Marco'))
+        self.assertNotContains(self.client.get(reverse('turni:manutenzione')), 'fermo da')
+        self.assertContains(self.client.get(reverse('turni:fermi')), 'Rottura nastro')
+
+    def test_senza_causa_non_si_segnala_e_ora_non_nel_futuro(self):
+        from .models import FermoImpianto
+
+        self.client.login(username='operaio', password='123456')
+        self.client.post(reverse('turni:nuovo_fermo'), {'impianto': 'SABBIA'})
+        self.assertFalse(FermoImpianto.objects.exists())
+        self.client.post(reverse('turni:nuovo_fermo'), {'impianto': 'SABBIA', 'causa': 'TRAMOGGIA', 'dal': '2099-01-01T10:00'})
+        f = FermoImpianto.objects.get()
+        self.assertLessEqual(f.fermo_dal, timezone.now())
+        self.assertIsNone(f.intervento)

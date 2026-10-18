@@ -935,3 +935,58 @@ class ManutenzioneProgrammata(models.Model):
     @property
     def righe_istruzioni(self):
         return [r.strip() for r in self.istruzioni.splitlines() if r.strip()]
+
+
+class FermoImpianto(models.Model):
+    """Interruzione di un intero impianto (es. rottura nastro, tramoggia bloccata) fino alla ripartenza."""
+
+    IMPIANTI = [('IMP1', 'Impianto 1'), ('IMP2', 'Impianto 2'), ('SABBIA', 'Sabbia'), ('METALLI', 'Metalli')]
+
+    class Causa(models.TextChoices):
+        NASTRO = 'NASTRO', 'Rottura nastro'
+        TRAMOGGIA = 'TRAMOGGIA', 'Blocco tramoggia'
+        MACCHINA = 'MACCHINA', 'Guasto a una macchina'
+        ALTRO = 'ALTRO', 'Altro guasto'
+
+    impianto = models.CharField(max_length=10, choices=IMPIANTI)
+    causa = models.CharField(max_length=10, choices=Causa.choices)
+    macchina = models.ForeignKey(Macchina, null=True, blank=True, on_delete=models.SET_NULL, related_name='fermi')
+    descrizione = models.CharField('cosa è successo', max_length=500, blank=True)
+    foto = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
+    fermo_dal = models.DateTimeField(default=timezone.now)
+    segnalato_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    intervento = models.ForeignKey(Intervento, null=True, blank=True, on_delete=models.SET_NULL, related_name='fermi')
+    ripartito_il = models.DateTimeField(null=True, blank=True)
+    ripartenza_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    sistemazione = models.CharField('cosa è stato sistemato', max_length=500, blank=True)
+    foto_ripartenza = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
+
+    class Meta:
+        verbose_name = 'fermo impianto'
+        verbose_name_plural = 'fermi impianto'
+        ordering = ['-fermo_dal']
+
+    def __str__(self):
+        return f'{self.get_impianto_display()} fermo dal {timezone.localtime(self.fermo_dal):%d/%m %H:%M}'
+
+    @property
+    def in_corso(self):
+        return self.ripartito_il is None
+
+    @property
+    def minuti(self):
+        fine = self.ripartito_il or timezone.now()
+        return max(0, int((fine - self.fermo_dal).total_seconds() // 60))
+
+    @property
+    def durata(self):
+        m = self.minuti
+        return f'{m // 60} h {m % 60:02d} min' if m >= 60 else f'{m} min'
+
+    @property
+    def chi_ha_segnalato(self):
+        return Intervento._nome(self.segnalato_da)
+
+    @property
+    def chi_ha_fatto_ripartire(self):
+        return Intervento._nome(self.ripartenza_da)
