@@ -123,3 +123,27 @@ class AvvisoTest(BaseTest):
         self.client.post(reverse('turni:ufficio_richieste'), {'avviso': avviso.pk})
         avviso.refresh_from_db()
         self.assertIsNotNone(avviso.visto_il)
+
+
+class RuoloExtraTest(BaseTest):
+    def test_richiesta_per_manutentore_e_palista(self):
+        from .models import Mansione
+
+        manut = TurnoExtra.objects.create(data=DOMENICA, fascia='1T', ruolo=Mansione.MANUTENTORE)
+        pala = TurnoExtra.objects.create(data=DOMENICA, fascia='1T', ruolo=Mansione.PALISTA)
+        # Drame non è manutentore né ha fatto il palista: vede nessuna delle due
+        self.assertEqual(svc.extra_per(self.drame), [])
+        with self.assertRaises(svc.RichiestaNonValida):
+            svc.offri(manut, self.drame)
+        # l'ufficio lo segna manutentore dalla pagina Dipendenti
+        get_user_model().objects.create_user('uff', password='x', is_staff=True)
+        self.client.login(username='uff', password='x')
+        self.client.post(reverse('turni:dipendenti'), {'dipendente': self.drame.pk, 'azione': 'mansione', 'mansione': 'MANUTENTORE'})
+        self.drame.refresh_from_db()
+        self.assertEqual([e.pk for e in svc.extra_per(self.drame)], [manut.pk])
+        # Crimi ha fatto il palista questa settimana: vede la richiesta per palista anche senza mansione impostata
+        Turno.objects.filter(dipendente=self.crimi, data=DOMENICA).update(fascia=Fascia.RIPOSO, postazione='')
+        self.assertEqual([e.pk for e in svc.extra_per(self.crimi)], [pala.pk])
+        svc.offri(pala, self.crimi)
+        svc.conferma_volontario(Disponibilita.objects.get(extra=pala))
+        self.assertEqual(Turno.objects.get(dipendente=self.crimi, data=DOMENICA).postazione, Postazione.PALISTA)

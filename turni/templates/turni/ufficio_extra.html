@@ -11,6 +11,10 @@
     <label>Giorno<input type="date" name="data" min="{{ oggi|date:'Y-m-d' }}" required></label>
     <label>Persone<input type="number" name="posti" min="1" max="20" value="1" inputmode="numeric"></label>
   </div>
+  <fieldset class="scegli-fascia scegli-ruolo"><legend>Chi serve</legend>
+    <label class="chip-fascia chip-ruolo"><input type="radio" name="ruolo" value="" checked>Chiunque</label>
+    {% for v, nome in ruoli %}<label class="chip-fascia chip-ruolo"><input type="radio" name="ruolo" value="{{ v }}">{{ nome }}</label>{% endfor %}
+  </fieldset>
   <fieldset class="scegli-fascia"><legend>Turno</legend>
     {% for v, nome, sigla, classe in fasce %}
       <label class="chip-fascia {{ classe }}"><input type="radio" name="fascia" value="{{ v }}" {% if forloop.first %}checked{% endif %} required>{{ nome }}</label>
@@ -27,7 +31,7 @@
 <section class="scheda {% if not e.chiusa %}extra{% endif %}">
   <p class="extra-titolo">{% if e.chiusa %}Chiusa{% elif e.mancano %}Mancano {{ e.mancano }} su {{ e.posti }}{% else %}Coperta{% endif %}</p>
   <h2 class="grande">{{ e.data|date:'l j F'|capfirst }}</h2>
-  <p>{% include 'turni/_pillola.html' with t=e %}</p>
+  <p>{% include 'turni/_pillola.html' with t=e %}{% if e.ruolo %} <span class="ruolo-cercato">Serve un {{ e.get_ruolo_display|lower }}</span>{% endif %}</p>
   {% if e.nota %}<p class="tenue piccolo">{{ e.nota }}</p>{% endif %}
   <ul class="elenco">
     {% for d in e.disponibilita.all %}

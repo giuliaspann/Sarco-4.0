@@ -15,7 +15,7 @@
 
 {% for e in extra %}
 <a class="home-extra" href="{% url 'turni:miei_turni' %}">
-  <b>Cercasi volontari</b> · {{ e.data|date:'l j'|capfirst }} {% include 'turni/_pillola.html' with t=e %} <span>Rispondi ›</span>
+  <b>{% if e.ruolo %}Cercasi {{ e.get_ruolo_display|lower }}{% else %}Cercasi volontari{% endif %}</b> · {{ e.data|date:'l j'|capfirst }} {% include 'turni/_pillola.html' with t=e %} <span>Rispondi ›</span>
 </a>
 {% endfor %}
 

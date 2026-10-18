@@ -309,8 +309,11 @@ def ufficio_extra(request):
                 postazione = request.POST.get('postazione', '')
                 if postazione not in Postazione.values:
                     postazione = ''
+                ruolo = request.POST.get('ruolo', '')
+                if ruolo not in dict(TurnoExtra._meta.get_field('ruolo').choices):
+                    ruolo = ''
                 TurnoExtra.objects.create(
-                    data=giorno, fascia=fascia, postazione=postazione, posti=posti,
+                    data=giorno, fascia=fascia, postazione=postazione, posti=posti, ruolo=ruolo,
                     nota=request.POST.get('nota', '')[:300], creata_da=request.user,
                 )
                 messages.success(request, 'Richiesta pubblicata: gli operai liberi quel giorno la vedono nei Turni.')
@@ -337,6 +340,7 @@ def ufficio_extra(request):
                 for v, nome in TurnoExtra._meta.get_field('fascia').choices
             ],
             'postazioni': Postazione.choices,
+            'ruoli': TurnoExtra._meta.get_field('ruolo').choices,
             'oggi': oggi,
         },
     )

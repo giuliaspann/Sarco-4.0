@@ -165,6 +165,19 @@ def ferie_approvate(dipendente, giorno):
 # ---------------------------------------------------------------- turni extra (volontari)
 
 
+def ha_mansione(dipendente, ruolo):
+    """Può rispondere a una richiesta per quel ruolo? I palisti si riconoscono anche dai turni
+    da palista dell'ultimo mese, così l'ufficio non deve impostarli tutti a mano."""
+    from .models import Mansione, Postazione
+
+    if not ruolo or dipendente.mansione == ruolo:
+        return True
+    if ruolo == Mansione.PALISTA:
+        da = timezone.localdate() - timedelta(days=31)
+        return dipendente.turni.filter(postazione=Postazione.PALISTA, data__gte=da).exists()
+    return False
+
+
 def extra_per(dipendente):
     """Richieste di volontari aperte che riguardano il dipendente: quelle dei giorni in cui
     non lavora già, più quelle a cui ha già risposto."""
@@ -179,7 +192,7 @@ def extra_per(dipendente):
     for e in aperte:
         mia = next((d for d in e.disponibilita.all() if d.dipendente_id == dipendente.pk), None)
         t = turni.get(e.data)
-        if mia or not (t and t.lavora):
+        if mia or (not (t and t.lavora) and ha_mansione(dipendente, e.ruolo)):
             e.mia = mia
             risultato.append(e)
     return risultato
@@ -190,6 +203,8 @@ def offri(extra, dipendente):
 
     if extra.chiusa or extra.data < timezone.localdate():
         raise RichiestaNonValida('Questa richiesta è già chiusa.')
+    if not ha_mansione(dipendente, extra.ruolo):
+        raise RichiestaNonValida(f'Questa richiesta è per un {extra.get_ruolo_display().lower()}.')
     Disponibilita.objects.get_or_create(extra=extra, dipendente=dipendente)
 
 
@@ -219,7 +234,7 @@ def conferma_volontario(disponibilita):
             dipendente=disponibilita.dipendente, data=extra.data, defaults={'settimana': settimana, 'fascia': extra.fascia}
         )
         turno.fascia = extra.fascia
-        turno.postazione = extra.postazione
+        turno.postazione = extra.postazione or ('PALISTA' if extra.ruolo == 'PALISTA' else '')
         turno.capoturno = False
         turno.codice = 'EXTRA'
         turno.nota_modifica = 'Turno extra (volontario)'

@@ -517,6 +517,14 @@ def dipendenti(request):
             return redirect('turni:dipendenti')
 
         dip = get_object_or_404(Dipendente, pk=request.POST.get('dipendente'))
+        if azione == 'mansione':
+            from .models import Mansione
+
+            if request.POST.get('mansione') in Mansione.values:
+                dip.mansione = request.POST['mansione']
+                dip.save(update_fields=['mansione'])
+                messages.success(request, f'{dip.nome_breve}: {dip.get_mansione_display().lower()}.')
+            return redirect('turni:dipendenti')
         if azione == 'turni_prova':
             if dip.turni.exists():
                 messages.error(request, f'{dip.nome_breve} ha già dei turni: i turni di prova servono solo a chi non ne ha.')
@@ -555,7 +563,9 @@ def dipendenti(request):
                 dip.utente.save(update_fields=['is_active'])
         return redirect('turni:dipendenti')
     elenco = Dipendente.objects.select_related('utente').annotate(n_turni=Count('turni')).order_by('-attivo', 'nome')
-    return render(request, 'turni/ufficio_dipendenti.html', {'elenco': elenco})
+    from .models import Mansione
+
+    return render(request, 'turni/ufficio_dipendenti.html', {'elenco': elenco, 'mansioni': Mansione.choices})
 
 
 # ---------------------------------------------------------------- app installabile

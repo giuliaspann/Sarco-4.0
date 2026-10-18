@@ -672,3 +672,13 @@ h2 .posto, h2.grande .posto { font-size: .95rem; padding: 3px 10px; }
 /* etichetta del turno più grande nei titoli */
 .pillola-titolo, h2 .pillola, .home-turno .pillola { font-size: 1rem; padding: 4px 12px; border-radius: 8px; }
 .home-turno .posto, h2 .posto { font-size: .95rem; padding: 3px 10px; }
+
+/* chi serve nei turni extra */
+.scegli-ruolo { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.chip-ruolo { background: var(--carta); color: var(--testo); border: 1.5px solid var(--bordo); justify-content: center; }
+.chip-ruolo:has(input:checked) { border-color: var(--testo); box-shadow: inset 0 0 0 2px var(--testo); font-weight: 700; }
+.ruolo-cercato { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--testo); color: #fff; font-size: .8rem; font-weight: 700; vertical-align: middle; }
+
+.mansione-riga { flex: 1 1 100%; }
+.mansione-riga label { display: flex; align-items: center; gap: 10px; margin: 0; font-size: .85rem; }
+.mansione-riga select { min-height: 38px; padding: 6px 10px; flex: 1; }

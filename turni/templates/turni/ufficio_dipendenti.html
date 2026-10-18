@@ -22,6 +22,12 @@
         <b>{{ d.nome_breve }}</b><br>
         <span class="tenue piccolo">{% if d.utente %}utente: {{ d.utente.username }}{% else %}nessun accesso{% endif %}{% if d.tutor %} · tutor: {{ d.tutor|title }}{% endif %}</span>
       </span>
+      <form method="post" class="mansione-riga">{% csrf_token %}
+        <input type="hidden" name="dipendente" value="{{ d.pk }}"><input type="hidden" name="azione" value="mansione">
+        <label>Mansione
+          <select name="mansione" data-invia>{% for v, nome in mansioni %}<option value="{{ v }}" {% if d.mansione == v %}selected{% endif %}>{{ nome }}</option>{% endfor %}</select>
+        </label>
+      </form>
       <form method="post" class="azioni-dipendente">{% csrf_token %}
         <input type="hidden" name="dipendente" value="{{ d.pk }}">
         {% if d.attivo %}<button class="bottone" name="azione" value="pin">{% if d.utente %}Nuovo PIN{% else %}Crea accesso{% endif %}</button>{% endif %}

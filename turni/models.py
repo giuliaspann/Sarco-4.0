@@ -31,6 +31,13 @@ class Postazione(models.TextChoices):
     PALISTA = 'PALISTA', 'Palista'
 
 
+class Mansione(models.TextChoices):
+    OPERAIO = 'OPERAIO', 'Operaio'
+    MANUTENTORE = 'MANUTENTORE', 'Manutentore'
+    PALISTA = 'PALISTA', 'Palista'
+    AUTISTA = 'AUTISTA', 'Autista'
+
+
 class Dipendente(models.Model):
     nome = models.CharField('nome come nel file turni', max_length=100, unique=True)
     utente = models.OneToOneField(
@@ -38,6 +45,8 @@ class Dipendente(models.Model):
     )
     attivo = models.BooleanField(default=True)
     tutor = models.CharField('tutor (apprendisti)', max_length=200, blank=True)
+    # Il file turni non la dice: la imposta l'ufficio (serve per cercare manutentori o palisti)
+    mansione = models.CharField(max_length=12, choices=Mansione.choices, default=Mansione.OPERAIO)
     # Il PIN è corto: dopo troppi tentativi sbagliati l'accesso si blocca per un po'
     tentativi_falliti = models.PositiveSmallIntegerField(default=0, editable=False)
     bloccato_fino = models.DateTimeField(null=True, blank=True, editable=False)
@@ -404,6 +413,11 @@ class TurnoExtra(models.Model):
         max_length=10, choices=[(f.value, f.label) for f in Fascia if f in FASCE_LAVORATIVE and f != Fascia.ALTRO]
     )
     postazione = models.CharField(max_length=10, choices=Postazione.choices, blank=True)
+    # chi può offrirsi: vuoto = chiunque
+    ruolo = models.CharField(
+        'chi serve', max_length=12, blank=True,
+        choices=Mansione.choices,
+    )
     posti = models.PositiveSmallIntegerField(default=1)
     nota = models.CharField(max_length=300, blank=True)
     chiusa = models.BooleanField(default=False)
