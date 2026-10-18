@@ -151,8 +151,9 @@ def miei_turni(request):
     )
 
 
-ORDINE_GRUPPI = [Postazione.IMP1, Postazione.IMP2, Postazione.PALISTA, Postazione.SUPERBI,
-                 Postazione.ANALISI, Postazione.MULINO, Postazione.BARROTTI]
+ORDINE_GRUPPI = [Postazione.IMP1, Postazione.IMP2, Postazione.METALLI, Postazione.SABBIA, Postazione.ANALISI,
+                 Postazione.PIAZZALE, Postazione.PALISTA, Postazione.AUTISTA, Postazione.MANUT,
+                 Postazione.SUPERBI, Postazione.MULINO, Postazione.BARROTTI, Postazione.UFFICIO]
 
 
 def nome_corto(dip):
@@ -188,7 +189,7 @@ def settimana_tutti(request):
         else:
             fasce = Counter(t.fascia for t in lavoro)
             chiave = fasce.most_common(1)[0][0] if fasce else 'zz'
-            titolo = {Fascia.GIORNALIERO: 'Giornalieri', Fascia.NOTTE: 'Notte'}.get(chiave, 'Altri')
+            titolo = {Fascia.GIORNALIERO: 'Giornalieri', Fascia.NOTTE: 'Notturno'}.get(chiave, 'Altri')
         celle = []
         for g in giorni:
             t = turni.get(g)

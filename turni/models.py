@@ -8,7 +8,7 @@ from django.utils import timezone
 class Fascia(models.TextChoices):
     MATTINA = '1T', '1° turno'
     POMERIGGIO = '2T', '2° turno'
-    NOTTE = 'N', 'Notte'
+    NOTTE = 'N', 'Notturno'
     GIORNALIERO = 'G', 'Giornaliero'
     RIPOSO = 'RIP', 'Riposo'
     FERIE = 'FERIE', 'Ferie'
@@ -29,6 +29,29 @@ class Postazione(models.TextChoices):
     MULINO = 'MULINO', 'Mulino'
     BARROTTI = 'BARROTTI', 'Barrotti'
     PALISTA = 'PALISTA', 'Palista'
+    METALLI = 'METALLI', 'Metalli'
+    SABBIA = 'SABBIA', 'Sabbia'
+    PIAZZALE = 'PIAZZALE', 'Piazzale'
+    AUTISTA = 'AUTISTA', 'Autista'
+    MANUT = 'MANUT', 'Manutentore'
+    UFFICIO = 'UFFICIO', 'Ufficio'
+
+
+# Orari dei turni (dal foglio dell'ufficio)
+ORARI = {
+    Fascia.MATTINA: '06:00–14:00',
+    Fascia.POMERIGGIO: '14:00–22:00',
+    Fascia.GIORNALIERO: '08:00–13:00 · 14:30–17:30',
+    Fascia.NOTTE: '22:00–06:00',
+}
+
+# Le pulizie si fanno negli ultimi 30 minuti del turno (il giornaliero a fine giornata)
+ORARI_PULIZIE = {
+    Fascia.MATTINA: '13:30–14:00',
+    Fascia.POMERIGGIO: '21:30–22:00',
+    Fascia.GIORNALIERO: '17:00–17:30',
+    Fascia.NOTTE: '05:30–06:00',
+}
 
 
 class Mansione(models.TextChoices):
@@ -155,6 +178,14 @@ class Turno(models.Model):
     def nome_postazione(self):
         return self.get_postazione_display() if self.lavora and self.postazione else ''
 
+    @property
+    def orario(self):
+        return ORARI.get(self.fascia, '') if self.lavora else ''
+
+    @property
+    def orario_pulizie(self):
+        return ORARI_PULIZIE.get(self.fascia, '') if self.lavora else ''
+
     SIGLE = {
         Fascia.MATTINA: '1T',
         Fascia.POMERIGGIO: '2T',
@@ -173,6 +204,12 @@ class Turno(models.Model):
         return self.SIGLE.get(self.fascia, '?')
 
     SIGLE_POSTAZIONE = {
+        Postazione.METALLI: 'MET.',
+        Postazione.SABBIA: 'SABB.',
+        Postazione.PIAZZALE: 'PIAZ.',
+        Postazione.AUTISTA: 'AUT.',
+        Postazione.MANUT: 'MAN.',
+        Postazione.UFFICIO: 'UFF.',
         Postazione.IMP1: 'IMP 1',
         Postazione.IMP2: 'IMP 2',
         Postazione.ANALISI: 'ANAL.',
@@ -450,6 +487,10 @@ class TurnoExtra(models.Model):
     @property
     def nome_postazione(self):
         return self.get_postazione_display() if self.postazione else ''
+
+    @property
+    def orario(self):
+        return ORARI.get(self.fascia, '')
 
     @property
     def classe_fascia(self):

@@ -7,10 +7,11 @@
   <span class="home-etichetta">{% if turno and turno.data != oggi %}Turno di stanotte{% else %}Oggi{% endif %}</span>
   {% if turno %}
     <span class="home-turno">{% include 'turni/_pillola.html' with t=turno %}</span>
+    {% if turno.orario %}<span class="orario">{{ turno.orario }}</span>{% endif %}
   {% else %}
     <span class="home-turno">Turno non pubblicato</span>
   {% endif %}
-  {% if domani %}<span class="home-domani">Domani: {% include 'turni/_pillola.html' with t=domani %}</span>{% endif %}
+  {% if domani %}<span class="home-domani">Domani: {% include 'turni/_pillola.html' with t=domani %}{% if domani.orario %} <span class="orario">{{ domani.orario }}</span>{% endif %}</span>{% endif %}
 </a>
 
 {% for e in extra %}
@@ -31,7 +32,7 @@
     {% if pulizie_da_fare %}<i class="home-badge">{{ pulizie_da_fare }}</i>{% endif %}
     <span class="home-icona">🧹</span>
     <b>Pulizie</b>
-    <small>{% if pulizie_da_fare %}{{ pulizie_da_fare }} da completare{% elif pulizie_da_fare == 0 %}Tutto completato{% else %}Fine turno: mezzi e impianto{% endif %}</small>
+    <small>{% if pulizie_da_fare %}{{ pulizie_da_fare }} da completare{% if turno.orario_pulizie %}, {{ turno.orario_pulizie }}{% endif %}{% elif pulizie_da_fare == 0 %}Tutto completato{% else %}Ultimi 30 minuti del turno{% endif %}</small>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:nuovo_cambio' %}">

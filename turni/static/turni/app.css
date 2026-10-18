@@ -704,3 +704,10 @@ h2 .posto, h2.grande .posto { font-size: .95rem; padding: 3px 10px; }
   .wa-solo-admin { background: #202c33; color: #8696a0; }
   .wa-spunta { background: #2a3942; }
 }
+
+/* orari dei turni */
+.orario { font-size: .9rem; font-weight: 700; color: var(--testo); font-variant-numeric: tabular-nums; }
+p.orario { margin: 2px 0 6px; }
+.legenda small { color: var(--tenue); font-size: .7rem; }
+.ora-pulizie { margin: 6px 0 0; padding: 8px 12px; border-radius: 10px; background: #fff6ec; border: 1.5px solid #ff7a00; color: var(--testo); font-size: .88rem; }
+@media (prefers-color-scheme: dark) { .ora-pulizie { background: #33240f; } }

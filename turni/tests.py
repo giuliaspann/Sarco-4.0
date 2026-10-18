@@ -420,3 +420,24 @@ class SettimanaTuttiTest(TestCase):
         io = next(x for x in gruppi['Impianto 1'] if x['io'])
         self.assertFalse(any(c['cambiabile'] for c in io['celle']))
         self.assertContains(r, f"collega={spano['dip'].pk}")
+
+
+class PostazioniOrariTest(TestCase):
+    def test_nuove_postazioni_e_orari(self):
+        casi = {
+            '1T-Metalli': (Fascia.MATTINA, Postazione.METALLI),
+            'G - Sabbia': (Fascia.GIORNALIERO, Postazione.SABBIA),
+            '2T/Piazzale': (Fascia.POMERIGGIO, Postazione.PIAZZALE),
+            'G-Autista': (Fascia.GIORNALIERO, Postazione.AUTISTA),
+            'N/Manutentore': (Fascia.NOTTE, Postazione.MANUT),
+            'G-Ufficio': (Fascia.GIORNALIERO, Postazione.UFFICIO),
+            'Notturno': (Fascia.NOTTE, ''),
+        }
+        for codice, atteso in casi.items():
+            c = importa.interpreta_codice(codice)
+            self.assertEqual((c.fascia, c.postazione), atteso, codice)
+        t = Turno(fascia=Fascia.MATTINA, postazione=Postazione.METALLI)
+        self.assertEqual((t.orario, t.orario_pulizie, t.sigla_postazione), ('06:00–14:00', '13:30–14:00', 'MET.'))
+        self.assertEqual(Turno(fascia=Fascia.GIORNALIERO).orario_pulizie, '17:00–17:30')
+        self.assertEqual(Turno(fascia=Fascia.NOTTE).descrizione_fascia, 'Notturno')
+        self.assertEqual(Turno(fascia=Fascia.RIPOSO).orario, '')

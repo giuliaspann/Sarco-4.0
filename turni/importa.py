@@ -23,6 +23,12 @@ POSTAZIONI = [
     (r'MULINO', Postazione.MULINO),
     (r'BARROTTI', Postazione.BARROTTI),
     (r'PALISTA', Postazione.PALISTA),
+    (r'METALL', Postazione.METALLI),
+    (r'SABBIA', Postazione.SABBIA),
+    (r'PIAZZALE', Postazione.PIAZZALE),
+    (r'AUTIST', Postazione.AUTISTA),
+    (r'MANUT', Postazione.MANUT),
+    (r'UFFICIO', Postazione.UFFICIO),
 ]
 
 ASSENZE = {
@@ -31,6 +37,7 @@ ASSENZE = {
     'FERIE': Fascia.FERIE,
     'FESTA': Fascia.FESTA,
     'C.P.': Fascia.PERMESSO,
+    'NOTTURNO': Fascia.NOTTE,
     'CP': Fascia.PERMESSO,
 }
 

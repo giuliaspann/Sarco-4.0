@@ -25,7 +25,7 @@ def nome_di(utente):
     if dip:
         return dip.nome_breve
     if e_responsabile(utente) or utente.is_staff:
-        return 'Ufficio turni'
+        return 'Ufficio Turni'
     return utente.get_full_name() or utente.username
 
 
