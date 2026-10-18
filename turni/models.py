@@ -677,6 +677,7 @@ class Luogo(models.TextChoices):
     PIAZZALE = 'PIAZZALE', 'Piazzale'
     METALLI = 'METALLI', 'Metalli'
     SABBIA = 'SABBIA', 'Sabbia'
+    MEZZI = 'MEZZI', 'Mezzi interni'
 
 
 class Macchina(models.Model):

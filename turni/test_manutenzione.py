@@ -150,6 +150,19 @@ class ManutenzioneTest(TestCase):
         self.assertEqual(diario[0], 'Guasto segnalato · macchina ferma')
         self.assertEqual(diario[-1], 'Riparato')
 
+    def test_segnala_in_tre_passi(self):
+        self.entra('operaio')
+        r = self.client.get(reverse('turni:segnala'))
+        self.assertIn('Mezzi interni', [nome for _, nome, _, _ in r.context['luoghi']])
+        r = self.client.get(reverse('turni:segnala'), {'luogo': 'MEZZI'})
+        self.assertIn(self.pala, r.context['elenco'])
+        self.assertTrue(all(m.luogo == 'MEZZI' for m in r.context['elenco']))
+        r = self.client.get(reverse('turni:segnala'), {'q': 'PALA1'})
+        self.assertEqual([m.codice for m in r.context['elenco']], ['PZ-PALA1'])
+        r = self.client.get(reverse('turni:segnala'), {'macchina': self.pala.pk})
+        self.assertEqual(r.context['macchina'], self.pala)
+        self.assertContains(r, 'Foto del guasto')
+
     def test_segnalazione_senza_foto_rifiutata(self):
         self.entra('operaio')
         n = Intervento.objects.count()

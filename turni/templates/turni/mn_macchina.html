@@ -2,7 +2,7 @@
 {% block titolo %}{{ m.nome }}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  <p class="tenue piccolo"><a href="{% url 'turni:macchine' %}?luogo={{ m.luogo }}">‹ Macchine</a></p>
+  <a class="tasto-indietro" href="{% url 'turni:macchine' %}?luogo={{ m.luogo }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Macchine</a>
   <p class="occhiello">{{ m.get_luogo_display }} · {{ m.codice }}</p>
   <h1>{{ m.icona }} {{ m.nome }}</h1>
   <span class="mn-stato {{ m.stato }}">{{ m.stato_testo }}</span>

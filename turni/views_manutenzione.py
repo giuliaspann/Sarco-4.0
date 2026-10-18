@@ -18,7 +18,7 @@ from .accessi import qr_svg
 from .esempi_manutenzione import togli
 from .models import Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
 
-LUOGHI_BREVI = [('IMP1', 'Imp. 1'), ('IMP2', 'Imp. 2'), ('PIAZZALE', 'Piazzale'), ('METALLI', 'Metalli'), ('SABBIA', 'Sabbia')]
+LUOGHI_BREVI = [('IMP1', 'Imp. 1'), ('IMP2', 'Imp. 2'), ('PIAZZALE', 'Piazzale'), ('METALLI', 'Metalli'), ('SABBIA', 'Sabbia'), ('MEZZI', 'Mezzi interni')]
 
 
 class MacchinaForm(forms.ModelForm):
@@ -86,16 +86,20 @@ def manutenzione(request):
     })
 
 
+ICONE_LUOGHI = {'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜'}
+
+
 @login_required
 def segnala(request):
+    """In tre passi senza menu a tendina: luogo → macchina (pulsanti grandi, con ricerca) → cosa succede e foto."""
     macchine = Macchina.objects.filter(attiva=True)
-    scelta = request.POST.get('macchina') or request.GET.get('macchina')
+    scelta = request.POST.get('macchina') or request.GET.get('macchina') or ''
+    macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
     if request.method == 'POST':
-        macchina = macchine.filter(pk=scelta).first() if (scelta or '').isdigit() else None
         descrizione = (request.POST.get('descrizione') or '').strip()[:1000]
         foto = request.FILES.get('foto')
         if not (macchina and descrizione and foto):
-            messages.error(request, 'Scegli la macchina, scrivi cosa succede e fai la foto del guasto.')
+            messages.error(request, 'Scrivi cosa succede e fai la foto del guasto.')
         else:
             try:
                 i = mn.segnala(request.user, macchina, descrizione, request.POST.get('ferma') == '1', foto)
@@ -104,11 +108,22 @@ def segnala(request):
             else:
                 messages.success(request, 'Segnalazione inviata: il capo turno e il responsabile manutenzione la ricevono subito.')
                 return redirect('turni:intervento', i.pk)
-    gruppi = [(nome, [m for m in macchine if m.luogo == v]) for v, nome in Luogo.choices]
-    return render(request, 'turni/mn_segnala.html', {
-        'gruppi': [g for g in gruppi if g[1]], 'scelta': str(scelta or ''),
-        'descrizione': request.POST.get('descrizione', ''),
-    })
+    contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', '')}
+    if macchina is None:
+        luogo = _luogo(request)
+        q = (request.GET.get('q') or '').strip()
+        if luogo or q:
+            elenco = macchine.filter(luogo=luogo) if luogo else macchine
+            if q:
+                elenco = elenco.filter(Q(nome__icontains=q) | Q(codice__icontains=q) | Q(categoria__icontains=q) | Q(marca__icontains=q))
+            contesto.update(luogo=luogo, nome_luogo=Luogo(luogo).label if luogo else '', q=q,
+                            elenco=mn.stato_macchine(list(elenco)))
+        else:
+            conti = {v: 0 for v in Luogo.values}
+            for v in macchine.values_list('luogo', flat=True):
+                conti[v] += 1
+            contesto['luoghi'] = [(v, nome, ICONE_LUOGHI[v], conti[v]) for v, nome in Luogo.choices if conti[v]]
+    return render(request, 'turni/mn_segnala.html', contesto)
 
 
 @login_required

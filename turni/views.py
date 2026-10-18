@@ -621,16 +621,19 @@ def manifest(request):
 
     return JsonResponse(
         {
-            'name': 'Sarco Turni',
-            'short_name': 'Turni',
+            'name': 'Sarco 4.0',
+            'short_name': 'Sarco 4.0',
             'start_url': '/turni/',
             'scope': '/',
             'display': 'standalone',
-            'background_color': '#f4f5f2',
-            'theme_color': '#1f5f3f',
+            'background_color': '#00384f',
+            'theme_color': '#00384f',
+            # logo Sarco su fondo blu; la versione «tonda» ha più margine per le icone rotonde di Android
             'icons': [
-                {'src': static('turni/icona-192.png'), 'sizes': '192x192', 'type': 'image/png'},
-                {'src': static('turni/icona-512.png'), 'sizes': '512x512', 'type': 'image/png'},
+                {'src': static('turni/app-192.png'), 'sizes': '192x192', 'type': 'image/png', 'purpose': 'any'},
+                {'src': static('turni/app-512.png'), 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+                {'src': static('turni/app-tonda-192.png'), 'sizes': '192x192', 'type': 'image/png', 'purpose': 'maskable'},
+                {'src': static('turni/app-tonda-512.png'), 'sizes': '512x512', 'type': 'image/png', 'purpose': 'maskable'},
             ],
         },
         content_type='application/manifest+json',
@@ -643,9 +646,9 @@ self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => self.clients.claim());
 self.addEventListener('push', e => {
   let d = {};
-  try { d = e.data.json(); } catch (err) { d = { titolo: 'Sarco Turni', testo: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.titolo || 'Sarco Turni', {
-    body: d.testo || '', icon: '/static/turni/icona-192.png', badge: '/static/turni/icona-192.png',
+  try { d = e.data.json(); } catch (err) { d = { titolo: 'Sarco 4.0', testo: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.titolo || 'Sarco 4.0', {
+    body: d.testo || '', icon: '/static/turni/app-192.png', badge: '/static/turni/app-192.png',
     data: { url: d.url || '/turni/' },
   }));
 });

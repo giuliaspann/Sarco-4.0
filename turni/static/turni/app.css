@@ -997,3 +997,37 @@ details.scheda summary { cursor: pointer; }
 .mn-schede a span { white-space: nowrap; letter-spacing: -.03em; font-size: .62rem; }
 .mn-pezzo { display: flex !important; justify-content: center; text-align: center; padding: 12px; box-sizing: border-box; }
 .mn-cerca input { padding: 11px 14px; border-radius: 99px; border: 1px solid var(--bordo); background: var(--carta); color: var(--testo); font: inherit; font-size: 16px; }
+
+/* segnala un guasto: luogo → macchina → guasto */
+.sg-passi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; list-style: none; padding: 0; margin: 10px 0 4px; counter-reset: passo; }
+.sg-passi li { counter-increment: passo; font-size: .75rem; font-weight: 700; color: var(--spento); padding-top: 6px; border-top: 4px solid var(--bordo); }
+.sg-passi li::before { content: counter(passo) '. '; }
+.sg-passi li.fatto { color: var(--primario); border-color: var(--primario); }
+.sg-passi li.ora { color: var(--testo); border-color: var(--testo); }
+.sg-luoghi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sg-luoghi a { display: flex; flex-direction: column; gap: 2px; padding: 16px 14px; min-height: 104px; border-radius: var(--raggio-grande);
+  background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(16,40,70,.08); color: var(--testo); text-decoration: none; }
+.sg-luoghi a:active, .sg-macchina:active { transform: scale(.98); }
+.sg-luoghi span { font-size: 1.9rem; margin-bottom: 4px; }
+.sg-luoghi b { font-size: 1.1rem; }
+.sg-luoghi small { color: var(--tenue); font-size: .78rem; }
+.sg-macchine { display: flex; flex-direction: column; gap: 8px; }
+.sg-macchina, .sg-scelta { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 14px; border-radius: var(--raggio);
+  background: var(--carta); border: 1px solid var(--bordo); text-decoration: none; color: inherit; }
+.sg-macchina .home-icona, .sg-scelta .home-icona { width: 44px; height: 44px; margin: 0; font-size: 1.35rem; flex: none; }
+.sg-macchina b { font-size: 1rem; }
+.sg-freccia { font-size: 1.6rem; color: var(--spento); flex: none; }
+.sg-scelta { margin-bottom: 12px; border: 2px solid var(--primario); background: var(--primario-chiaro); }
+
+/* tasto indietro: grande e ben visibile in tutte le pagine */
+.tasto-indietro { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 16px 8px 12px; margin: 0 0 12px;
+  border-radius: 99px; background: var(--carta); border: 2px solid var(--testo); color: var(--testo);
+  font-weight: 700; font-size: .95rem; text-decoration: none; box-shadow: 0 1px 3px rgba(16,40,70,.1); }
+.tasto-indietro svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.tasto-indietro:active { transform: scale(.97); background: var(--altro); }
+@media print { .tasto-indietro { display: none; } }
+/* freccia indietro in cima alle chat: più grande */
+.wa-indietro { width: 44px; height: 44px; margin: 0 -2px 0 -8px; border-radius: 50%; }
+.wa-indietro svg { width: 28px; height: 28px; stroke-width: 2.6; }
+.wa-indietro:active { background: rgba(0,0,0,.08); }
+.marchio-modulo { font-family: var(--font-titoli); font-weight: 700; font-size: 1.35rem; color: var(--testo); }

@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#142229" media="(prefers-color-scheme: dark)">
-  <title>{% block titolo %}Turni{% endblock %} · Sarco</title>
+  <title>{% block titolo %}Home{% endblock %} · Sarco 4.0</title>
   <link rel="manifest" href="{% url 'manifest' %}">
-  <link rel="apple-touch-icon" href="{% static 'turni/icona-192.png' %}">
-  <link rel="icon" href="{% static 'turni/icona-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'turni/app-180.png' %}">
+  <meta name="apple-mobile-web-app-title" content="Sarco 4.0">
+  <link rel="icon" href="{% static 'turni/app-192.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +23,7 @@
         <source srcset="{% static 'turni/logo-bianco.png' %}" media="(prefers-color-scheme: dark)">
         <img src="{% static 'turni/logo-blu.png' %}" alt="Sarco" width="115" height="34">
       </picture>
-      <span class="marchio-modulo">Turni</span>
+      <span class="marchio-modulo">4.0</span>
     </span>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
