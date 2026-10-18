@@ -83,6 +83,9 @@ class Dipendente(models.Model):
     # il responsabile turni ha le pagine dell'ufficio
     ruolo_app = models.CharField('ruolo nell\'app', max_length=12, choices=RuoloApp.choices, default=RuoloApp.OPERAIO)
     qualifica = models.CharField('ruolo in azienda', max_length=150, blank=True)
+    # incarichi per la manutenzione
+    resp_manutenzione = models.BooleanField('responsabile manutenzione', default=False)
+    acquisti = models.BooleanField('ordina i ricambi (acquisti)', default=False)
     # Il PIN è corto: dopo troppi tentativi sbagliati l'accesso si blocca per un po'
     tentativi_falliti = models.PositiveSmallIntegerField(default=0, editable=False)
     bloccato_fino = models.DateTimeField(null=True, blank=True, editable=False)
@@ -662,3 +665,247 @@ class BloccoAccesso(models.Model):
     class Meta:
         verbose_name = 'blocco accesso'
         verbose_name_plural = 'blocchi accesso'
+
+
+# ================================================================ manutenzione
+# Registro di macchine e mezzi, ordini di lavoro (guasti e programmate), ricambi e ordini.
+
+
+class Luogo(models.TextChoices):
+    IMP1 = 'IMP1', 'Impianto 1'
+    IMP2 = 'IMP2', 'Impianto 2'
+    PIAZZALE = 'PIAZZALE', 'Piazzale'
+    METALLI = 'METALLI', 'Metalli'
+    SABBIA = 'SABBIA', 'Sabbia'
+
+
+class Macchina(models.Model):
+    class Tipo(models.TextChoices):
+        IMPIANTO = 'IMPIANTO', 'Macchina'
+        MEZZO = 'MEZZO', 'Mezzo'
+
+    codice = models.CharField(max_length=20, unique=True)
+    nome = models.CharField(max_length=80)
+    tipo = models.CharField(max_length=10, choices=Tipo.choices, default=Tipo.IMPIANTO)
+    categoria = models.CharField(max_length=40, blank=True, help_text='Es. pala gommata, muletto, nastro, vaglio')
+    luogo = models.CharField(max_length=10, choices=Luogo.choices)
+    marca = models.CharField(max_length=40, blank=True)
+    modello = models.CharField(max_length=60, blank=True)
+    matricola = models.CharField('matricola / targa', max_length=40, blank=True)
+    anno = models.PositiveSmallIntegerField(null=True, blank=True)
+    contaore = models.PositiveIntegerField('ore motore', null=True, blank=True)
+    note = models.TextField(blank=True)
+    attiva = models.BooleanField(default=True)
+    esempio = models.BooleanField(default=False, help_text="Macchina d'esempio, da togliere quando arriva l'elenco vero")
+
+    class Meta:
+        verbose_name_plural = 'macchine'
+        ordering = ['luogo', 'tipo', 'nome']
+
+    def __str__(self):
+        return f'{self.nome} ({self.get_luogo_display()})'
+
+    @property
+    def icona(self):
+        c = self.categoria.lower()
+        for parola, emoji in (('pala', '🚜'), ('escavat', '🚜'), ('muletto', '🏗️'), ('camion', '🚛'),
+                              ('nastro', '➰'), ('vaglio', '🔩'), ('tritur', '⚙️'), ('pressa', '🗜️'),
+                              ('compress', '💨'), ('separat', '🧲'), ('pesa', '⚖️')):
+            if parola in c:
+                return emoji
+        return '🚜' if self.tipo == self.Tipo.MEZZO else '⚙️'
+
+
+class Intervento(models.Model):
+    """Ordine di lavoro: un guasto segnalato o una manutenzione programmata."""
+
+    class Tipo(models.TextChoices):
+        GUASTO = 'GUASTO', 'Guasto'
+        PROGRAMMATA = 'PROGRAMMATA', 'Programmata'
+
+    class Priorita(models.IntegerChoices):
+        BASSA = 1, 'Bassa'
+        NORMALE = 2, 'Normale'
+        ALTA = 3, 'Alta'
+        URGENTE = 4, 'Urgente'
+
+    class Stato(models.TextChoices):
+        SEGNALATA = 'SEGNALATA', 'Da approvare'
+        ASSEGNATA = 'ASSEGNATA', 'Assegnata'
+        IN_CORSO = 'IN_CORSO', 'In lavorazione'
+        ATTESA_PEZZI = 'ATTESA_PEZZI', 'Attesa pezzi'
+        COMPLETATA = 'COMPLETATA', 'Riparata'
+        RIFIUTATA = 'RIFIUTATA', 'Rifiutata'
+
+    APERTI = [Stato.SEGNALATA, Stato.ASSEGNATA, Stato.IN_CORSO, Stato.ATTESA_PEZZI]
+
+    macchina = models.ForeignKey(Macchina, on_delete=models.PROTECT, related_name='interventi')
+    tipo = models.CharField(max_length=12, choices=Tipo.choices, default=Tipo.GUASTO)
+    descrizione = models.TextField('cosa succede')
+    macchina_ferma = models.BooleanField(default=False)
+    priorita = models.PositiveSmallIntegerField(choices=Priorita.choices, default=Priorita.NORMALE)
+    stato = models.CharField(max_length=12, choices=Stato.choices, default=Stato.SEGNALATA)
+    segnalata_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    segnalata_il = models.DateTimeField(default=timezone.now)
+    foto_guasto = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
+    approvata_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    approvata_il = models.DateTimeField(null=True, blank=True)
+    assegnata_a = models.ForeignKey('Dipendente', null=True, blank=True, on_delete=models.SET_NULL, related_name='interventi')
+    iniziata_il = models.DateTimeField(null=True, blank=True)
+    completata_il = models.DateTimeField(null=True, blank=True)
+    lavoro_svolto = models.TextField(blank=True)
+    foto_riparazione = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
+    ore_lavoro = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    motivo_rifiuto = models.CharField(max_length=300, blank=True)
+    piano = models.ForeignKey('ManutenzioneProgrammata', null=True, blank=True, on_delete=models.SET_NULL, related_name='interventi')
+
+    class Meta:
+        verbose_name_plural = 'interventi'
+        ordering = ['-priorita', 'segnalata_il']
+
+    def __str__(self):
+        return f'#{self.pk} {self.macchina.nome}'
+
+    @property
+    def aperto(self):
+        return self.stato in self.APERTI
+
+    @property
+    def classe_stato(self):
+        return {
+            'SEGNALATA': 'attesa', 'ASSEGNATA': 'blu', 'IN_CORSO': 'blu', 'ATTESA_PEZZI': 'viola',
+            'COMPLETATA': 'ok', 'RIFIUTATA': 'spento',
+        }[self.stato]
+
+    @property
+    def etichetta_stato(self):
+        if self.stato == self.Stato.SEGNALATA and self.tipo == self.Tipo.PROGRAMMATA:
+            return 'Da assegnare'
+        return self.get_stato_display()
+
+    @property
+    def ore_fermo(self):
+        """Ore di macchina ferma, dalla segnalazione alla riparazione (o a ora se ancora aperta)."""
+        if not self.macchina_ferma:
+            return 0
+        fine = self.completata_il or timezone.now()
+        return round((fine - self.segnalata_il).total_seconds() / 3600, 1)
+
+
+class EventoIntervento(models.Model):
+    """Diario dell'intervento: cambi di stato e note di chi ci lavora."""
+
+    intervento = models.ForeignKey(Intervento, on_delete=models.CASCADE, related_name='eventi')
+    autore = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    testo = models.CharField(max_length=500)
+    nota = models.BooleanField(default=False)  # scritta a mano (non un cambio di stato)
+    creato_il = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['creato_il', 'pk']
+
+
+class Ricambio(models.Model):
+    codice = models.CharField(max_length=40, blank=True)
+    nome = models.CharField(max_length=100)
+    fornitore = models.CharField(max_length=80, blank=True)
+    scorta = models.IntegerField(default=0)
+    scorta_minima = models.PositiveIntegerField(default=0)
+    unita = models.CharField(max_length=8, default='pz')
+    ubicazione = models.CharField('dove si trova', max_length=60, blank=True)
+    costo = models.DecimalField('costo unitario €', max_digits=9, decimal_places=2, null=True, blank=True)
+    macchine = models.ManyToManyField(Macchina, blank=True, related_name='ricambi')
+    esempio = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = 'ricambi'
+        ordering = ['nome']
+
+    def __str__(self):
+        return f'{self.nome}{f" ({self.codice})" if self.codice else ""}'
+
+    @property
+    def sotto_scorta(self):
+        return self.scorta <= self.scorta_minima and self.scorta_minima > 0
+
+
+class RicambioUsato(models.Model):
+    intervento = models.ForeignKey(Intervento, on_delete=models.CASCADE, related_name='ricambi_usati')
+    ricambio = models.ForeignKey(Ricambio, null=True, blank=True, on_delete=models.SET_NULL, related_name='usi')
+    descrizione = models.CharField(max_length=100, blank=True)
+    quantita = models.PositiveIntegerField(default=1)
+
+    @property
+    def nome(self):
+        return self.ricambio.nome if self.ricambio else self.descrizione
+
+
+class OrdineRicambio(models.Model):
+    class Stato(models.TextChoices):
+        RICHIESTO = 'RICHIESTO', 'Da approvare'
+        APPROVATO = 'APPROVATO', 'Da ordinare'
+        ORDINATO = 'ORDINATO', 'Ordinato'
+        ARRIVATO = 'ARRIVATO', 'Arrivato'
+        ANNULLATO = 'ANNULLATO', 'Annullato'
+
+    intervento = models.ForeignKey(Intervento, null=True, blank=True, on_delete=models.SET_NULL, related_name='ordini')
+    macchina = models.ForeignKey(Macchina, null=True, blank=True, on_delete=models.SET_NULL, related_name='ordini')
+    ricambio = models.ForeignKey(Ricambio, null=True, blank=True, on_delete=models.SET_NULL, related_name='ordini')
+    descrizione = models.CharField('pezzo', max_length=120, blank=True)
+    quantita = models.PositiveIntegerField(default=1)
+    urgente = models.BooleanField(default=False)
+    nota = models.CharField(max_length=300, blank=True)
+    foto = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
+    stato = models.CharField(max_length=10, choices=Stato.choices, default=Stato.RICHIESTO)
+    richiesto_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    richiesto_il = models.DateTimeField(default=timezone.now)
+    approvato_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    fornitore = models.CharField(max_length=80, blank=True)
+    ordinato_il = models.DateTimeField(null=True, blank=True)
+    arrivato_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'ordine ricambio'
+        verbose_name_plural = 'ordini ricambi'
+        ordering = ['-urgente', '-richiesto_il']
+
+    @property
+    def nome(self):
+        return self.ricambio.nome if self.ricambio else self.descrizione
+
+    @property
+    def classe_stato(self):
+        return {'RICHIESTO': 'attesa', 'APPROVATO': 'attesa', 'ORDINATO': 'blu', 'ARRIVATO': 'ok', 'ANNULLATO': 'spento'}[self.stato]
+
+    @property
+    def aperto(self):
+        return self.stato in (self.Stato.RICHIESTO, self.Stato.APPROVATO, self.Stato.ORDINATO)
+
+
+class ManutenzioneProgrammata(models.Model):
+    """Manutenzione periodica: alla scadenza diventa un intervento da assegnare."""
+
+    macchina = models.ForeignKey(Macchina, on_delete=models.CASCADE, related_name='programmate')
+    attivita = models.CharField('attività', max_length=120)
+    istruzioni = models.TextField(blank=True, help_text='Una riga per ogni controllo da fare')
+    ogni_giorni = models.PositiveSmallIntegerField('ogni quanti giorni')
+    ultima = models.DateField('ultima volta', null=True, blank=True)
+    attiva = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'manutenzione programmata'
+        verbose_name_plural = 'manutenzioni programmate'
+        ordering = ['macchina__luogo', 'macchina__nome']
+
+    def __str__(self):
+        return f'{self.attivita} · {self.macchina.nome}'
+
+    @property
+    def prossima(self):
+        if self.ultima is None:
+            return timezone.localdate()
+        return self.ultima + timedelta(days=self.ogni_giorni)
+
+    @property
+    def righe_istruzioni(self):
+        return [r.strip() for r in self.istruzioni.splitlines() if r.strip()]

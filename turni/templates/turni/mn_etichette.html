@@ -1,0 +1,19 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Etichette QR{% endblock %}
+{% block contenuto %}
+<div class="intestazione non-stampare">
+  <p class="tenue piccolo"><a href="{% url 'turni:macchine' %}">‹ Macchine</a></p>
+  <h1>Etichette QR</h1>
+  <p class="tenue piccolo">Stampale e attaccale sulle macchine: inquadrando il QR col telefono si apre la segnalazione del guasto già sulla macchina giusta.</p>
+  {% include 'turni/_mn_luoghi.html' %}
+  <button type="button" class="bottone pieno piena-larghezza" data-stampa>🖨️ Stampa</button>
+</div>
+<div class="mn-etichette-stampa">
+  {% for m in elenco %}
+  <div class="mn-etichetta">
+    <img src="{{ m.qr }}" alt="QR {{ m.nome }}" width="120" height="120">
+    <div><b>{{ m.nome }}</b><small>{{ m.codice }} · {{ m.get_luogo_display }}</small><em>Guasto? Inquadra e segnala</em></div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -20,6 +20,9 @@ def navigazione(request):
     from .views_messaggi import non_letti_bacheca, non_letti_chat, stato_di
 
     stato = stato_di(user)
+    from .manutenzione import da_fare_per
+
+    contesto['nav_manutenzione'] = da_fare_per(user)
     contesto['nav_messaggi'] = non_letti_bacheca(user, stato) + non_letti_chat(user, stato)
     if dip:
         contesto['nav_da_rispondere'] = CambioTurno.objects.filter(

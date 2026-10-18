@@ -1,0 +1,7 @@
+<label>Manutentore
+  <select name="manutentore" required>
+    <option value="">Scegli…</option>
+    {% if in_turno %}<optgroup label="In turno oggi">{% for d in in_turno %}<option value="{{ d.pk }}" {% if d.pk == i.assegnata_a_id or not i.assegnata_a_id and forloop.first %}selected{% endif %}>{{ d.nome_breve }} · {{ d.turno_oggi.descrizione_fascia }}</option>{% endfor %}</optgroup>{% endif %}
+    {% if altri_manutentori %}<optgroup label="Non in turno oggi">{% for d in altri_manutentori %}<option value="{{ d.pk }}" {% if d.pk == i.assegnata_a_id %}selected{% endif %}>{{ d.nome_breve }}</option>{% endfor %}</optgroup>{% endif %}
+  </select>
+</label>

@@ -80,3 +80,35 @@ class RichiestaFerieAdmin(admin.ModelAdmin):
     list_display = ['dipendente', 'tipo', 'dal', 'al', 'stato', 'creata_il', 'gestita_da']
     list_filter = ['stato', 'tipo']
     search_fields = ['dipendente__nome']
+
+
+from .models import Intervento, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio  # noqa: E402
+
+
+@admin.register(Macchina)
+class MacchinaAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'codice', 'luogo', 'tipo', 'categoria', 'marca', 'modello', 'attiva', 'esempio']
+    list_filter = ['luogo', 'tipo', 'attiva', 'esempio']
+    search_fields = ['nome', 'codice', 'marca', 'matricola']
+
+
+@admin.register(Ricambio)
+class RicambioAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'codice', 'scorta', 'scorta_minima', 'unita', 'ubicazione', 'fornitore']
+    search_fields = ['nome', 'codice']
+    filter_horizontal = ['macchine']
+
+
+@admin.register(Intervento)
+class InterventoAdmin(admin.ModelAdmin):
+    list_display = ['pk', 'macchina', 'tipo', 'stato', 'priorita', 'macchina_ferma', 'assegnata_a', 'segnalata_il']
+    list_filter = ['stato', 'tipo', 'macchina__luogo']
+
+
+@admin.register(OrdineRicambio)
+class OrdineRicambioAdmin(admin.ModelAdmin):
+    list_display = ['pk', 'ricambio', 'descrizione', 'quantita', 'stato', 'urgente', 'richiesto_il']
+    list_filter = ['stato']
+
+
+admin.site.register(ManutenzioneProgrammata)

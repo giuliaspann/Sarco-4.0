@@ -1,0 +1,32 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Segnala un guasto{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <p class="tenue piccolo"><a href="{% url 'turni:manutenzione' %}">‹ Manutenzione</a></p>
+  <h1>Segnala un guasto</h1>
+  <p class="tenue piccolo">Arriva subito al capo turno e al responsabile manutenzione, che la inviano al manutentore.</p>
+</div>
+<form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
+  <label>Quale macchina o mezzo
+    <select name="macchina" required>
+      <option value="">Scegli…</option>
+      {% for nome, macchine in gruppi %}
+      <optgroup label="{{ nome }}">{% for m in macchine %}<option value="{{ m.pk }}" {% if scelta == m.pk|stringformat:'s' %}selected{% endif %}>{{ m.nome }} · {{ m.codice }}</option>{% endfor %}</optgroup>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Cosa succede
+    <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="Es. perde olio dal cilindro del braccio">{{ descrizione }}</textarea>
+  </label>
+  <fieldset class="mn-sino">
+    <legend>La macchina è ferma?</legend>
+    <label><input type="radio" name="ferma" value="1"><span>🔴 Sì, è ferma</span></label>
+    <label><input type="radio" name="ferma" value="0" checked><span>🟠 No, funziona ancora</span></label>
+  </fieldset>
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
+    <span>📷 Foto del guasto (obbligatoria)</span>
+  </label>
+  <button class="bottone pieno piena-larghezza">Invia segnalazione</button>
+</form>
+{% endblock %}

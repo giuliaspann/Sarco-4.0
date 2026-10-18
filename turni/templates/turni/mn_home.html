@@ -1,0 +1,36 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Manutenzione{% endblock %}
+{% block contenuto %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Interventi' %}
+
+<a class="mn-segnala" href="{% url 'turni:segnala' %}">
+  <span>⚠️</span><b>Segnala un guasto</b><small>Foto e due righe: arriva subito al capo turno e al responsabile</small>
+</a>
+
+<div class="mn-numeri">
+  <div class="{% if ferme %}rosso{% endif %}"><b>{{ ferme }}</b><small>macchine ferme</small></div>
+  <div><b>{{ aperti_totale }}</b><small>interventi aperti</small></div>
+  <a href="{% url 'turni:ordini' %}"><b>{{ ordini_aperti }}</b><small>pezzi in ordine</small></a>
+  {% if chiede_pezzi %}<a href="{% url 'turni:ricambi' %}?sotto=1" class="{% if sotto_scorta %}arancio{% endif %}"><b>{{ sotto_scorta }}</b><small>ricambi sotto scorta</small></a>{% endif %}
+</div>
+
+{% include 'turni/_mn_luoghi.html' %}
+
+{% if da_approvare %}
+<h2 class="rq-sezione">Da approvare e assegnare <span class="mn-conta">{{ da_approvare|length }}</span></h2>
+{% for i in da_approvare %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
+{% endif %}
+
+{% if miei %}
+<h2 class="rq-sezione">I tuoi lavori <span class="mn-conta">{{ miei|length }}</span></h2>
+{% for i in miei %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
+{% endif %}
+
+<h2 class="rq-sezione">{% if miei or da_approvare %}Altri interventi aperti{% else %}Interventi aperti{% endif %}</h2>
+{% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}. 👍</p>{% endfor %}
+
+{% if recenti %}
+<h2 class="rq-sezione">Riparati negli ultimi 7 giorni</h2>
+{% for i in recenti %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
+{% endif %}
+{% endblock %}

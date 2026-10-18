@@ -1,0 +1,23 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Manutenzioni programmate{% endblock %}
+{% block contenuto %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Programmate' %}
+<p class="tenue piccolo mn-spiega">Alla scadenza l'app crea da sola l'intervento da assegnare al manutentore. Quando viene chiuso, si riparte da quel giorno.</p>
+{% for p in piani %}
+<div class="rq-riga">
+  <span class="home-icona">{{ p.macchina.icona }}</span>
+  <span class="rq-testo"><b>{{ p.attivita }}</b><small><a href="{% url 'turni:macchina' p.macchina.pk %}">{{ p.macchina.nome }}</a> · ogni {{ p.ogni_giorni }} giorni{% if p.ultima %} · ultima {{ p.ultima|date:'j M' }}{% endif %}</small>
+    {% if resp %}<form method="post">{% csrf_token %}<input type="hidden" name="piano" value="{{ p.pk }}"><button class="link-piccolo" name="azione" value="disattiva" data-conferma="Non programmare più questa manutenzione?">Non programmare più</button></form>{% endif %}
+  </span>
+  <span class="stato-chip {% if p.giorni <= 0 %}no{% elif p.giorni <= 3 %}attesa{% else %}ok{% endif %}">{% if p.giorni < 0 %}Scaduta{% elif p.giorni == 0 %}Oggi{% else %}tra {{ p.giorni }} g{% endif %}</span>
+</div>
+{% empty %}
+<p class="tenue piccolo">Nessuna manutenzione programmata.</p>
+{% endfor %}
+{% if form %}
+<details class="scheda">
+  <summary><b>➕ Programma una manutenzione</b></summary>
+  <form method="post" class="mn-form">{% csrf_token %}{{ form.as_p }}<button class="bottone pieno piena-larghezza">Aggiungi</button></form>
+</details>
+{% endif %}
+{% endblock %}

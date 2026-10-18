@@ -1,0 +1,41 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Ricambi{% endblock %}
+{% block contenuto %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Magazzino ricambi' %}
+<form class="mn-cerca" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Cerca pezzo, codice o macchina…">
+</form>
+<div class="mn-luoghi due">
+  <a href="?" class="{% if not sotto %}attivo{% endif %}">Tutti</a>
+  <a href="?sotto=1" class="{% if sotto %}attivo{% endif %}">Sotto scorta</a>
+</div>
+
+{% for r in elenco %}
+<div class="rq-riga mn-ricambio" id="r{{ r.pk }}">
+  <span class="rq-testo">
+    <b>{{ r.nome }}</b>
+    <small>{% if r.codice %}{{ r.codice }} · {% endif %}{{ r.ubicazione|default:'posto non indicato' }}{% if r.fornitore %} · {{ r.fornitore }}{% endif %}</small>
+    {% if r.macchine.all %}<small class="mn-meta">Per: {% for m in r.macchine.all %}{{ m.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>{% endif %}
+  </span>
+  <span class="mn-scorta">
+    <span class="stato-chip {% if r.sotto_scorta %}no{% else %}ok{% endif %}">{{ r.scorta }} {{ r.unita }}</span>
+    <small>min {{ r.scorta_minima }}</small>
+    {% if chiede_pezzi %}
+    <form method="post" class="mn-piu-meno">{% csrf_token %}<input type="hidden" name="ricambio" value="{{ r.pk }}"><input type="hidden" name="azione" value="scorta">
+      <button name="verso" value="meno" aria-label="Uno in meno">−</button><button name="verso" value="piu" aria-label="Uno in più">+</button>
+    </form>
+    <a class="link-piccolo" href="{% url 'turni:nuovo_ordine' %}?ricambio={{ r.pk }}">Ordina</a>
+    {% endif %}
+  </span>
+</div>
+{% empty %}
+<p class="tenue piccolo">Nessun ricambio{% if sotto %} sotto scorta{% endif %}.</p>
+{% endfor %}
+
+{% if chiede_pezzi %}
+<details class="scheda">
+  <summary><b>➕ Aggiungi ricambio</b></summary>
+  <form method="post" class="mn-form">{% csrf_token %}{{ form.as_p }}<button class="bottone pieno piena-larghezza">Aggiungi</button></form>
+</details>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Chiedi un pezzo{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <p class="tenue piccolo"><a href="{% if i %}{% url 'turni:intervento' i.pk %}{% else %}{% url 'turni:ordini' %}{% endif %}">‹ Indietro</a></p>
+  <h1>Chiedi un pezzo</h1>
+  {% if i %}<p class="tenue piccolo">Per {{ i.macchina.nome }} · intervento #{{ i.pk }}</p>{% endif %}
+</div>
+<form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
+  {% if i %}<input type="hidden" name="intervento" value="{{ i.pk }}">{% endif %}
+  <label>Pezzo dal magazzino
+    <select name="ricambio">
+      <option value="">Non c'è in elenco: lo scrivo sotto</option>
+      {% if compatibili %}<optgroup label="Di questa macchina">{% for r in compatibili %}<option value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}selected{% endif %}>{{ r.nome }} · {{ r.scorta }} {{ r.unita }}</option>{% endfor %}</optgroup>{% endif %}
+      <optgroup label="{% if compatibili %}Altri{% else %}Magazzino{% endif %}">{% for r in altri %}<option value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}selected{% endif %}>{{ r.nome }} · {{ r.scorta }} {{ r.unita }}</option>{% endfor %}</optgroup>
+    </select>
+  </label>
+  <label>…oppure scrivi il pezzo<input type="text" name="descrizione" maxlength="120" placeholder="Es. tubo idraulico 1/2 pollice, 80 cm"></label>
+  <label>Quantità<input type="number" name="quantita" value="1" min="1" max="9999" inputmode="numeric"></label>
+  <label class="mn-check"><input type="checkbox" name="urgente" value="1"> Urgente (macchina ferma)</label>
+  <label>Nota per chi ordina<input type="text" name="nota" maxlength="300" placeholder="Es. codice sulla targhetta, fornitore abituale"></label>
+  {% if i and i.foto_guasto %}
+  <p class="mn-sottotitolo">Prova del guasto</p>
+  <img class="pl-foto" src="{% url 'turni:foto_mn' 'guasto' i.pk %}" alt="Foto del guasto">
+  {% endif %}
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci {% if not i %}required{% endif %}>
+    <span>📷 Foto del pezzo o della macchina rotta{% if i %} (facoltativa){% else %} (obbligatoria){% endif %}</span>
+  </label>
+  <button class="bottone pieno piena-larghezza">Invia richiesta</button>
+</form>
+{% endblock %}

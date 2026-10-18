@@ -1,0 +1,64 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ m.nome }}{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <p class="tenue piccolo"><a href="{% url 'turni:macchine' %}?luogo={{ m.luogo }}">‹ Macchine</a></p>
+  <p class="occhiello">{{ m.get_luogo_display }} · {{ m.codice }}</p>
+  <h1>{{ m.icona }} {{ m.nome }}</h1>
+  <span class="mn-stato {{ m.stato }}">{{ m.stato_testo }}</span>
+  {% if m.esempio %}<span class="stato-chip spento">Esempio</span>{% endif %}
+</div>
+
+<a class="mn-segnala" href="{% url 'turni:segnala' %}?macchina={{ m.pk }}"><span>⚠️</span><b>Segnala un guasto</b><small>su questa macchina</small></a>
+
+<div class="mn-numeri">
+  <div><b>{{ stat.guasti }}</b><small>guasti in 12 mesi</small></div>
+  <div class="{% if stat.ore_fermo %}rosso{% endif %}"><b>{{ stat.ore_fermo }}</b><small>ore di fermo</small></div>
+  <div><b>{% if stat.tempo_medio is not None %}{{ stat.tempo_medio }}{% else %}–{% endif %}</b><small>ore medie per riparare</small></div>
+</div>
+
+<section class="scheda mn-dati">
+  {% if m.categoria %}<div><small>Tipo</small><b>{{ m.categoria }}</b></div>{% endif %}
+  {% if m.marca or m.modello %}<div><small>Marca e modello</small><b>{{ m.marca }} {{ m.modello }}</b></div>{% endif %}
+  {% if m.matricola %}<div><small>Matricola / targa</small><b>{{ m.matricola }}</b></div>{% endif %}
+  {% if m.anno %}<div><small>Anno</small><b>{{ m.anno }}</b></div>{% endif %}
+  <div><small>Ore motore</small><b>{{ m.contaore|default:'–' }}</b></div>
+  {% if m.note %}<div class="largo"><small>Note</small><span>{{ m.note|linebreaksbr }}</span></div>{% endif %}
+  {% if manutentore or resp %}
+  <form method="post" class="largo mn-contaore">{% csrf_token %}
+    <input type="number" name="contaore" min="0" inputmode="numeric" placeholder="Ore lette" required>
+    <button class="bottone" name="azione" value="contaore">Aggiorna ore</button>
+  </form>
+  {% endif %}
+</section>
+
+<h2 class="rq-sezione">Interventi aperti</h2>
+{% for i in aperti %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessuno. 👍</p>{% endfor %}
+
+{% if programmate %}
+<h2 class="rq-sezione">Manutenzioni programmate</h2>
+{% for p in programmate %}
+<div class="rq-riga"><span class="home-icona">🗓️</span>
+  <span class="rq-testo"><b>{{ p.attivita }}</b><small>Ogni {{ p.ogni_giorni }} giorni · prossima {{ p.prossima|date:'j M' }}</small></span></div>
+{% endfor %}
+{% endif %}
+
+{% if ricambi %}
+<h2 class="rq-sezione">Ricambi di questa macchina</h2>
+{% for r in ricambi %}
+<div class="rq-riga"><span class="home-icona">🔩</span>
+  <span class="rq-testo"><b>{{ r.nome }}</b><small>{{ r.codice|default:'' }}{% if r.ubicazione %} · {{ r.ubicazione }}{% endif %}</small></span>
+  <span class="stato-chip {% if r.sotto_scorta %}no{% else %}ok{% endif %}">{{ r.scorta }} {{ r.unita }}</span></div>
+{% endfor %}
+{% endif %}
+
+<h2 class="rq-sezione">Storico</h2>
+{% for i in storico %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Ancora nessun intervento chiuso.</p>{% endfor %}
+
+{% if form %}
+<details class="scheda mn-modifica">
+  <summary><b>✏️ Modifica la scheda</b></summary>
+  <form method="post" class="mn-form">{% csrf_token %}{{ form.as_p }}<button class="bottone pieno piena-larghezza" name="azione" value="modifica">Salva</button></form>
+</details>
+{% endif %}
+{% endblock %}

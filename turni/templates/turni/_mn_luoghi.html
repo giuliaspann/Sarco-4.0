@@ -1,0 +1,4 @@
+<div class="mn-luoghi">
+  <a href="?" class="{% if not luogo %}attivo{% endif %}">Tutti</a>
+  {% for v, nome in luoghi %}<a href="?luogo={{ v }}" class="{% if luogo == v %}attivo{% endif %}">{{ nome }}</a>{% endfor %}
+</div>

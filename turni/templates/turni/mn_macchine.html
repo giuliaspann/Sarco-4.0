@@ -1,0 +1,39 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Macchine{% endblock %}
+{% block contenuto %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Macchine e mezzi' %}
+<form class="mn-cerca" method="get">
+  {% if luogo %}<input type="hidden" name="luogo" value="{{ luogo }}">{% endif %}
+  <input type="search" name="q" value="{{ q }}" placeholder="Cerca per nome, codice, marca…">
+</form>
+{% include 'turni/_mn_luoghi.html' %}
+
+{% for nome, elenco in gruppi %}
+<h2 class="rq-sezione">{{ nome }} <span class="mn-conta">{{ elenco|length }}</span></h2>
+{% for m in elenco %}
+<a class="mn-riga" href="{% url 'turni:macchina' m.pk %}">
+  <span class="home-icona">{{ m.icona }}</span>
+  <span class="rq-testo"><b>{{ m.nome }}</b><small>{{ m.codice }}{% if m.marca %} · {{ m.marca }} {{ m.modello }}{% endif %}</small></span>
+  <span class="mn-stato {{ m.stato }}">{{ m.stato_testo }}</span>
+</a>
+{% endfor %}
+{% empty %}
+<p class="tenue piccolo">Nessuna macchina trovata.</p>
+{% endfor %}
+
+{% if resp %}
+<div class="mn-strumenti">
+  <a class="bottone piena-larghezza" href="{% url 'turni:etichette' %}{% if luogo %}?luogo={{ luogo }}{% endif %}">🏷️ Stampa le etichette QR da attaccare sulle macchine</a>
+  <details class="scheda">
+    <summary><b>➕ Aggiungi macchina o mezzo</b></summary>
+    <form method="post" class="mn-form">{% csrf_token %}{{ form.as_p }}<button class="bottone pieno piena-larghezza">Aggiungi</button></form>
+  </details>
+  {% if ci_sono_esempi %}
+  <form method="post" class="scheda">{% csrf_token %}
+    <p class="tenue piccolo">Ci sono macchine d'esempio, messe per provare l'app. Quando carichi l'elenco vero puoi toglierle.</p>
+    <button class="bottone avviso-btn piena-larghezza" name="azione" value="togli_esempi" data-conferma="Togliere tutte le macchine d'esempio con i loro interventi e ricambi?">Togli gli esempi</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

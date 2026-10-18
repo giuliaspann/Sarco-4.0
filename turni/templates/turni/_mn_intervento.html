@@ -1,0 +1,9 @@
+<a class="mn-riga{% if i.macchina_ferma and i.aperto %} ferma{% endif %}" href="{% url 'turni:intervento' i.pk %}">
+  <span class="home-icona">{% if i.tipo == 'PROGRAMMATA' %}🗓️{% else %}{{ i.macchina.icona }}{% endif %}</span>
+  <span class="rq-testo">
+    <b>{{ i.macchina.nome }}</b>
+    <small>{{ i.descrizione|truncatechars:70 }}</small>
+    <small class="mn-meta">{{ i.macchina.get_luogo_display }} · {{ i.segnalata_il|timesince }} fa{% if i.assegnata_a %} · 🔧 {{ i.assegnata_a.nome_breve }}{% endif %}{% if i.priorita >= 3 and i.aperto %} · <em class="mn-prio p{{ i.priorita }}">{{ i.get_priorita_display }}</em>{% endif %}</small>
+  </span>
+  <span class="stato-chip {% if i.macchina_ferma and i.aperto %}no{% else %}{{ i.classe_stato }}{% endif %}">{% if i.macchina_ferma and i.aperto %}Ferma{% else %}{{ i.etichetta_stato }}{% endif %}</span>
+</a>

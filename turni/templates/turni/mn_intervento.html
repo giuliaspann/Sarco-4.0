@@ -1,0 +1,116 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Intervento #{{ i.pk }}{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <p class="tenue piccolo"><a href="{% url 'turni:manutenzione' %}">‹ Manutenzione</a></p>
+  <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% else %}Guasto{% endif %} #{{ i.pk }}</p>
+  <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona }} {{ i.macchina.nome }}</a></h1>
+  <div class="mn-etichette">
+    <span class="stato-chip {{ i.classe_stato }}">{{ i.etichetta_stato }}</span>
+    {% if i.macchina_ferma %}<span class="stato-chip no">{% if i.aperto %}Macchina ferma{% else %}Ferma {{ i.ore_fermo }} ore{% endif %}</span>{% endif %}
+    <span class="stato-chip spento">{{ i.macchina.get_luogo_display }}</span>
+    <span class="stato-chip mn-prio-chip p{{ i.priorita }}">Priorità {{ i.get_priorita_display|lower }}</span>
+  </div>
+</div>
+
+<section class="scheda">
+  <p class="mn-descrizione">{{ i.descrizione|linebreaksbr }}</p>
+  <p class="tenue piccolo">{% if i.segnalata_da %}Segnalato da {{ i.segnalata_da.dipendente.nome_breve|default:i.segnalata_da.username }}{% else %}Creato dall'app{% endif %} · {{ i.segnalata_il|date:'D j M, H:i' }}</p>
+  {% if i.foto_guasto or i.foto_riparazione %}
+  <div class="mn-foto-coppia">
+    {% if i.foto_guasto %}<figure><img src="{% url 'turni:foto_mn' 'guasto' i.pk %}" alt="Foto del guasto" loading="lazy"><figcaption>Prima</figcaption></figure>{% endif %}
+    {% if i.foto_riparazione %}<figure><img src="{% url 'turni:foto_mn' 'riparazione' i.pk %}" alt="Foto dopo la riparazione" loading="lazy"><figcaption>Dopo</figcaption></figure>{% endif %}
+  </div>
+  {% endif %}
+  {% if i.stato == 'COMPLETATA' %}
+  <div class="mn-fatto">
+    <b>Lavoro fatto</b>
+    <p>{{ i.lavoro_svolto|linebreaksbr }}</p>
+    <small>{{ i.assegnata_a.nome_breve }} · {{ i.completata_il|date:'D j M, H:i' }}{% if i.ore_lavoro %} · {{ i.ore_lavoro }} ore di lavoro{% endif %}</small>
+    {% if i.ricambi_usati.all %}<ul>{% for p in i.ricambi_usati.all %}<li>🔩 {{ p.nome }} × {{ p.quantita }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  {% endif %}
+  {% if i.stato == 'RIFIUTATA' and i.motivo_rifiuto %}<p class="avviso avviso-warning">Non approvata: {{ i.motivo_rifiuto }}</p>{% endif %}
+</section>
+
+{% if i.stato == 'SEGNALATA' and approvatore %}
+<form method="post" class="scheda mn-azione">{% csrf_token %}
+  <h2>{% if i.tipo == 'PROGRAMMATA' %}Assegna{% else %}Approva e invia al manutentore{% endif %}</h2>
+  {% include 'turni/_mn_scegli_manutentore.html' %}
+  <label>Priorità
+    <select name="priorita">{% for v, nome in priorita %}<option value="{{ v }}" {% if v == i.priorita %}selected{% endif %}>{{ nome }}</option>{% endfor %}</select>
+  </label>
+  <button class="bottone pieno piena-larghezza" name="azione" value="approva">Invia al manutentore</button>
+  <details class="mn-rifiuta">
+    <summary>Non serve / non approvare</summary>
+    <label>Perché<input type="text" name="motivo" maxlength="300" placeholder="Es. già sistemato, è un doppione"></label>
+    <button class="bottone avviso-btn piena-larghezza" name="azione" value="rifiuta" formnovalidate>Non approvare</button>
+  </details>
+</form>
+{% endif %}
+
+{% if lavora and i.stato == 'ASSEGNATA' %}
+<form method="post" class="mn-azione-rapida">{% csrf_token %}
+  <button class="bottone pieno piena-larghezza" name="azione" value="inizia">▶️ Inizio il lavoro</button>
+</form>
+{% endif %}
+
+{% if i.aperto and i.stato != 'SEGNALATA' and chiede_pezzi %}
+<a class="bottone piena-larghezza mn-pezzo" href="{% url 'turni:nuovo_ordine' %}?intervento={{ i.pk }}">📦 Serve un pezzo da ordinare</a>
+{% endif %}
+
+{% if lavora and i.aperto and i.stato != 'SEGNALATA' %}
+<form method="post" enctype="multipart/form-data" class="scheda mn-azione mn-form">{% csrf_token %}
+  <h2>Chiudi: macchina riparata</h2>
+  <label>Cosa hai fatto<textarea name="lavoro" rows="3" maxlength="2000" required placeholder="Es. sostituito il tubo e rabboccato l'olio, provata 10 minuti"></textarea></label>
+  <p class="mn-sottotitolo">Pezzi usati (si scalano dal magazzino)</p>
+  {% for n in righe_pezzi %}
+  <div class="mn-pezzo-riga">
+    <select name="pezzo_{{ n }}">
+      <option value="">{% if forloop.first %}Nessuno{% else %}—{% endif %}</option>
+      {% for r in ricambi %}<option value="{{ r.pk }}">{{ r.nome }} ({{ r.scorta }} {{ r.unita }})</option>{% endfor %}
+    </select>
+    <input type="number" name="quantita_{{ n }}" value="1" min="1" max="999" inputmode="numeric" aria-label="Quantità">
+    <input type="text" name="altro_{{ n }}" maxlength="100" placeholder="…oppure scrivi il pezzo">
+  </div>
+  {% endfor %}
+  <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
+    <span>📷 Foto della macchina riparata (obbligatoria)</span>
+  </label>
+  <button class="bottone pieno piena-larghezza" name="azione" value="completa">✅ Riparata</button>
+</form>
+{% endif %}
+
+{% if resp and i.aperto and i.stato != 'SEGNALATA' %}
+<details class="scheda mn-riassegna">
+  <summary>Riassegna a un altro manutentore</summary>
+  <form method="post">{% csrf_token %}
+    {% include 'turni/_mn_scegli_manutentore.html' %}
+    <button class="bottone piena-larghezza" name="azione" value="riassegna">Riassegna</button>
+  </form>
+</details>
+{% endif %}
+
+{% if ordini %}
+<h2 class="rq-sezione">Pezzi chiesti</h2>
+{% for o in ordini %}
+<div class="rq-riga"><span class="home-icona">📦</span>
+  <span class="rq-testo"><b>{{ o.nome }} × {{ o.quantita }}</b><small>{{ o.richiesto_il|date:'j M' }}{% if o.fornitore %} · {{ o.fornitore }}{% endif %}</small></span>
+  <span class="stato-chip {{ o.classe_stato }}">{{ o.get_stato_display }}</span></div>
+{% endfor %}
+{% endif %}
+
+<h2 class="rq-sezione">Diario</h2>
+<ol class="mn-diario">
+  {% for e in eventi %}
+  <li class="{% if e.nota %}nota{% endif %}"><b>{% if e.nota %}{{ e.autore.dipendente.nome_breve|default:e.autore.username }}: {% endif %}{{ e.testo }}</b>
+    <small>{{ e.creato_il|date:'D j M, H:i' }}{% if e.autore and not e.nota %} · {{ e.autore.dipendente.nome_breve|default:'Ufficio' }}{% endif %}</small></li>
+  {% endfor %}
+</ol>
+<form method="post" class="mn-nota">{% csrf_token %}
+  <input type="text" name="testo" maxlength="500" placeholder="Aggiungi una nota al diario" required>
+  <button class="bottone" name="azione" value="nota">Aggiungi</button>
+</form>
+{% endblock %}
