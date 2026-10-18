@@ -17,7 +17,7 @@ from django.views.decorators.http import require_POST
 
 from . import importa
 from .forms import AccessoForm, ImportaForm
-from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Pulizia, Settimana, Turno
+from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
 from .pulizie import genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
 from .richieste import extra_per
 from .views_messaggi import non_letti_bacheca, non_letti_chat
@@ -147,6 +147,80 @@ def miei_turni(request):
             'prec': inizio - timedelta(days=7),
             'succ': inizio + timedelta(days=7),
             'extra': extra_per(dip),
+        },
+    )
+
+
+ORDINE_GRUPPI = [Postazione.IMP1, Postazione.IMP2, Postazione.PALISTA, Postazione.SUPERBI,
+                 Postazione.ANALISI, Postazione.MULINO, Postazione.BARROTTI]
+
+
+def nome_corto(dip):
+    """'DI GIROLAMO GIANVITO' -> 'Di Girolamo G.': sta nella colonna stretta del telefono."""
+    parole = dip.nome_breve.split()
+    return ' '.join(parole[:-1] + [parole[-1][0] + '.']) if len(parole) > 1 else dip.nome_breve
+
+
+@login_required
+def settimana_tutti(request):
+    """Come il file Excel: tutti i dipendenti della settimana, raggruppati per impianto/postazione,
+    una casella colorata per giorno. Toccando il giorno di un collega si chiede il cambio."""
+    from collections import Counter
+
+    oggi = timezone.localdate()
+    base = leggi_data(request.GET.get('settimana'), oggi)
+    lunedi = base - timedelta(days=base.weekday())
+    giorni = [lunedi + timedelta(days=i) for i in range(7)]
+    mio = dipendente_di(request)
+
+    per_dip = {}
+    for t in Turno.objects.filter(data__in=giorni, settimana__pubblicata=True, dipendente__attivo=True).select_related('dipendente'):
+        per_dip.setdefault(t.dipendente, {})[t.data] = t
+    miei = per_dip.get(mio, {}) if mio else {}
+
+    gruppi = {}
+    for dip, turni in per_dip.items():
+        lavoro = [t for t in turni.values() if t.lavora]
+        posti = Counter(t.postazione for t in lavoro if t.postazione)
+        if posti:
+            chiave = posti.most_common(1)[0][0]
+            titolo = Postazione(chiave).label
+        else:
+            fasce = Counter(t.fascia for t in lavoro)
+            chiave = fasce.most_common(1)[0][0] if fasce else 'zz'
+            titolo = {Fascia.GIORNALIERO: 'Giornalieri', Fascia.NOTTE: 'Notte'}.get(chiave, 'Altri')
+        celle = []
+        for g in giorni:
+            t = turni.get(g)
+            mio_t = miei.get(g)
+            cambiabile = (
+                mio and dip != mio and t and mio_t and g > oggi
+                and (t.fascia, t.postazione, t.capoturno) != (mio_t.fascia, mio_t.postazione, mio_t.capoturno)
+            )
+            celle.append({'turno': t, 'cambiabile': cambiabile, 'giorno': g})
+        # dentro il gruppo: prima chi fa più mattine, poi pomeriggi, notti...
+        fascia_tipica = Counter(t.fascia for t in lavoro).most_common(1)[0][0] if lavoro else 'zz'
+        gruppi.setdefault((chiave, titolo), []).append(
+            {'dip': dip, 'nome': nome_corto(dip), 'celle': celle, 'io': dip == mio,
+             'ordine': (ORDINE_FASCE.index(fascia_tipica) if fascia_tipica in ORDINE_FASCE else 9, dip.nome)}
+        )
+
+    def ordine_gruppo(k):
+        chiave = k[0]
+        return ORDINE_GRUPPI.index(chiave) if chiave in ORDINE_GRUPPI else len(ORDINE_GRUPPI) + (chiave == 'zz')
+
+    elenco = [(titolo, sorted(righe, key=lambda r: r['ordine'])) for (chiave, titolo), righe in sorted(gruppi.items(), key=lambda x: ordine_gruppo(x[0]))]
+    return render(
+        request,
+        'turni/settimana_tutti.html',
+        {
+            'gruppi': elenco,
+            'giorni': giorni,
+            'oggi': oggi,
+            'lunedi': lunedi,
+            'prec': lunedi - timedelta(days=7),
+            'succ': lunedi + timedelta(days=7),
+            'mio': mio,
         },
     )
 

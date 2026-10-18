@@ -535,3 +535,19 @@ body.accesso .barra { display: none; }
 /* squadra: la fascia ha la stessa sigla e lo stesso colore del calendario */
 .fascia-squadra { border-left-width: 6px; }
 .sigla-titolo { display: inline-block; width: auto; min-width: 34px; padding: 2px 7px; margin-right: 6px; font-size: .85rem; vertical-align: middle; }
+
+/* ------------------------------------------------ turni di tutti (come l'Excel, senza scorrimento laterale) */
+.griglia-aiuto { margin: 0 0 8px; }
+.griglia-tutti { padding: 12px 8px; }
+.griglia-tutti h2 { margin: 0 4px 6px; }
+.gt-riga { display: grid; grid-template-columns: minmax(0, 1fr) repeat(7, 29px); gap: 2px; align-items: center; padding: 3px 2px; border-radius: 8px; }
+.gt-riga.io { background: var(--primario-chiaro); outline: 2px solid var(--primario); }
+.gt-testa { padding-bottom: 4px; }
+.gt-nome { font-size: .76rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gt-giorno { display: flex; flex-direction: column; align-items: center; font-size: .66rem; color: var(--tenue); line-height: 1.1; }
+.gt-giorno b { font-size: .78rem; color: var(--testo); }
+.gt-giorno.oggi b { background: var(--primario); color: #fff; border-radius: 99px; padding: 0 5px; }
+.gt-cella { display: grid; place-items: center; height: 28px; border-radius: 6px; font-size: .7rem; font-weight: 800; text-decoration: none; }
+.gt-cella.vuota { color: var(--spento, #999); background: transparent; }
+.gt-cella.cambiabile { box-shadow: inset 0 0 0 2px var(--testo); }
+@media (max-width: 360px) { .gt-riga { grid-template-columns: minmax(0, 1fr) repeat(7, 26px); } }

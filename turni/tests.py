@@ -390,3 +390,33 @@ class TurniProvaTest(TestCase):
         self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
         self.assertEqual(dip.turni.count(), 14)
         self.assertNotContains(self.client.get(url), 'Genera turni di prova')
+
+
+class SettimanaTuttiTest(TestCase):
+    def setUp(self):
+        importa.salva_settimana(importa.leggi_file(file_turni(RIGHE), LUNEDI))
+        d = Dipendente.objects.get(nome='DRAME BOUBA')
+        d.utente = get_user_model().objects.create_user('drame', password='123456')
+        d.save()
+        self.client.login(username='drame', password='123456')
+        adesso = timezone.make_aware(datetime.combine(LUNEDI, datetime.min.time()) + timedelta(hours=8))
+        patcher = mock.patch('django.utils.timezone.now', return_value=adesso)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_griglia_per_impianto_e_celle_cambiabili(self):
+        r = self.client.get(reverse('turni:settimana_tutti'))
+        self.assertEqual(r.status_code, 200)
+        gruppi = dict(r.context['gruppi'])
+        # Drame e Spano lavorano soprattutto all'Impianto 1, Crimi soprattutto da palista
+        self.assertEqual({x['nome'] for x in gruppi['Impianto 1']}, {'Spano’ A. M.', 'Drame B.'})
+        self.assertIn('Crimi B.', {x['nome'] for x in gruppi['Palista']})
+        spano = next(x for x in gruppi['Impianto 1'] if x['nome'].startswith('Spano'))
+        # lunedì (oggi) non si cambia; martedì Spano riposa e Drame lavora: si può chiedere
+        self.assertFalse(spano['celle'][0]['cambiabile'])
+        self.assertTrue(spano['celle'][1]['cambiabile'])
+        # giovedì hanno lo stesso turno: niente da cambiare
+        self.assertFalse(spano['celle'][3]['cambiabile'])
+        io = next(x for x in gruppi['Impianto 1'] if x['io'])
+        self.assertFalse(any(c['cambiabile'] for c in io['celle']))
+        self.assertContains(r, f"collega={spano['dip'].pk}")

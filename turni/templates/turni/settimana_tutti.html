@@ -1,0 +1,50 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Turni di tutti{% endblock %}
+{% block contenuto %}
+<div class="naviga mese">
+  <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
+  <h1>{{ lunedi|date:'j' }} – {{ giorni.6|date:'j F' }}</h1>
+  <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
+</div>
+
+{% if mio %}
+<p class="tenue piccolo griglia-aiuto">Tocca il giorno di un collega (casella con il bordo) per chiedergli il cambio.</p>
+{% endif %}
+
+<ul class="legenda">
+  <li><i class="f-mattina">1T</i>Mattina</li>
+  <li><i class="f-pomeriggio">2T</i>Pomeriggio</li>
+  <li><i class="f-notte">N</i>Notte</li>
+  <li><i class="f-giorno">G</i>Giornata</li>
+  <li><i class="f-capo">CT</i>Capo turno</li>
+  <li><i class="f-riposo">R</i>Riposo</li>
+  <li><i class="f-ferie">F</i>Ferie</li>
+</ul>
+
+{% for titolo, righe in gruppi %}
+<section class="scheda griglia-tutti">
+  <h2>{{ titolo }}</h2>
+  <div class="gt-riga gt-testa">
+    <span class="gt-nome"></span>
+    {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}
+  </div>
+  {% for r in righe %}
+  <div class="gt-riga {% if r.io %}io{% endif %}">
+    <span class="gt-nome" title="{{ r.dip.nome_breve }}">{{ r.nome }}</span>
+    {% for c in r.celle %}
+      {% if c.cambiabile %}
+        <a class="gt-cella cambiabile {{ c.turno.classe_fascia }}" href="{% url 'turni:nuovo_cambio' %}?giorno={{ c.giorno|date:'Y-m-d' }}&collega={{ r.dip.pk }}"
+           title="Chiedi il cambio a {{ r.nome }}">{{ c.turno.sigla }}</a>
+      {% elif c.turno %}
+        <span class="gt-cella {{ c.turno.classe_fascia }}" title="{{ c.turno.descrizione }}">{{ c.turno.sigla }}</span>
+      {% else %}
+        <span class="gt-cella vuota">–</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</section>
+{% empty %}
+  <div class="vuoto"><p>I turni di questa settimana non sono ancora pubblicati.</p></div>
+{% endfor %}
+{% endblock %}

@@ -11,6 +11,7 @@ urlpatterns = [
     path('esci/', LogoutView.as_view(), name='logout'),
     path('miei/', views.miei_turni, name='miei_turni'),
     path('squadra/', views.squadra, name='squadra'),
+    path('settimana/', views.settimana_tutti, name='settimana_tutti'),
     path('pulizie/', views.pulizie, name='pulizie'),
     path('pulizie/<int:turno_id>/', views.pulizie, name='pulizie_turno'),
     path('capoturno/', views.capoturno, name='capoturno'),
