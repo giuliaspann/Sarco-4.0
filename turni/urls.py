@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views, views_richieste
+from . import views, views_messaggi, views_richieste
 
 app_name = 'turni'
 
@@ -21,6 +21,9 @@ urlpatterns = [
     path('richieste/avviso/', views_richieste.nuovo_avviso, name='nuovo_avviso'),
     path('extra/<int:extra_id>/', views_richieste.rispondi_extra, name='rispondi_extra'),
     path('ufficio/extra/', views_richieste.ufficio_extra, name='ufficio_extra'),
+    path('messaggi/', views_messaggi.messaggi, name='messaggi'),
+    path('messaggi/chat/nuovi/', views_messaggi.chat_nuovi, name='chat_nuovi'),
+    path('notifiche/iscrivi/', views_messaggi.iscrivi_notifiche, name='iscrivi_notifiche'),
     path('ufficio/richieste/', views_richieste.ufficio_richieste, name='ufficio_richieste'),
     path('ufficio/importa/', views.importa_turni, name='importa'),
     path('ufficio/importa/anteprima/', views.anteprima, name='anteprima'),

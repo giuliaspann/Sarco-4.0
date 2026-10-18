@@ -3,17 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1f5f3f">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#142229" media="(prefers-color-scheme: dark)">
   <title>{% block titolo %}Turni{% endblock %} · Sarco</title>
   <link rel="manifest" href="{% url 'manifest' %}">
   <link rel="apple-touch-icon" href="{% static 'turni/icona-192.png' %}">
   <link rel="icon" href="{% static 'turni/icona-192.png' %}">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600&display=swap">
   <link rel="stylesheet" href="{% static 'turni/app.css' %}">
 </head>
 <body class="{% block classe_body %}{% endblock %}">
   <header class="barra">
-    <span class="marchio">Sarco <b>Turni</b></span>
+    <span class="marchio">
+      <picture>
+        <source srcset="{% static 'turni/logo-bianco.png' %}" media="(prefers-color-scheme: dark)">
+        <img src="{% static 'turni/logo-blu.png' %}" alt="Sarco" width="115" height="34">
+      </picture>
+      <span class="marchio-modulo">Turni &amp;<br>Pulizie</span>
+    </span>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
         <button class="link-esci" type="submit">Esci</button>
@@ -31,11 +41,15 @@
   {% if user.is_authenticated %}
   <nav class="menu">
     {% if nav_dipendente %}
+      <a href="{% url 'turni:home' %}" class="{% if request.resolver_match.url_name == 'home' %}attivo{% endif %}">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Home</a>
       <a href="{% url 'turni:miei_turni' %}" class="{% if request.resolver_match.url_name == 'miei_turni' %}attivo{% endif %}">
         <span class="icona-badge"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>{% if nav_extra %}<b class="badge">{{ nav_extra }}</b>{% endif %}</span>Turni</a>
     {% endif %}
+    {% if not nav_dipendente %}
     <a href="{% url 'turni:squadra' %}" class="{% if request.resolver_match.url_name == 'squadra' %}attivo{% endif %}">
       <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 1.6 5.5 5"/></svg>Squadra</a>
+    {% endif %}
     {% if nav_dipendente %}
       <a href="{% url 'turni:pulizie' %}" class="{% if 'pulizie' in request.resolver_match.url_name %}attivo{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/></svg>Pulizie</a>
@@ -44,6 +58,8 @@
       <a href="{% url 'turni:richieste' %}" class="{% if '/richieste/' in request.path and '/ufficio/' not in request.path %}attivo{% endif %}">
         <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>{% if nav_da_rispondere %}<b class="badge">{{ nav_da_rispondere }}</b>{% endif %}</span>Richieste</a>
     {% endif %}
+    <a href="{% url 'turni:messaggi' %}" class="{% if '/messaggi/' in request.path %}attivo{% endif %}">
+      <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>{% if nav_messaggi %}<b class="badge">{{ nav_messaggi }}</b>{% endif %}</span>Messaggi</a>
     {% if nav_capoturno %}
       <a href="{% url 'turni:capoturno' %}" class="{% if request.resolver_match.url_name == 'capoturno' %}attivo{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/><path d="M5 20h14"/></svg>Verifica</a>

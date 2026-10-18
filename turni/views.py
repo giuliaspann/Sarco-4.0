@@ -20,6 +20,7 @@ from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Pulizia, Settimana, Turno
 from .pulizie import genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
 from .richieste import extra_per
+from .views_messaggi import non_letti_bacheca, non_letti_chat
 
 ORDINE_FASCE = [Fascia.MATTINA, Fascia.GIORNALIERO, Fascia.POMERIGGIO, Fascia.NOTTE, Fascia.ALTRO]
 
@@ -50,14 +51,41 @@ def leggi_data(valore, predefinita):
 
 @login_required
 def home(request):
-    if dipendente_di(request) is None:
+    """Per l'operaio: pagina di scorciatoie (un pulsante grande per ogni cosa che può fare)."""
+    dip = dipendente_di(request)
+    if dip is None:
         from .richieste import e_responsabile
 
         if e_responsabile(request.user):
             return redirect('turni:ufficio_richieste')
         if request.user.is_staff:
             return redirect('turni:importa')
-    return redirect('turni:miei_turni')
+        return redirect('turni:miei_turni')
+
+    turno = turno_attuale(dip)
+    pulizie_da_fare = None
+    if turno and turno.lavora:
+        genera_pulizie(turno)
+        pulizie_da_fare = turno.pulizie.exclude(stato__in=[Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA]).count()
+    domani = timezone.localdate() + timedelta(days=1)
+    return render(
+        request,
+        'turni/home.html',
+        {
+            'dip': dip,
+            'oggi': timezone.localdate(),
+            'turno': turno,
+            'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
+            'pulizie_da_fare': pulizie_da_fare,
+            'extra': [e for e in extra_per(dip) if not e.mia],
+            'bacheca_nuovi': non_letti_bacheca(request.user),
+            'chat_nuovi': non_letti_chat(request.user),
+            # pulizie segnate "fatte" che aspettano il controllo del capo turno
+            'da_verificare': Pulizia.objects.filter(turno__data=timezone.localdate(), stato=Pulizia.Stato.FATTA).count()
+            if e_capoturno(request.user, timezone.localdate())
+            else 0,
+        },
+    )
 
 
 @login_required
@@ -421,9 +449,25 @@ def manifest(request):
 
 
 SERVICE_WORKER = """
-// Serve solo a rendere l'app installabile e a mostrare un avviso senza rete.
+// Rende l'app installabile, mostra un avviso senza rete e le notifiche push.
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => self.clients.claim());
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data.json(); } catch (err) { d = { titolo: 'Sarco Turni', testo: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.titolo || 'Sarco Turni', {
+    body: d.testo || '', icon: '/static/turni/icona-192.png', badge: '/static/turni/icona-192.png',
+    data: { url: d.url || '/turni/' },
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/turni/';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(finestre => {
+    for (const f of finestre) { if ('focus' in f) { f.navigate(url); return f.focus(); } }
+    return clients.openWindow(url);
+  }));
+});
 self.addEventListener('fetch', e => {
   if (e.request.mode !== 'navigate') return;
   e.respondWith(fetch(e.request).catch(() => new Response(

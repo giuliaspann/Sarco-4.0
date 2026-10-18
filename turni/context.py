@@ -17,6 +17,10 @@ def navigazione(request):
         'nav_responsabile': responsabile,
         'nav_ufficio': user.is_staff or responsabile,
     }
+    from .views_messaggi import non_letti_bacheca, non_letti_chat, stato_di
+
+    stato = stato_di(user)
+    contesto['nav_messaggi'] = non_letti_bacheca(user, stato) + non_letti_chat(user, stato)
     if dip:
         contesto['nav_da_rispondere'] = CambioTurno.objects.filter(
             collega=dip, stato=CambioTurno.Stato.ATTESA_COLLEGA, giorno1__gt=timezone.localdate()

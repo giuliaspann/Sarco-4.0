@@ -1,6 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Turni{% endblock %}
 {% block contenuto %}
+<p class="occhiello centrato">I miei turni</p>
 <div class="naviga mese">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
   <h1>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</h1>
@@ -9,7 +10,7 @@
 
 {% for e in extra %}
 <section class="scheda extra {% if e.mia.confermata %}extra-ok{% elif e.mia %}extra-offerto{% endif %}">
-  <p class="extra-titolo">{% if e.mia.confermata %}✅ Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}🙋 Cercasi volontari{% endif %}</p>
+  <p class="extra-titolo">{% if e.mia.confermata %}Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}Cercasi volontari{% endif %}</p>
   <h2 class="grande">{{ e.data|date:'l j F'|capfirst }} · {{ e.descrizione }}</h2>
   {% if e.nota %}<p>{{ e.nota }}</p>{% endif %}
   {% if not e.mia.confermata %}
@@ -57,7 +58,10 @@
 </div>
 
 <section class="scheda dettaglio-giorno {% if turno %}{{ turno.classe_fascia }}-bordo{% endif %}">
-  <p class="tenue piccolo">{% if scelto == oggi %}Oggi, {% endif %}{{ scelto|date:'l j F'|capfirst }}</p>
+  <div class="dettaglio-testa">
+    <p class="tenue piccolo">{% if scelto == oggi %}Oggi, {% endif %}{{ scelto|date:'l j F'|capfirst }}</p>
+    {% if turno %}<span class="badge-turno {{ turno.classe_fascia }}">{{ turno.sigla }}</span>{% endif %}
+  </div>
   {% if turno %}
     <h2 class="grande">{{ turno.descrizione }}</h2>
     {% if turno.nota_modifica %}<p class="tenue piccolo">{{ turno.nota_modifica }}</p>{% endif %}

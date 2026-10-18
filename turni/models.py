@@ -454,3 +454,59 @@ class AvvisoAssenza(models.Model):
 
     def __str__(self):
         return f'{self.dipendente} {self.data:%d/%m} {self.get_tipo_display()}'
+
+
+# ---------------------------------------------------------------- Messaggi
+
+
+class Annuncio(models.Model):
+    """Bacheca: scrive solo il responsabile turni, leggono tutti."""
+
+    testo = models.TextField(max_length=2000)
+    importante = models.BooleanField(default=False)
+    autore = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    creato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'annunci'
+        ordering = ['-creato_il']
+
+
+class MessaggioChat(models.Model):
+    """Chat di gruppo: operai e ufficio."""
+
+    autore = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    testo = models.TextField(max_length=1000)
+    creato_il = models.DateTimeField(auto_now_add=True)
+    eliminato = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'messaggio chat'
+        verbose_name_plural = 'messaggi chat'
+        ordering = ['creato_il']
+
+
+class StatoMessaggi(models.Model):
+    """Fin dove ha letto ogni utente (per i pallini dei non letti) e se vuole le notifiche della chat."""
+
+    utente = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='stato_messaggi')
+    bacheca_letta_il = models.DateTimeField(null=True, blank=True)
+    chat_letta_fino = models.PositiveBigIntegerField(default=0)
+    notifiche_chat = models.BooleanField(default=True)
+
+
+class IscrizionePush(models.Model):
+    """Un telefono che ha accettato le notifiche."""
+
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='iscrizioni_push')
+    endpoint = models.URLField(max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    creata_il = models.DateTimeField(auto_now_add=True)
+
+
+class ChiaviPush(models.Model):
+    """Chiavi VAPID generate dall'app al primo uso: niente segreti da copiare su Railway."""
+
+    privata_pem = models.TextField()
+    pubblica = models.CharField(max_length=200)

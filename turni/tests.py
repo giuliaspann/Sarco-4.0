@@ -311,3 +311,30 @@ class CalendarioTest(TestCase):
         )
         self.assertEqual(r.context['inizio'], LUNEDI)
         self.assertEqual(r.context['scelto'], LUNEDI + timedelta(days=9))
+
+
+class HomeTest(TestCase):
+    def setUp(self):
+        importa.salva_settimana(importa.leggi_file(file_turni(RIGHE), LUNEDI))
+        for nome, user in [('CRIMI BENITO', 'crimi'), ('DRAME BOUBA', 'drame')]:
+            d = Dipendente.objects.get(nome=nome)
+            d.utente = get_user_model().objects.create_user(user, password='123456')
+            d.save()
+        adesso = timezone.make_aware(datetime.combine(LUNEDI + timedelta(days=1), datetime.min.time()) + timedelta(hours=12))
+        patcher = mock.patch('django.utils.timezone.now', return_value=adesso)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_scorciatoie_operaio(self):
+        self.client.login(username='drame', password='123456')
+        r = self.client.get(reverse('turni:home'))
+        self.assertEqual(r.status_code, 200)
+        for testo in ('I miei turni', 'Pulizie', 'Cambio turno', 'Ferie / permesso', 'Avviso assenza', 'Chat', 'Bacheca'):
+            self.assertContains(r, testo)
+        self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))  # martedì: 2T Imp. 2
+        self.assertEqual(r.context['domani'].fascia, Fascia.RIPOSO)
+        self.assertNotContains(r, 'Verifica pulizie')  # non è capo turno
+
+    def test_capo_turno_vede_la_verifica(self):
+        self.client.login(username='crimi', password='123456')  # martedì capo turno di notte
+        self.assertContains(self.client.get(reverse('turni:home')), 'Verifica pulizie')

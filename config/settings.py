@@ -112,6 +112,8 @@ STORAGES = {
 # Nei test non c'è collectstatic: niente manifest
 if 'test' in sys.argv:
     STORAGES['staticfiles'] = {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'}
+    # nei test le notifiche partono subito (e sono finte), non in un thread
+    PUSH_SINCRONO = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

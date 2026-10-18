@@ -1,16 +1,39 @@
 {% extends 'turni/base.html' %}
+{% load static %}
 {% block titolo %}Accesso{% endblock %}
 {% block classe_body %}accesso{% endblock %}
 {% block contenuto %}
-<div class="scheda scheda-accesso">
-  <h1>Accedi</h1>
-  <p class="tenue">Nome utente e PIN te li dà l'ufficio.</p>
+<div class="accesso-pagina">
+  <div class="accesso-logo">
+    <picture>
+      <source srcset="{% static 'turni/logo-bianco.png' %}" media="(prefers-color-scheme: dark)">
+      <img src="{% static 'turni/logo-blu.png' %}" alt="Sarco" width="156" height="46">
+    </picture>
+    <span>Turni &amp; Pulizie</span>
+  </div>
+
+  <div>
+    <h1>Buongiorno,<br>accedi con il tuo PIN</h1>
+    <p class="tenue">Nome utente e PIN te li dà l'ufficio.</p>
+  </div>
+
   <form method="post">{% csrf_token %}
     {% if form.non_field_errors %}<div class="avviso avviso-error">{{ form.non_field_errors.0 }}</div>{% endif %}
     <label>{{ form.username.label }}{{ form.username }}</label>
-    <label>{{ form.password.label }}{{ form.password }}</label>
+    <label class="pin">{{ form.password.label }}{{ form.password }}</label>
+
+    {# Tastierino: lo mostra app.js; senza JavaScript si scrive il PIN con la tastiera del telefono #}
+    <div class="tastierino" data-tastierino="id_password" hidden>
+      {% for t in '123456789' %}<button type="button" data-tasto="{{ t }}">{{ t }}</button>{% endfor %}
+      <button type="button" class="vuoto-tasto" tabindex="-1" aria-hidden="true"></button>
+      <button type="button" data-tasto="0">0</button>
+      <button type="button" data-tasto="canc" aria-label="Cancella l'ultima cifra">⌫</button>
+    </div>
+
     <input type="hidden" name="next" value="{{ next }}">
     <button class="bottone pieno" type="submit">Entra</button>
   </form>
+
+  <p class="accesso-aiuto">PIN dimenticato? Chiedi all'ufficio.</p>
 </div>
 {% endblock %}

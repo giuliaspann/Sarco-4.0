@@ -1,39 +1,49 @@
+/* Design system "Turno Chiaro": palette presa da sarcosrl.it */
 :root {
-  --sfondo: #f4f5f2;
+  --sfondo: #f2f2f2;
   --carta: #ffffff;
-  --testo: #1d2420;
-  --tenue: #66706a;
-  --bordo: #dfe3dd;
-  --primario: #1f5f3f;
-  --primario-chiaro: #e3efe7;
-  --imp1: #fff3a6;
-  --imp2: #ffd89a;
-  --notte: #cfe0f7;
-  --notte-testo: #173e74;
-  --altro: #eef0ec;
-  --ok: #2d8a4e;
-  --attenzione: #b7651a;
+  --testo: #00384f;          /* blu Sarco */
+  --tenue: #54595f;
+  --spento: #7f8588;
+  --bordo: #dcdfe0;
+  --marchio: #4fac25;        /* verde del logo: solo superfici, mai testo bianco sopra */
+  --primario: #2e7a14;       /* verde scuro: pulsanti e testo */
+  --primario-scuro: #215a0e;
+  --primario-chiaro: #e8f4e2;
+  --imp1: #fbe7b5;
+  --imp2: #f9d9a6;
+  --notte: #dce6f2;
+  --notte-testo: #00384f;
+  --altro: #eef0f1;
+  --ok: #2e7a14;
+  --attenzione: #c2410c;
   --errore: #b3261e;
-  --raggio: 14px;
+  --raggio: 12px;
+  --raggio-grande: 20px;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-titoli: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --sfondo: #121513;
-    --carta: #1c201d;
-    --testo: #e8ece9;
-    --tenue: #9aa49e;
-    --bordo: #2e3530;
-    --primario: #6fc596;
-    --primario-chiaro: #1f3428;
-    --imp1: #4a4419;
+    --sfondo: #0c171d;
+    --carta: #142229;
+    --testo: #e6eef1;
+    --tenue: #9fb0b8;
+    --spento: #6f8089;
+    --bordo: #26363f;
+    --primario: #7cc95b;
+    --primario-scuro: #9bd981;
+    --primario-chiaro: #1a3320;
+    --imp1: #4a4019;
     --imp2: #4d3615;
-    --notte: #1d2f4a;
-    --notte-testo: #b9d2f5;
-    --altro: #262b27;
-    --ok: #6fc596;
-    --attenzione: #e9a05a;
+    --notte: #17304a;
+    --notte-testo: #cfe0f5;
+    --altro: #1d2c34;
+    --ok: #7cc95b;
+    --attenzione: #f08a55;
     --errore: #f2867e;
     color-scheme: dark;
   }
@@ -48,7 +58,7 @@ body {
   overflow-wrap: anywhere;
   background: var(--sfondo);
   color: var(--testo);
-  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 16px/1.45 var(--font);
   padding-bottom: calc(76px + env(safe-area-inset-bottom));
 }
 a { color: var(--primario); }
@@ -273,6 +283,7 @@ textarea { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; 
 
 /* ------------------------------------------------ calendario */
 /* un colore pieno e diverso per ogni sigla, leggibile anche al sole */
+/* colori scelti dall'utente: non cambiarli con la palette del design system */
 .f-mattina { background: #ffd60a; color: #3a2f00; }
 .f-pomeriggio { background: #ff7a00; color: #fff; }
 .f-notte { background: #1e3a8a; color: #fff; }
@@ -341,3 +352,179 @@ h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
 /* i pulsanti non si spezzano mai lettera per lettera */
 .bottone { overflow-wrap: normal; white-space: nowrap; }
 .elenco li > form, .elenco li > .azioni { flex: none; }
+
+/* ------------------------------------------------ messaggi */
+.schede-messaggi { margin: 0 0 12px; }
+.pallino { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 99px; background: var(--errore); color: #fff; font-size: .72rem; line-height: 18px; }
+.notifiche { border: 2px solid var(--primario); }
+.notifiche p { margin: 0 0 6px; }
+.spunta-riga { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 8px 0; }
+.spunta-riga input { width: 20px; height: 20px; }
+.annuncio.importante { border: 2px solid var(--errore); }
+.annuncio-testo { margin: 0 0 8px; font-size: 1rem; }
+.annuncio-piede { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.link-piccolo { background: none; border: 0; padding: 4px 0; color: var(--tenue); font: inherit; font-size: .8rem; text-decoration: underline; cursor: pointer; }
+.in-linea { display: inline; }
+
+.chat { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.bolla {
+  max-width: 82%; align-self: flex-start; display: flex; flex-direction: column; gap: 2px;
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: 14px 14px 14px 4px; padding: 7px 11px;
+}
+.bolla.mia { align-self: flex-end; background: #dcf3e3; border-color: #bfe3cb; border-radius: 14px 14px 4px 14px; }
+@media (prefers-color-scheme: dark) { .bolla.mia { background: #1f3a29; border-color: #2c5139; } }
+.bolla.ufficio:not(.mia) { border: 2px solid var(--primario); }
+.bolla-autore { font-size: .78rem; font-weight: 700; color: var(--primario); }
+.bolla-testo { white-space: pre-wrap; }
+.bolla-ora { font-size: .7rem; color: var(--tenue); align-self: flex-end; }
+.scrivi {
+  position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); display: flex; gap: 8px; align-items: flex-end;
+  background: var(--sfondo); padding: 8px 0;
+}
+.scrivi textarea { flex: 1; min-height: 44px; max-height: 120px; resize: none; }
+
+/* ================================================ Turno Chiaro (design system) */
+/* Strato finale: aggiorna l'aspetto senza cambiare le classi usate dai template. */
+h1, h2, h2.grande, .marchio { font-family: var(--font-titoli); letter-spacing: -.01em; }
+h1 { font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
+h2 { font-size: 1.1rem; font-weight: 700; }
+h2.grande { font-size: 1.3rem; }
+.mono, .cal-num, .conteggio, .pin input { font-family: var(--font-mono); }
+.occhiello { margin: 0 0 2px; font-size: .78rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--tenue); }
+
+/* intestazione: fondo chiaro, logo Sarco */
+.barra { background: var(--carta); color: var(--testo); border-bottom: 1px solid var(--bordo); padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: 12px; }
+@media (prefers-color-scheme: dark) { .barra { background: var(--carta); } }
+.marchio { display: flex; align-items: center; gap: 10px; font-size: .9rem; font-weight: 600; color: var(--tenue); }
+.marchio picture, .marchio img { display: block; height: 34px; width: auto; }
+.marchio-modulo { padding-left: 10px; border-left: 1px solid var(--bordo); line-height: 1.1; }
+.link-esci { color: var(--testo); opacity: 1; font-weight: 600; min-height: 44px; padding: 0 12px; border-radius: var(--raggio); }
+.link-esci:hover { background: var(--altro); }
+
+/* superfici */
+.scheda, .vuoto, .calendario, .tabella-scorre { border-radius: var(--raggio-grande); }
+.scheda { padding: 18px; }
+.avviso { border-radius: var(--raggio); }
+.etichetta { background: var(--primario); }
+
+/* pulsanti: 52px, si usano anche con i guanti */
+.bottone { min-height: 52px; padding: 0 18px; border-radius: var(--raggio); border: 2px solid var(--testo); background: var(--carta); color: var(--testo); }
+.bottone.pieno { background: var(--primario); border-color: var(--primario); color: #fff; }
+.bottone.pieno:hover { background: var(--primario-scuro); border-color: var(--primario-scuro); }
+@media (prefers-color-scheme: dark) { .bottone.pieno { color: #0c1a10; } .bottone.pieno:hover { color: #0c1a10; } }
+.bottone.leggero { border-color: transparent; background: var(--primario-chiaro); color: var(--primario-scuro); }
+.bottone.avviso-btn { border-color: var(--attenzione); color: var(--attenzione); }
+.bottone:disabled { background: var(--altro); border-color: var(--altro); color: var(--spento); }
+
+/* campi */
+input[type=text], input[type=password], input[type=date], input[type=number], input[type=file], select, textarea {
+  min-height: 52px; border-radius: var(--raggio); background: var(--carta); border: 1px solid var(--bordo); padding: 12px 14px;
+}
+input:focus, select:focus, textarea:focus { outline: none; border: 2px solid var(--primario); padding: 11px 13px; }
+:focus-visible { outline: 3px solid var(--marchio); outline-offset: 2px; }
+
+/* filtri a segmenti */
+.filtri { border-radius: var(--raggio); }
+.filtri a { border-radius: 9px; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+
+/* menu in basso: voce attiva in una pillola verde tenue */
+.menu { padding-top: 8px; }
+.menu a { padding: 7px 2px; font-weight: 600; }
+.menu a.attivo { background: var(--primario-chiaro); color: var(--primario-scuro); }
+
+/* calendario */
+.calendario { padding: 10px; }
+.cal-giorno { border-radius: var(--raggio); background: var(--carta); border: 1px solid var(--bordo); }
+.cal-giorno.scelto { border: 2px solid var(--primario); background: var(--primario-chiaro); }
+.cal-giorno.oggi .cal-num { background: var(--testo); color: var(--carta); }
+.cal-sigla { border-radius: 7px; }
+.badge-turno { font-weight: 800; }
+.legenda i { font-family: var(--font-mono); font-weight: 500; border-radius: 6px; padding: 2px 4px; }
+.freccia { width: 48px; height: 48px; color: var(--testo); }
+
+/* card del giorno scelto */
+.scheda.dettaglio-giorno { border-left: 1px solid var(--bordo); }
+.dettaglio-testa { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.dettaglio-testa .tenue { margin: 0; font-weight: 600; }
+.badge-turno { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 99px; font-size: .85rem; font-weight: 500; white-space: nowrap; }
+.azioni-giorno .bottone { width: 100%; }
+
+/* ------------------------------------------------ accesso con PIN */
+body.accesso { padding-bottom: 0; }
+body.accesso .barra { display: none; }
+.accesso-pagina { min-height: calc(100vh - 32px); display: flex; flex-direction: column; gap: 22px; padding-top: calc(24px + env(safe-area-inset-top)); max-width: 420px; margin: 0 auto; }
+.accesso-logo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.accesso-logo img { height: 46px; width: auto; display: block; }
+.accesso-logo span { font-size: .85rem; font-weight: 600; color: var(--tenue); }
+.accesso-pagina h1 { font-size: 2rem; margin-top: 12px; }
+.accesso-pagina form { display: flex; flex-direction: column; gap: 4px; }
+.pin input { font-size: 1.6rem; letter-spacing: .4em; text-align: center; padding-left: .4em; }
+.tastierino { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 6px 0 14px; }
+.tastierino[hidden] { display: none; }
+.tastierino button {
+  min-height: 64px; border-radius: 16px; border: 1px solid var(--bordo); background: var(--carta); color: var(--testo);
+  font: 500 1.6rem var(--font-mono); cursor: pointer; touch-action: manipulation;
+}
+.tastierino button:active { background: var(--primario-chiaro); border-color: var(--primario); }
+.tastierino .vuoto-tasto { visibility: hidden; }
+.accesso-pagina .bottone { width: 100%; }
+.accesso-aiuto { text-align: center; color: var(--tenue); font-size: .9rem; margin: 4px 0 0; }
+
+/* ------------------------------------------------ pulizie */
+.progresso { display: flex; flex-direction: column; gap: 8px; }
+.progresso-testa { display: flex; justify-content: space-between; font-weight: 600; font-size: .92rem; }
+.avanzamento { background: var(--altro); }
+.avanzamento span { background: var(--marchio); }
+.voce { border-radius: 14px; padding: 12px 14px; }
+.spunta { width: 28px; height: 28px; border-radius: 8px; border: 2px solid var(--spento); display: grid; place-items: center; }
+.stato-fatta .spunta, .stato-verificata .spunta { background: var(--primario); border-color: var(--primario); box-shadow: none; }
+.stato-fatta .spunta::after, .stato-verificata .spunta::after {
+  content: ""; width: 12px; height: 7px; border: solid #fff; border-width: 0 0 3px 3px; transform: translateY(-2px) rotate(-45deg);
+}
+.stato-fatta .stato { color: var(--primario); }
+.stato-verificata .stato { color: var(--primario); }
+.stato-segnalata { border: 1px solid var(--attenzione); }
+.stato-segnalata .spunta { border-color: var(--attenzione); }
+.stato { font-weight: 600; text-align: right; }
+.foto-btn { gap: 8px; }
+.foto-btn svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.foto-btn.pronta { background: var(--primario-chiaro); border-color: var(--primario); color: var(--primario-scuro); }
+.miniatura { border-radius: var(--raggio); }
+.form-voce .foto-btn { margin: 0; align-self: stretch; }
+
+/* ------------------------------------------------ home: scorciatoie dell'operaio */
+.home-saluto { font-size: 1.15rem; margin: 2px 0 10px; }
+.home-oggi {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; margin-bottom: 12px; text-decoration: none; color: var(--testo);
+  background: var(--carta); border: 1px solid var(--bordo); border-left: 6px solid var(--bordo); border-radius: var(--raggio);
+}
+.home-etichetta { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--tenue); }
+.home-turno { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 700; }
+.home-turno .cal-sigla { width: auto; min-width: 46px; padding: 5px 8px; }
+.home-domani { font-size: .88rem; color: var(--tenue); }
+.home-extra {
+  display: block; padding: 12px 14px; margin-bottom: 12px; border-radius: var(--raggio); text-decoration: none;
+  color: var(--testo); background: #fff6ec; border: 2px solid #ff7a00;
+}
+.home-extra span { float: right; font-weight: 700; color: #c2410c; }
+@media (prefers-color-scheme: dark) { .home-extra { background: #33240f; } }
+.home-griglia { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-tasto {
+  position: relative; display: flex; flex-direction: column; gap: 3px; min-height: 112px; padding: 14px 12px;
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); text-decoration: none; color: var(--testo);
+}
+.home-tasto:active { transform: scale(.98); }
+.home-icona {
+  display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 6px; border-radius: 12px;
+  background: var(--altro); font-size: 1.45rem; line-height: 1;
+}
+.home-tasto b { font-size: 1rem; }
+.home-tasto small { font-size: .78rem; color: var(--tenue); line-height: 1.25; }
+/* pallino rosso come le notifiche delle app su iPhone: sull'angolo, con bordo chiaro */
+.home-badge {
+  position: absolute; top: -7px; right: -7px; z-index: 1; min-width: 24px; height: 24px; padding: 0 7px;
+  border-radius: 99px; border: 2px solid var(--sfondo); background: #ff3b30; color: #fff;
+  font-style: normal; font-size: .8rem; font-weight: 700; line-height: 20px; text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+}
+.home-griglia > .home-tasto:last-child:nth-child(odd) { grid-column: span 2; min-height: 0; }
