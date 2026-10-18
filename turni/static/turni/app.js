@@ -173,7 +173,7 @@ async function iscrivi(riquadro) {
     }
     const t = document.createElement('span');
     t.className = 'wa-testo' + (m.eliminato ? ' eliminato' : '');
-    t.textContent = m.eliminato ? 'Messaggio eliminato' : m.testo;
+    t.textContent = m.eliminato ? (m.testo ? m.testo + ' · eliminato' : 'Messaggio eliminato') : m.testo;
     b.appendChild(t);
     const o = document.createElement('span');
     o.className = 'wa-ora';
@@ -185,7 +185,7 @@ async function iscrivi(riquadro) {
   async function aggiorna() {
     if (document.hidden) return;
     try {
-      const r = await fetch(chat.dataset.url + '?dopo=' + chat.dataset.ultimo);
+      const r = await fetch(chat.dataset.url + '&dopo=' + chat.dataset.ultimo);
       const { messaggi } = await r.json();
       if (!messaggi.length) return;
       const vuota = document.getElementById('chat-vuota');

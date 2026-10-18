@@ -89,6 +89,9 @@ class CodiciTest(TestCase):
 
 
 class ImportTest(TestCase):
+    def setUp(self):
+        Dipendente.objects.all().delete()  # i profili dell'organigramma (migrazione 0012) non servono qui
+
     def test_lettura_e_salvataggio(self):
         note = [('42', 'SPANO MAURO', 'ferie venerdì'), ('43', 'CRIMI BENITO', 'fare notte')]
         letta = importa.leggi_file(file_turni(RIGHE, note), LUNEDI)
@@ -342,6 +345,7 @@ class HomeTest(TestCase):
 
 class GestioneDipendentiTest(TestCase):
     def setUp(self):
+        Dipendente.objects.all().delete()  # i profili dell'organigramma (migrazione 0012) non servono qui
         get_user_model().objects.create_user('ufficio', password='x', is_staff=True)
         self.client.login(username='ufficio', password='x')
 

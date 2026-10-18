@@ -6,7 +6,7 @@ from django.contrib.auth.models import Permission
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Annuncio, Dipendente, IscrizionePush, MessaggioChat, StatoMessaggi
+from .models import Annuncio, Chat, Dipendente, IscrizionePush, MessaggioChat, RuoloApp, StatoMessaggi
 
 URL = 'turni:messaggi'
 
@@ -23,6 +23,7 @@ class MessaggiTest(TestCase):
         self.resp.user_permissions.add(Permission.objects.get(codename='approva_richieste'))
         for u in (*self.utenti.values(), self.resp):
             IscrizionePush.objects.create(utente=u, endpoint=f'https://push.example/{u.username}', p256dh='k', auth='a')
+        self.chat = Chat.objects.get(nome='Turni')  # creata dalla migrazione 0012
         patcher = mock.patch('pywebpush.webpush')
         self.webpush = patcher.start()
         self.addCleanup(patcher.stop)
@@ -50,29 +51,29 @@ class MessaggiTest(TestCase):
     def test_chat_notifiche_e_disattivazione(self):
         StatoMessaggi.objects.create(utente=self.utenti['spano'], notifiche_chat=False)
         self.client.login(username='drame', password='123456')
-        self.client.post(reverse(URL), {'vista': 'chat', 'azione': 'chat', 'testo': 'Io sono disponibile'})
+        self.client.post(reverse(URL), {'vista': 'chat', 'chat': self.chat.pk, 'azione': 'chat', 'testo': 'Io sono disponibile'})
         m = MessaggioChat.objects.get()
         self.assertEqual(self.endpoint_avvisati(), ['resp'])  # spano ha spento la chat, drame è l'autore
         dati = json.loads(self.webpush.call_args.args[1])
-        self.assertIn('Drame Bouba', dati['titolo'])
+        self.assertEqual(dati['titolo'], 'Turni · Drame Bouba')
 
         # aggiornamento automatico: chi ha la chat aperta riceve i nuovi
         self.client.login(username='spano', password='123456')
-        r = self.client.get(reverse('turni:chat_nuovi'), {'dopo': 0})
+        r = self.client.get(reverse('turni:chat_nuovi'), {'chat': self.chat.pk, 'dopo': 0})
         self.assertEqual([x['testo'] for x in r.json()['messaggi']], ['Io sono disponibile'])
-        self.assertEqual(self.client.get(reverse('turni:chat_nuovi'), {'dopo': m.pk}).json()['messaggi'], [])
+        self.assertEqual(self.client.get(reverse('turni:chat_nuovi'), {'chat': self.chat.pk, 'dopo': m.pk}).json()['messaggi'], [])
 
     def test_eliminare_messaggi(self):
-        m = MessaggioChat.objects.create(autore=self.utenti['drame'], testo='sbagliato')
+        m = MessaggioChat.objects.create(chat=self.chat, autore=self.utenti['drame'], testo='sbagliato')
         self.client.login(username='spano', password='123456')
-        self.client.post(reverse(URL), {'vista': 'chat', 'azione': 'elimina_chat', 'messaggio': m.pk})
+        self.client.post(reverse(URL), {'vista': 'chat', 'chat': self.chat.pk, 'azione': 'elimina_chat', 'messaggio': m.pk})
         m.refresh_from_db()
         self.assertFalse(m.eliminato)
         self.client.login(username='resp', password='x')
-        self.client.post(reverse(URL), {'vista': 'chat', 'azione': 'elimina_chat', 'messaggio': m.pk})
+        self.client.post(reverse(URL), {'vista': 'chat', 'chat': self.chat.pk, 'azione': 'elimina_chat', 'messaggio': m.pk})
         m.refresh_from_db()
         self.assertTrue(m.eliminato)
-        self.assertNotContains(self.client.get(reverse(URL), {'vista': 'chat'}), 'sbagliato')
+        self.assertNotContains(self.client.get(reverse(URL), {'vista': 'chat', 'chat': self.chat.pk}), 'sbagliato')
 
     def test_iscrizione_e_telefono_revocato(self):
         from pywebpush import WebPushException

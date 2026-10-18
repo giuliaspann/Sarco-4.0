@@ -2,10 +2,6 @@
 {% block titolo %}Messaggi{% endblock %}
 {% block classe_body %}pagina-chat{% endblock %}
 {% block contenuto %}
-<div class="filtri schede-messaggi">
-  <a href="?vista=bacheca" class="{% if vista == 'bacheca' %}attivo{% endif %}">Bacheca{% if bacheca_nuovi %} <b class="pallino">{{ bacheca_nuovi }}</b>{% endif %}</a>
-  <a href="?vista=chat#fondo" class="{% if vista == 'chat' %}attivo{% endif %}">Chat{% if chat_nuovi %} <b class="pallino">{{ chat_nuovi }}</b>{% endif %}</a>
-</div>
 
 <div id="attiva-notifiche" class="notifiche-barra" hidden data-chiave="{{ chiave_push }}" data-url="{% url 'turni:iscrivi_notifiche' %}">
   <span>Ricevi le notifiche sul telefono</span>
@@ -20,6 +16,7 @@
 {% if vista == 'bacheca' %}
   <div class="wa">
     <div class="wa-testa">
+      <a class="wa-indietro" href="?vista=lista" aria-label="Tutte le chat"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
       <span class="wa-avatar wa-avatar-bacheca"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l7 4V6L7 10H4z"/><path d="M17.5 9a4 4 0 010 6"/></svg></span>
       <span class="wa-titolo"><b>Bacheca Sarco</b><small>Solo l'ufficio può scrivere · {{ membri }} membri</small></span>
     </div>
@@ -55,15 +52,16 @@
     {% endif %}
   </div>
 
-{% else %}
+{% elif vista == 'chat' %}
   <div class="wa">
     <div class="wa-testa">
-      <span class="wa-avatar"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 1.6 5.5 5"/></svg></span>
-      <span class="wa-titolo"><b>Squadra Sarco</b><small>{{ membri }} membri</small></span>
+      <a class="wa-indietro" href="?vista=lista" aria-label="Tutte le chat"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
+      <span class="wa-avatar wa-avatar-emoji">{{ chat_aperta.emoji|default:'💬' }}</span>
+      <span class="wa-titolo"><b>{{ chat_aperta.nome }}</b><small>{{ membri }} membri{% if direzione %} · storico completo{% endif %}</small></span>
       <details class="wa-menu">
         <summary aria-label="Opzioni">⋮</summary>
         <div class="wa-menu-voci">
-          <form method="post">{% csrf_token %}<input type="hidden" name="vista" value="chat">
+          <form method="post">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}">
             <button name="azione" value="notifiche_chat">{% if stato.notifiche_chat %}Disattiva notifiche chat{% else %}Attiva notifiche chat{% endif %}</button></form>
           <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza (privato)</a>
           <a href="?vista=bacheca">Bacheca dell'ufficio</a>
@@ -71,15 +69,15 @@
       </details>
     </div>
 
-    <div class="wa-sfondo" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}">
+    <div class="wa-sfondo" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}?chat={{ chat_aperta.pk }}" data-direzione="{{ direzione|yesno:'1,' }}">
       <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e capo turno.</p>
       {% for m in chat %}
         {% if m.nuovo_giorno %}<div class="wa-data" data-giorno="{{ m.giorno }}"><span>{{ m.etichetta_giorno }}</span></div>{% endif %}
         <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}">
           {% if not m.mio and m.primo %}<span class="wa-autore c{{ m.colore }}">{{ m.autore }}</span>{% endif %}
-          <span class="wa-testo{% if m.eliminato %} eliminato{% endif %}">{% if m.eliminato %}Messaggio eliminato{% else %}{{ m.testo|linebreaksbr }}{% endif %}</span><span class="wa-ora">{{ m.ora }}</span>
+          <span class="wa-testo{% if m.eliminato %} eliminato{% endif %}">{% if m.eliminato and m.testo %}{{ m.testo|linebreaksbr }} <em class="wa-storico">· eliminato</em>{% elif m.eliminato %}Messaggio eliminato{% else %}{{ m.testo|linebreaksbr }}{% endif %}</span><span class="wa-ora">{{ m.ora }}</span>
           {% if m.eliminabile %}
-          <form method="post" class="wa-elimina">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="messaggio" value="{{ m.id }}">
+          <form method="post" class="wa-elimina">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}"><input type="hidden" name="messaggio" value="{{ m.id }}">
             <button name="azione" value="elimina_chat" data-conferma="Eliminare questo messaggio per tutti?">Elimina</button></form>
           {% endif %}
         </div>
@@ -89,12 +87,31 @@
     </div>
 
     <form method="post" class="wa-scrivi" id="fondo">{% csrf_token %}
-      <input type="hidden" name="vista" value="chat">
+      <input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}">
       <textarea name="testo" rows="1" maxlength="1000" required placeholder="Messaggio"></textarea>
       <button class="wa-invia" name="azione" value="chat" aria-label="Invia">
         <svg viewBox="0 0 24 24"><path d="M3 20.5l18-8.5L3 3.5l2.5 8.5L3 20.5zM5.5 12H13"/></svg>
       </button>
     </form>
   </div>
+
+{% else %}
+  <div class="chat-griglia">
+    <a class="chat-tasto chat-tasto-bacheca" href="?vista=bacheca">
+      {% if bacheca_nuovi %}<i class="home-badge">{{ bacheca_nuovi }}</i>{% endif %}
+      <span class="chat-emoji">📢</span>
+      <span class="chat-testi"><b>Bacheca</b><small>{% if bacheca_ultimo %}{{ bacheca_ultimo.testo|truncatechars:70 }}{% else %}Avvisi dell'ufficio{% endif %}</small></span>
+    </a>
+    {% for c in elenco %}
+    <a class="chat-tasto" href="?vista=chat&chat={{ c.chat.pk }}#fondo">
+      {% if c.nuovi %}<i class="home-badge">{{ c.nuovi }}</i>{% endif %}
+      <span class="chat-emoji">{{ c.chat.emoji|default:'💬' }}</span>
+      <span class="chat-testi"><b>{{ c.chat.nome }}</b>
+      <small>{% if c.ultimo %}{{ c.autore }}: {{ c.ultimo.testo|truncatechars:60 }}{% else %}Nessun messaggio{% endif %}</small></span>
+      {% if c.quando %}<time>{% if c.quando|date:'Ymd' == oggi %}{{ c.quando|time:'H:i' }}{% else %}{{ c.quando|date:'d/m' }}{% endif %}</time>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e capo turno.</p>
 {% endif %}
 {% endblock %}

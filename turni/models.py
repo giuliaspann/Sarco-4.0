@@ -63,6 +63,12 @@ class Mansione(models.TextChoices):
     UFFICIO = 'UFFICIO', 'Ufficio'
 
 
+class RuoloApp(models.TextChoices):
+    OPERAIO = 'OPERAIO', 'Dipendente'
+    DIREZIONE = 'DIREZIONE', 'Direzione'
+    RESP_TURNI = 'RESP_TURNI', 'Responsabile turni'
+
+
 class Dipendente(models.Model):
     nome = models.CharField('nome come nel file turni', max_length=100, unique=True)
     utente = models.OneToOneField(
@@ -73,6 +79,10 @@ class Dipendente(models.Model):
     # Il file turni non la dice: la imposta l'ufficio (serve per cercare manutentori o palisti)
     # una o più, separate da virgola (es. "OPERAIO,PALISTA")
     mansione = models.CharField(max_length=80, default=Mansione.OPERAIO)
+    # cosa può fare nell'app: la direzione è in tutte le chat e ne vede lo storico completo,
+    # il responsabile turni ha le pagine dell'ufficio
+    ruolo_app = models.CharField('ruolo nell\'app', max_length=12, choices=RuoloApp.choices, default=RuoloApp.OPERAIO)
+    qualifica = models.CharField('ruolo in azienda', max_length=150, blank=True)
     # Il PIN è corto: dopo troppi tentativi sbagliati l'accesso si blocca per un po'
     tentativi_falliti = models.PositiveSmallIntegerField(default=0, editable=False)
     bloccato_fino = models.DateTimeField(null=True, blank=True, editable=False)
@@ -571,9 +581,28 @@ class Annuncio(models.Model):
         ordering = ['-creato_il']
 
 
-class MessaggioChat(models.Model):
-    """Chat di gruppo: operai e ufficio."""
+class Chat(models.Model):
+    """Una chat di gruppo. "Tutti" = ogni utente attivo; altrimenti solo i membri scelti.
+    La direzione è sempre dentro: le chat sono lo storico dell'azienda."""
 
+    nome = models.CharField(max_length=60, unique=True)
+    emoji = models.CharField(max_length=8, blank=True)
+    tutti = models.BooleanField('aperta a tutti', default=True)
+    membri = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='chat')
+    ordine = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name_plural = 'chat'
+        ordering = ['ordine', 'nome']
+
+    def __str__(self):
+        return self.nome
+
+
+class MessaggioChat(models.Model):
+    """Messaggio in una chat di gruppo."""
+
+    chat = models.ForeignKey(Chat, null=True, on_delete=models.CASCADE, related_name='messaggi')
     autore = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
     testo = models.TextField(max_length=1000)
     creato_il = models.DateTimeField(auto_now_add=True)
@@ -592,6 +621,17 @@ class StatoMessaggi(models.Model):
     bacheca_letta_il = models.DateTimeField(null=True, blank=True)
     chat_letta_fino = models.PositiveBigIntegerField(default=0)
     notifiche_chat = models.BooleanField(default=True)
+
+
+class LetturaChat(models.Model):
+    """Fin dove ha letto ogni utente in ciascuna chat (per i non letti)."""
+
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='letture_chat')
+    chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name='letture')
+    letta_fino = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['utente', 'chat'], name='una_lettura_per_chat')]
 
 
 class IscrizionePush(models.Model):

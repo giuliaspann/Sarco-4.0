@@ -31,6 +31,7 @@ class PinTest(TestCase):
 )
 class TessereTest(TestCase):
     def setUp(self):
+        Dipendente.objects.all().delete()  # i profili dell'organigramma (migrazione 0012) non servono qui
         get_user_model().objects.create_user('ufficio', password='Password-Lunga-1', is_staff=True)
         self.client.login(username='ufficio', password='Password-Lunga-1')
         self.a = Dipendente.objects.create(nome='ROSSI MARIO')

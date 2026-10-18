@@ -31,7 +31,8 @@
   {% for d in elenco %}
     <li class="{% if not d.attivo %}spento{% endif %}">
       <span>
-        <b>{{ d.nome_breve }}</b><br>
+        <b>{{ d.nome_breve }}</b>{% if d.ruolo_app != 'OPERAIO' %} <span class="chip-ruolo">{{ d.get_ruolo_app_display }}</span>{% endif %}<br>
+        {% if d.qualifica %}<span class="piccolo">{{ d.qualifica }}</span><br>{% endif %}
         <span class="tenue piccolo">{% if d.utente %}utente: {{ d.utente.username }}{% else %}nessun accesso{% endif %}{% if d.tutor %} · tutor: {{ d.tutor|title }}{% endif %}</span>
       </span>
       <form method="post" class="mansione-riga">{% csrf_token %}
@@ -47,7 +48,7 @@
         <button class="bottone avviso-btn" name="azione" value="elimina"
                 data-conferma="Eliminare {{ d.nome_breve }}? Verranno cancellati anche i suoi turni, le pulizie e le richieste. Non si può annullare.">Elimina</button>
       </form>
-      {% if not d.n_turni and d.attivo %}
+      {% if not d.n_turni and d.attivo and d.ruolo_app == 'OPERAIO' %}
       <form method="post" class="prova-turni">{% csrf_token %}
         <input type="hidden" name="dipendente" value="{{ d.pk }}">
         <button class="link-piccolo" name="azione" value="turni_prova">Genera turni di prova (per far vedere l'app)</button>

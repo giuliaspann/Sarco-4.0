@@ -55,7 +55,13 @@ def crea_credenziali(dip):
         dip.save(update_fields=['utente'])
     utente.set_password(pin)  # cambia anche l'impronta di sessione: il vecchio PIN smette di valere ovunque
     utente.is_active = True
+    if dip.ruolo_app == 'RESP_TURNI':
+        utente.is_staff = True  # pagine dell'ufficio
     utente.save()
+    if dip.ruolo_app == 'RESP_TURNI':
+        from django.contrib.auth.models import Permission
+
+        utente.user_permissions.add(Permission.objects.get(codename='approva_richieste', content_type__app_label='turni'))
     azzera(utente.username)
     return utente.username, pin
 

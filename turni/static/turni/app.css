@@ -832,3 +832,32 @@ p.orario { margin: 2px 0 6px; }
   .tessere { grid-template-columns: 1fr 1fr; gap: 8mm; }
   .tessera { border-width: 1.5px; }
 }
+
+/* chat: dashboard, un pulsante grande a tutta larghezza per ogni chat */
+.chat-griglia { display: flex; flex-direction: column; gap: 10px; }
+.chat-tasto {
+  position: relative; display: flex; align-items: center; gap: 14px; width: 100%;
+  min-height: 84px; padding: 12px 14px; border-radius: 18px; background: var(--carta, #fff);
+  border: 1px solid var(--linea, #e3e7ec); box-shadow: 0 1px 3px rgba(16,40,70,.08);
+  color: inherit; text-decoration: none; min-width: 0;
+}
+.chat-tasto:active { transform: scale(.98); }
+.chat-tasto .home-badge { top: 50%; right: 12px; transform: translateY(-50%); border-color: var(--carta, #fff); }
+.chat-tasto b { font-size: 1.12rem; line-height: 1.2; }
+.chat-tasto small { font-size: .82rem; color: var(--tenue, #667781); line-height: 1.3; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis; }
+.chat-tasto time { position: absolute; top: 10px; right: 14px; font-size: .72rem; color: var(--tenue, #667781); }
+.chat-tasto:has(.home-badge) .chat-testi, .chat-tasto:has(time) .chat-testi { padding-right: 44px; }
+.chat-emoji { width: 58px; height: 58px; border-radius: 16px; background: #e7f3ff; display: grid; place-items: center; font-size: 30px; flex: none; }
+.chat-tasto-bacheca { background: #eefaf0; border-color: #cfeed6; }
+.chat-tasto-bacheca .chat-emoji { background: #d9fdd3; }
+.chat-testi { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.wa-avatar-emoji { font-size: 22px; background: #e7f3ff; }
+.wa-indietro { display: grid; place-items: center; width: 28px; height: 40px; margin-right: -4px; color: inherit; }
+.wa-indietro svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.wa-storico { color: #c0392b; font-size: 12px; }
+@media (prefers-color-scheme: dark) {
+  .chat-emoji, .wa-avatar-emoji { background: #2a3942; }
+  .chat-tasto-bacheca { background: #16302a; border-color: #23463c; }
+}
+.chip-ruolo { font-size: .7rem; font-weight: 700; background: #e7f3ff; color: #1d5fa8; border-radius: 8px; padding: 1px 7px; vertical-align: 2px; }

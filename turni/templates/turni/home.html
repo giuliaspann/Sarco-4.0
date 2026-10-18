@@ -62,10 +62,10 @@
     <b>Bacheca</b><small>Avvisi dell'ufficio</small>
   </a>
 
-  <a class="home-tasto" href="{% url 'turni:messaggi' %}?vista=chat#fondo">
+  <a class="home-tasto" href="{% url 'turni:messaggi' %}">
     {% if chat_nuovi %}<i class="home-badge">{{ chat_nuovi }}</i>{% endif %}
     <span class="home-icona">💬</span>
-    <b>Chat</b><small>Scrivi alla squadra</small>
+    <b>Chat</b><small>Produzione, pulizia, turni…</small>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}">
