@@ -1095,3 +1095,42 @@ details.scheda summary { cursor: pointer; }
 .mn-chi { display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .legenda-due-righe { grid-template-columns: repeat(4, max-content); gap: 6px 4px; font-size: .74rem; }
 .legenda-due-righe li { white-space: nowrap; }
+
+/* turni di tutti: il mio turno in alto, niente bordo sulle caselle */
+.gt-cella.cambiabile { box-shadow: none; }
+.gt-mio { border: 2px solid var(--primario); }
+.gt-mio h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.gt-aiuto { margin: 10px 0 0; font-size: .8rem; color: var(--tenue); }
+/* cambio turno: riquadri grandi */
+.sg-passi.tre { grid-template-columns: repeat(3, 1fr); }
+.cb-elenco { display: flex; flex-direction: column; gap: 8px; }
+.cb-voce { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 10px 14px; border-radius: 16px;
+  background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(16,40,70,.08); color: var(--testo); text-decoration: none; }
+.cb-voce:active { transform: scale(.98); }
+.cb-voce.spento { opacity: .5; }
+.cb-data { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 52px; height: 52px; flex: none;
+  border-radius: 12px; background: #e7f3ff; color: var(--testo); line-height: 1; }
+.cb-data b { font-size: 1.35rem; font-family: var(--font-titoli); }
+.cb-data small { font-size: .62rem; font-weight: 700; text-transform: uppercase; }
+.cb-turno { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.cb-voce .cb-turno { justify-content: flex-start; }
+.cb-nome { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cb-nome b { font-size: 1.02rem; }
+.cb-nome small { font-size: .74rem; color: var(--tenue); }
+.cb-elenco .cb-voce .cb-nome + .cb-turno { flex: none; justify-content: flex-end; max-width: 55%; }
+.cb-link { display: block; margin: 14px 0; padding: 14px; border-radius: 14px; background: var(--altro); color: var(--testo); font-weight: 600; text-decoration: none; text-align: center; font-size: .9rem; }
+.cb-tuo { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--primario-chiaro); border: 2px solid var(--primario); }
+.cb-tuo > span:last-child { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.cb-tuo small { font-size: .75rem; color: var(--tenue); font-weight: 600; }
+.cb-giorno { font-family: var(--font-titoli); font-size: 1.3rem; font-weight: 700; margin: 0 0 10px; }
+.cb-scambio { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.cb-persona { padding: 14px; border-radius: 16px; background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(16,40,70,.08); }
+.cb-persona > b { display: block; font-size: 1.05rem; margin-bottom: 8px; }
+.cb-prima-dopo { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.cb-prima-dopo > span:not(.cb-freccia) { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.cb-prima-dopo .pillola { font-size: .95rem; padding: 5px 10px; }
+.cb-freccia { font-size: 1.4rem; color: var(--primario); font-weight: 800; }
+.cb-motivo { display: block; margin: 0 0 12px; font-weight: 600; }
+.cb-motivo textarea { width: 100%; box-sizing: border-box; margin-top: 4px; }
+.cb-invia { min-height: 54px; font-size: 1.05rem; }
+@media (prefers-color-scheme: dark) { .cb-data { background: #2a3942; } }

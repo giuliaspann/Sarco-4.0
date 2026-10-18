@@ -217,6 +217,7 @@ def settimana_tutti(request):
         return ORDINE_GRUPPI.index(chiave) if chiave in ORDINE_GRUPPI else len(ORDINE_GRUPPI) + (chiave == 'zz')
 
     elenco = [(titolo, sorted(righe, key=lambda r: r['ordine'])) for (chiave, titolo), righe in sorted(gruppi.items(), key=lambda x: ordine_gruppo(x[0]))]
+    mia_riga = next((r for _, righe in elenco for r in righe if r['io']), None)
     return render(
         request,
         'turni/settimana_tutti.html',
@@ -228,6 +229,7 @@ def settimana_tutti(request):
             'prec': lunedi - timedelta(days=7),
             'succ': lunedi + timedelta(days=7),
             'mio': mio,
+            'mia_riga': mia_riga,
         },
     )
 

@@ -2,60 +2,70 @@
 {% block titolo %}Cambio turno{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  <a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Richieste</a>
-  <h1>Chiedi un cambio turno</h1>
-  <p class="piccolo"><a href="{% url 'turni:settimana_tutti' %}">Guarda i turni di tutti per scegliere con chi cambiare ›</a></p>
+  {% if collega %}<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro collega</a>
+  {% elif mio %}<a class="tasto-indietro" href="?"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro giorno</a>
+  {% else %}<a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Richieste</a>{% endif %}
+  <h1>Cambio turno</h1>
+  <ol class="sg-passi tre">
+    <li class="{% if mio %}fatto{% else %}ora{% endif %}">Giorno</li>
+    <li class="{% if collega %}fatto{% elif mio %}ora{% endif %}">Collega</li>
+    <li class="{% if collega %}ora{% endif %}">Conferma</li>
+  </ol>
 </div>
 
 {% if not mio %}
-  {# 1. giorno #}
-  <section class="scheda">
-    <h2>1. Quale giorno vuoi cambiare?</h2>
-    <ul class="scelte">
-      {% for t in miei %}
-        <li><a href="?giorno={{ t.data|date:'Y-m-d' }}"><span>{{ t.data|date:'l j M' }}</span>{% include 'turni/_pillola.html' %}</a></li>
-      {% empty %}
-        <li class="tenue">Non ci sono turni pubblicati da domani in poi.</li>
-      {% endfor %}
-    </ul>
-  </section>
+  <h2 class="rq-sezione">Quale giorno vuoi cambiare?</h2>
+  <div class="cb-elenco">
+    {% for t in miei %}
+    <a class="cb-voce" href="?giorno={{ t.data|date:'Y-m-d' }}">
+      <span class="cb-data"><small>{{ t.data|date:'D' }}</small><b>{{ t.data.day }}</b><small>{{ t.data|date:'M' }}</small></span>
+      <span class="cb-turno">{% include 'turni/_pillola.html' %}</span>
+      <span class="sg-freccia">›</span>
+    </a>
+    {% empty %}
+    <p class="tenue piccolo">Non ci sono turni pubblicati da domani in poi.</p>
+    {% endfor %}
+  </div>
+  <a class="cb-link" href="{% url 'turni:settimana_tutti' %}">🗂️ Oppure guarda i turni di tutti e tocca quello di un collega</a>
 
 {% elif not collega %}
-  {# 2. collega #}
-  <section class="scheda">
-    <h2>2. Con chi?</h2>
-    <p class="tenue piccolo">{{ giorno|date:'l j F' }} — tu: {% include 'turni/_pillola.html' with t=mio %}</p>
-    {% if stessa %}
-      <h3>Stessa postazione</h3>
-      <ul class="scelte">
-        {% for t in stessa %}
-          <li><a href="?giorno={{ giorno|date:'Y-m-d' }}&collega={{ t.dipendente_id }}" class="{% if not t.dipendente.utente_id %}spento{% endif %}">
-            <span>{{ t.dipendente.nome_breve }}{% if not t.dipendente.utente_id %} <span class="tenue piccolo">(non usa l'app)</span>{% endif %}</span>{% include 'turni/_pillola.html' %}</a></li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    <h3>{% if stessa %}Altri colleghi{% else %}Colleghi{% endif %}</h3>
-    <ul class="scelte">
-      {% for t in resto %}
-        <li><a href="?giorno={{ giorno|date:'Y-m-d' }}&collega={{ t.dipendente_id }}" class="{% if not t.dipendente.utente_id %}spento{% endif %}">
-          <span>{{ t.dipendente.nome_breve }}{% if not t.dipendente.utente_id %} <span class="tenue piccolo">(non usa l'app)</span>{% endif %}</span>{% include 'turni/_pillola.html' %}</a></li>
-      {% endfor %}
-    </ul>
-  </section>
+  <div class="cb-tuo">
+    <span class="cb-data"><small>{{ giorno|date:'D' }}</small><b>{{ giorno.day }}</b><small>{{ giorno|date:'M' }}</small></span>
+    <span><small>Il tuo turno</small>{% include 'turni/_pillola.html' with t=mio %}</span>
+  </div>
+  <h2 class="rq-sezione">Con chi vuoi cambiare?</h2>
+  <div class="cb-elenco">
+    {% for t in stessa %}{% include 'turni/_cambio_collega.html' %}{% endfor %}
+    {% for t in resto %}{% include 'turni/_cambio_collega.html' %}{% endfor %}
+    {% if not stessa and not resto %}<p class="tenue piccolo">Nessun collega con un turno diverso dal tuo quel giorno.</p>{% endif %}
+  </div>
 
 {% else %}
-  {# 3. conferma #}
-  <form method="post" class="scheda">{% csrf_token %}
+  <form method="post">{% csrf_token %}
     <input type="hidden" name="giorno" value="{{ giorno|date:'Y-m-d' }}">
     <input type="hidden" name="collega" value="{{ collega.pk }}">
-    <h2>3. Cambio con {{ collega.nome_breve }}</h2>
-    <table class="scambio">
-      <tr><th>{{ giorno|date:'D j M' }}</th><th>Ora</th><td></td><th>Dopo</th></tr>
-      <tr><td>Tu</td><td>{% include 'turni/_pillola.html' with t=mio %}</td><td class="freccia-cella">→</td><td>{% include 'turni/_pillola.html' with t=suo %}</td></tr>
-      <tr><td>{{ collega.nome_breve }}</td><td>{% include 'turni/_pillola.html' with t=suo %}</td><td class="freccia-cella">→</td><td>{% include 'turni/_pillola.html' with t=mio %}</td></tr>
-    </table>
+    <p class="cb-giorno">{{ giorno|date:'l j F'|capfirst }}</p>
+    <div class="cb-scambio">
+      <div class="cb-persona">
+        <b>Tu</b>
+        <div class="cb-prima-dopo">
+          <span>{% include 'turni/_pillola.html' with t=mio %}</span>
+          <span class="cb-freccia">➜</span>
+          <span>{% include 'turni/_pillola.html' with t=suo %}</span>
+        </div>
+      </div>
+      <div class="cb-persona">
+        <b>{{ collega.nome_breve }}</b>
+        <div class="cb-prima-dopo">
+          <span>{% include 'turni/_pillola.html' with t=suo %}</span>
+          <span class="cb-freccia">➜</span>
+          <span>{% include 'turni/_pillola.html' with t=mio %}</span>
+        </div>
+      </div>
+    </div>
 
     {% if recuperi %}
+    <section class="scheda">
       <h3>Giorno di recupero (facoltativo)</h3>
       <p class="tenue piccolo">Un altro giorno in cui vi scambiate al contrario.</p>
       <ul class="scelte">
@@ -65,16 +75,16 @@
             <span>{{ r.giorno|date:'D j M' }}: tu {% include 'turni/_pillola.html' with t=r.mio %} → {% include 'turni/_pillola.html' with t=r.suo %}</span></label></li>
         {% endfor %}
       </ul>
+    </section>
     {% endif %}
 
-    <label>Motivo (facoltativo)<textarea name="motivo" rows="2" maxlength="300"></textarea></label>
+    <label class="cb-motivo">Motivo (facoltativo)<textarea name="motivo" rows="2" maxlength="300" placeholder="Es. visita medica"></textarea></label>
     {% if senza_account %}
-      <div class="avviso avviso-warning">{{ collega.nome_breve }} non ha ancora l'accesso all'app: non potrebbe accettare.</div>
+      <div class="avviso avviso-warning">{{ collega.nome_breve }} non ha ancora l'accesso all'app: non potrebbe accettare. Scegli un altro collega o chiedi all'ufficio.</div>
     {% else %}
-      <button class="bottone pieno piena-larghezza">Invia richiesta a {{ collega.nome_breve }}</button>
+      <button class="bottone pieno piena-larghezza cb-invia">Invia la richiesta a {{ collega.nome_breve }}</button>
+      <p class="tenue piccolo centrato">Prima accetta {{ collega.nome_breve }}, poi approva l'ufficio.<br>Fino ad allora i turni non cambiano.</p>
     {% endif %}
-    <p class="tenue piccolo">Prima accetta {{ collega.nome_breve }}, poi approva l'ufficio. Fino ad allora i turni non cambiano.</p>
   </form>
-  <p class="centrato piccolo"><a href="?giorno={{ giorno|date:'Y-m-d' }}">Scegli un altro collega</a></p>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,4 @@
+<a class="cb-voce{% if not t.dipendente.utente_id %} spento{% endif %}" href="?giorno={{ giorno|date:'Y-m-d' }}&collega={{ t.dipendente_id }}">
+  <span class="cb-nome"><b>{{ t.dipendente.nome_breve }}</b>{% if not t.dipendente.utente_id %}<small>non usa ancora l'app</small>{% endif %}</span>
+  <span class="cb-turno">{% include 'turni/_pillola.html' %}</span>
+</a>
