@@ -371,3 +371,22 @@ class GestioneDipendentiTest(TestCase):
         self.client.login(username='rossi', password='123456')
         self.client.post(reverse('turni:dipendenti'), {'dipendente': d.pk, 'azione': 'elimina'})
         self.assertTrue(Dipendente.objects.filter(pk=d.pk).exists())
+
+
+class TurniProvaTest(TestCase):
+    def test_turni_di_prova_solo_per_chi_non_ne_ha(self):
+        get_user_model().objects.create_user('ufficio', password='x', is_staff=True)
+        self.client.login(username='ufficio', password='x')
+        dip = Dipendente.objects.create(nome='SPANÒ GIULIA')
+        url = reverse('turni:dipendenti')
+        self.assertContains(self.client.get(url), 'Genera turni di prova')
+        self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
+        turni = list(dip.turni.order_by('data'))
+        self.assertEqual(len(turni), 14)
+        lunedi = timezone.localdate() - timedelta(days=timezone.localdate().weekday())
+        self.assertEqual(turni[0].data, lunedi)
+        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT', 'N', 'G', 'R', 'F'})
+        # una seconda volta non fa nulla
+        self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
+        self.assertEqual(dip.turni.count(), 14)
+        self.assertNotContains(self.client.get(url), 'Genera turni di prova')

@@ -537,3 +537,4 @@ body.accesso .barra { display: none; }
 .elenco-dipendenti li > span { flex: 1 1 100%; }
 .azioni-dipendente { flex: 1 1 100% !important; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 6px; }
 .azioni-dipendente .bottone { padding: 0 6px; font-size: .88rem; }
+.prova-turni { flex: 1 1 100%; }

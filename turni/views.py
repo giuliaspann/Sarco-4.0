@@ -381,6 +381,36 @@ def anteprima(request):
     )
 
 
+# Calendario inventato per far vedere l'app a chi non ha turni (es. un dipendente fittizio):
+# due settimane con tutti i tipi di turno, così compaiono tutti i colori.
+TURNI_PROVA = [
+    ('1T- Imp. 1', '1T- Imp. 1', 'RIP', '2T-Imp. 2', '2T-Imp. 2', 'CAPO T. - Imp. 1', 'RIP'),
+    ('N/palista', 'N/palista', 'RIP', 'G-Analisi', 'FERIE', 'FERIE', 'RIP'),
+]
+
+
+def genera_turni_prova(dip):
+    oggi = timezone.localdate()
+    lunedi = oggi - timedelta(days=oggi.weekday())
+    for n, codici in enumerate(TURNI_PROVA):
+        inizio = lunedi + timedelta(days=7 * n)
+        settimana, _ = Settimana.objects.get_or_create(lunedi=inizio, defaults={'file_originale': 'turni di prova'})
+        for i, codice in enumerate(codici):
+            c = importa.interpreta_codice(codice)
+            Turno.objects.update_or_create(
+                dipendente=dip,
+                data=inizio + timedelta(days=i),
+                defaults={
+                    'settimana': settimana,
+                    'codice': c.codice,
+                    'fascia': c.fascia,
+                    'postazione': c.postazione,
+                    'capoturno': c.capoturno,
+                    'nota_modifica': 'Turno di prova',
+                },
+            )
+
+
 def nome_utente_per(dip):
     parole = [p for p in slugify(dip.nome.replace("'", ' ')).split('-') if len(p) > 1]
     base = '.'.join(parole[:2]) or f'dip{dip.pk}'
@@ -410,6 +440,13 @@ def dipendenti(request):
             return redirect('turni:dipendenti')
 
         dip = get_object_or_404(Dipendente, pk=request.POST.get('dipendente'))
+        if azione == 'turni_prova':
+            if dip.turni.exists():
+                messages.error(request, f'{dip.nome_breve} ha già dei turni: i turni di prova servono solo a chi non ne ha.')
+            else:
+                genera_turni_prova(dip)
+                messages.success(request, f'Turni di prova creati per {dip.nome_breve} (questa settimana e la prossima).')
+            return redirect('turni:dipendenti')
         if azione == 'elimina':
             nome, utente = dip.nome_breve, dip.utente
             dip.delete()  # con lui spariscono turni, pulizie e richieste
@@ -440,7 +477,7 @@ def dipendenti(request):
                 dip.utente.is_active = dip.attivo
                 dip.utente.save(update_fields=['is_active'])
         return redirect('turni:dipendenti')
-    elenco = Dipendente.objects.select_related('utente').order_by('-attivo', 'nome')
+    elenco = Dipendente.objects.select_related('utente').annotate(n_turni=Count('turni')).order_by('-attivo', 'nome')
     return render(request, 'turni/ufficio_dipendenti.html', {'elenco': elenco})
 
 
