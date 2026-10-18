@@ -14,27 +14,29 @@
 {% endif %}
 
 {% for fascia, sottogruppi in gruppi %}
-<section class="scheda">
-  <h2>{{ fascia }}</h2>
+{% with primo=sottogruppi.0.1.0 %}
+<section class="scheda fascia-squadra {{ primo.classe_fascia }}-bordo">
+  <h2><span class="cal-sigla {{ primo.classe_fascia }} sigla-titolo">{{ primo.sigla }}</span> {{ fascia }}</h2>
   {% for postazione, turni in sottogruppi %}
-    <h3 class="postazione {{ turni.0.colore }}">{{ postazione }}</h3>
+    <h3 class="postazione">{{ postazione }}</h3>
     <ul class="persone">
       {% for t in turni %}
         <li class="{% if mio and t.dipendente_id == mio.pk %}io{% endif %}">
           {{ t.dipendente.nome_breve }}
-          {% if t.capoturno %}<span class="etichetta">Capo turno</span>{% endif %}
+          {% if t.capoturno %}<span class="pillola f-capo"><b>CT</b> Capo turno</span>{% endif %}
         </li>
       {% endfor %}
     </ul>
   {% endfor %}
 </section>
+{% endwith %}
 {% endfor %}
 
 {% if assenti %}
 <section class="scheda">
   <h2>Non in turno</h2>
   <ul class="persone compatto">
-    {% for t in assenti %}<li>{{ t.dipendente.nome_breve }} <span class="tenue piccolo">{{ t.get_fascia_display }}</span></li>{% endfor %}
+    {% for t in assenti %}<li>{{ t.dipendente.nome_breve }} <span class="pillola {{ t.classe_fascia }}"><b>{{ t.sigla }}</b> {{ t.get_fascia_display }}</span></li>{% endfor %}
   </ul>
 </section>
 {% endif %}
