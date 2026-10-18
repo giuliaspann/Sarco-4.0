@@ -61,10 +61,9 @@
 <section class="scheda dettaglio-giorno {% if turno %}{{ turno.classe_fascia }}-bordo{% endif %}">
   <div class="dettaglio-testa">
     <p class="tenue piccolo">{% if scelto == oggi %}Oggi, {% endif %}{{ scelto|date:'l j F'|capfirst }}</p>
-    {% if turno %}<span class="badge-turno {{ turno.classe_fascia }}">{{ turno.sigla }}</span>{% endif %}
   </div>
   {% if turno %}
-    <h2 class="grande">{{ turno.descrizione }}</h2>
+    <h2 class="grande">{% include 'turni/_pillola.html' with t=turno %}</h2>
     {% if turno.nota_modifica %}<p class="tenue piccolo">{{ turno.nota_modifica }}</p>{% endif %}
     {% if colleghi %}<p>Con: {% for c in colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
     <div class="azioni-giorno">

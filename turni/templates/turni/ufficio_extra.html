@@ -13,7 +13,7 @@
   </div>
   <fieldset class="scegli-fascia"><legend>Turno</legend>
     {% for v, nome, sigla, classe in fasce %}
-      <label class="chip-fascia {{ classe }}"><input type="radio" name="fascia" value="{{ v }}" {% if forloop.first %}checked{% endif %} required><b>{{ sigla }}</b> {{ nome }}</label>
+      <label class="chip-fascia {{ classe }}"><input type="radio" name="fascia" value="{{ v }}" {% if forloop.first %}checked{% endif %} required>{{ nome }}</label>
     {% endfor %}
   </fieldset>
   <label>Postazione

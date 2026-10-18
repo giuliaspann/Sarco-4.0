@@ -130,6 +130,22 @@ class Turno(models.Model):
             parti.append(self.get_postazione_display())
         return ' · '.join(parti) or self.codice
 
+    @property
+    def descrizione_fascia(self):
+        """Solo il turno (senza postazione): l'impianto va nel suo riquadro a parte."""
+        if not self.lavora:
+            return self.get_fascia_display()
+        parti = []
+        if self.capoturno:
+            parti.append('Capo turno')
+        if self.fascia != Fascia.ALTRO:
+            parti.append(self.get_fascia_display())
+        return ' · '.join(parti) or self.codice
+
+    @property
+    def nome_postazione(self):
+        return self.get_postazione_display() if self.lavora and self.postazione else ''
+
     SIGLE = {
         Fascia.MATTINA: '1T',
         Fascia.POMERIGGIO: '2T',
@@ -412,6 +428,14 @@ class TurnoExtra(models.Model):
     @property
     def sigla(self):
         return Turno.SIGLE.get(self.fascia, '?')
+
+    @property
+    def descrizione_fascia(self):
+        return self.get_fascia_display()
+
+    @property
+    def nome_postazione(self):
+        return self.get_postazione_display() if self.postazione else ''
 
     @property
     def classe_fascia(self):

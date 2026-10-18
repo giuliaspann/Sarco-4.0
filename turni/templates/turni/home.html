@@ -6,7 +6,7 @@
 <a class="home-oggi {% if turno %}{{ turno.classe_fascia }}-bordo{% endif %}" href="{% url 'turni:miei_turni' %}">
   <span class="home-etichetta">{% if turno and turno.data != oggi %}Turno di stanotte{% else %}Oggi{% endif %}</span>
   {% if turno %}
-    <span class="home-turno"><span class="cal-sigla {{ turno.classe_fascia }}">{{ turno.sigla }}</span> {{ turno.descrizione }}</span>
+    <span class="home-turno">{% include 'turni/_pillola.html' with t=turno %}</span>
   {% else %}
     <span class="home-turno">Turno non pubblicato</span>
   {% endif %}

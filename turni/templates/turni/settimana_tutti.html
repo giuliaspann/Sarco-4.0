@@ -23,7 +23,7 @@
 
 {% for titolo, righe in gruppi %}
 <section class="scheda griglia-tutti">
-  <h2>{{ titolo }}</h2>
+  <h2><span class="posto">{{ titolo }}</span></h2>
   <div class="gt-riga gt-testa">
     <span class="gt-nome"></span>
     {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}

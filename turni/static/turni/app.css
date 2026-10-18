@@ -658,3 +658,17 @@ details.notifiche-barra p { margin: 6px 0; }
 .filtri.filtri-fasce a.f-pomeriggio { background: #ff7a00; color: #fff; }
 .filtri.filtri-fasce a.f-notte { background: #1e3a8a; color: #fff; }
 .filtri.filtri-fasce a.f-giorno { background: #16a34a; color: #fff; }
+
+/* impianto / postazione: sempre lo stesso riquadro bianco con bordo e scritta blu (come nel calendario) */
+.posto {
+  display: inline-block; padding: 2px 8px; border-radius: 6px; vertical-align: middle;
+  background: #fff; color: var(--testo); border: 1.5px solid var(--testo);
+  font-size: .8rem; font-weight: 800; line-height: 1.35; white-space: nowrap; letter-spacing: 0;
+}
+h2 .posto, h2.grande .posto { font-size: .95rem; padding: 3px 10px; }
+.titolo-posto { margin: 12px 0 4px; }
+@media (prefers-color-scheme: dark) { .posto { background: var(--carta); } }
+
+/* etichetta del turno più grande nei titoli */
+.pillola-titolo, h2 .pillola, .home-turno .pillola { font-size: 1rem; padding: 4px 12px; border-radius: 8px; }
+.home-turno .posto, h2 .posto { font-size: .95rem; padding: 3px 10px; }
