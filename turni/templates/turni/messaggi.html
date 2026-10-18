@@ -1,6 +1,6 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Messaggi{% endblock %}
-{% block classe_body %}{% if vista != 'bacheca' %}pagina-chat{% endif %}{% endblock %}
+{% block classe_body %}pagina-chat{% endblock %}
 {% block contenuto %}
 <div class="filtri schede-messaggi">
   <a href="?vista=bacheca" class="{% if vista == 'bacheca' %}attivo{% endif %}">Bacheca{% if bacheca_nuovi %} <b class="pallino">{{ bacheca_nuovi }}</b>{% endif %}</a>
@@ -18,31 +18,42 @@
 </details>
 
 {% if vista == 'bacheca' %}
-  {% if responsabile %}
-  <form method="post" class="scheda">{% csrf_token %}
-    <input type="hidden" name="vista" value="bacheca">
-    <h2>Nuovo avviso per tutti</h2>
-    <textarea name="testo" rows="3" maxlength="2000" required placeholder="Es. Turni della prossima settimana pubblicati"></textarea>
-    <label class="spunta-riga"><input type="checkbox" name="importante" value="1"> Importante (in evidenza)</label>
-    <button class="bottone pieno piena-larghezza" name="azione" value="annuncio">Pubblica e avvisa tutti</button>
-  </form>
-  {% endif %}
-
-  {% for a in annunci %}
-  <article class="scheda annuncio {% if a.importante %}importante{% endif %}">
-    {% if a.importante %}<p class="extra-titolo">Importante</p>{% endif %}
-    <p class="annuncio-testo">{{ a.testo|linebreaksbr }}</p>
-    <div class="annuncio-piede">
-      <span class="tenue piccolo">Ufficio turni · {{ a.creato_il|date:'D j M, H:i' }}</span>
-      {% if responsabile %}
-      <form method="post">{% csrf_token %}<input type="hidden" name="vista" value="bacheca"><input type="hidden" name="annuncio" value="{{ a.pk }}">
-        <button class="link-piccolo" name="azione" value="elimina_annuncio">Elimina</button></form>
-      {% endif %}
+  <div class="wa">
+    <div class="wa-testa">
+      <span class="wa-avatar wa-avatar-bacheca"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l7 4V6L7 10H4z"/><path d="M17.5 9a4 4 0 010 6"/></svg></span>
+      <span class="wa-titolo"><b>Bacheca Sarco</b><small>Solo l'ufficio può scrivere · {{ membri }} membri</small></span>
     </div>
-  </article>
-  {% empty %}
-  <div class="vuoto"><p>Nessun avviso in bacheca.</p></div>
-  {% endfor %}
+
+    <div class="wa-sfondo">
+      {% for a in annunci %}
+        {% if a.nuovo_giorno %}<div class="wa-data"><span>{{ a.etichetta_giorno }}</span></div>{% endif %}
+        <div class="wa-msg primo bacheca{% if a.importante %} importante{% endif %}">
+          <span class="wa-autore c2">Ufficio turni</span>
+          {% if a.importante %}<span class="wa-importante">Importante</span>{% endif %}
+          <span class="wa-testo">{{ a.testo|linebreaksbr }}</span><span class="wa-ora">{{ a.creato_il|time:'H:i' }}</span>
+          {% if responsabile %}
+          <form method="post" class="wa-elimina">{% csrf_token %}<input type="hidden" name="vista" value="bacheca"><input type="hidden" name="annuncio" value="{{ a.pk }}">
+            <button name="azione" value="elimina_annuncio" data-conferma="Eliminare questo avviso dalla bacheca?">Elimina</button></form>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p class="wa-info">Nessun avviso in bacheca.</p>
+      {% endfor %}
+    </div>
+
+    {% if responsabile %}
+    <form method="post" class="wa-scrivi wa-scrivi-bacheca" id="fondo">{% csrf_token %}
+      <input type="hidden" name="vista" value="bacheca">
+      <label class="wa-spunta" title="Importante"><input type="checkbox" name="importante" value="1"><span>!</span></label>
+      <textarea name="testo" rows="1" maxlength="2000" required placeholder="Avviso (! = importante)"></textarea>
+      <button class="wa-invia" name="azione" value="annuncio" aria-label="Pubblica e avvisa tutti">
+        <svg viewBox="0 0 24 24"><path d="M3 20.5l18-8.5L3 3.5l2.5 8.5L3 20.5zM5.5 12H13"/></svg>
+      </button>
+    </form>
+    {% else %}
+    <div class="wa-solo-admin" id="fondo">Solo l'ufficio può scrivere in bacheca</div>
+    {% endif %}
+  </div>
 
 {% else %}
   <div class="wa">

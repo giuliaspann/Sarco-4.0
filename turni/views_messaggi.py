@@ -121,7 +121,15 @@ def messaggi(request):
 
     contesto = {'vista': vista, 'responsabile': responsabile, 'stato': stato, 'chiave_push': push.chiavi().pubblica}
     if vista == 'bacheca':
-        contesto['annunci'] = list(Annuncio.objects.select_related('autore')[:30])
+        recenti = list(Annuncio.objects.select_related('autore').order_by('-creato_il')[:50])[::-1]
+        precedente = None
+        for a in recenti:
+            giorno = timezone.localtime(a.creato_il).date()
+            a.nuovo_giorno = giorno != precedente
+            a.etichetta_giorno = etichetta_giorno(giorno)
+            precedente = giorno
+        contesto['annunci'] = recenti
+        contesto['membri'] = get_user_model().objects.filter(is_active=True).count()
         stato.bacheca_letta_il = timezone.now()
         stato.save(update_fields=['bacheca_letta_il'])
     else:

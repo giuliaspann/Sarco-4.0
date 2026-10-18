@@ -121,20 +121,25 @@ async function iscrivi(riquadro) {
   }
 })();
 
-// ---------------------------------------------------------------- chat (stile WhatsApp) che si aggiorna da sola
+// ---------------------------------------------------------------- chat e bacheca in stile WhatsApp
 (function () {
-  const chat = document.getElementById('chat');
-  if (!chat) return;
+  if (!document.querySelector('.wa')) return;
   // come WhatsApp: si parte dagli ultimi messaggi
   const fondo = () => window.scrollTo(0, document.documentElement.scrollHeight);
   fondo();
   window.addEventListener('load', fondo);
-
-  // tocco sul proprio fumetto: compare "Elimina"
-  chat.addEventListener('click', e => {
+  // tocco sul fumetto (proprio, o qualsiasi per l'ufficio): compare "Elimina"
+  document.querySelector('.wa').addEventListener('click', e => {
     const msg = e.target.closest('.wa-msg');
     if (msg && msg.querySelector('.wa-elimina') && !e.target.closest('button')) msg.classList.toggle('aperto');
   });
+})();
+
+// ---------------------------------------------------------------- chat (stile WhatsApp) che si aggiorna da sola
+(function () {
+  const chat = document.getElementById('chat');
+  if (!chat) return;
+  const fondo = () => window.scrollTo(0, document.documentElement.scrollHeight);
 
   // il campo di scrittura si allarga mentre scrivi
   const campo = document.querySelector('.wa-scrivi textarea');
