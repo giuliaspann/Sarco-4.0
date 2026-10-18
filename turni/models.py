@@ -377,3 +377,80 @@ class RichiestaFerie(models.Model):
     @property
     def fascia(self):
         return Fascia.FERIE if self.tipo == self.Tipo.FERIE else Fascia.PERMESSO
+
+
+class TurnoExtra(models.Model):
+    """L'ufficio cerca volontari (es. "domenica serve un 1° turno in più"): gli operai si
+    offrono dall'app, l'ufficio sceglie e il turno compare nel calendario dei confermati."""
+
+    data = models.DateField()
+    fascia = models.CharField(
+        max_length=10, choices=[(f.value, f.label) for f in Fascia if f in FASCE_LAVORATIVE and f != Fascia.ALTRO]
+    )
+    postazione = models.CharField(max_length=10, choices=Postazione.choices, blank=True)
+    posti = models.PositiveSmallIntegerField(default=1)
+    nota = models.CharField(max_length=300, blank=True)
+    chiusa = models.BooleanField(default=False)
+    creata_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    creata_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'turno extra'
+        verbose_name_plural = 'turni extra'
+        ordering = ['data', 'creata_il']
+
+    def __str__(self):
+        return f'{self.data:%d/%m} {self.descrizione}'
+
+    @property
+    def descrizione(self):
+        parti = [self.get_fascia_display()]
+        if self.postazione:
+            parti.append(self.get_postazione_display())
+        return ' · '.join(parti)
+
+    @property
+    def confermati(self):
+        return [d for d in self.disponibilita.all() if d.confermata]
+
+    @property
+    def mancano(self):
+        return max(0, self.posti - len(self.confermati))
+
+
+class Disponibilita(models.Model):
+    extra = models.ForeignKey(TurnoExtra, on_delete=models.CASCADE, related_name='disponibilita')
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='disponibilita')
+    confermata = models.BooleanField(default=False)
+    creata_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'disponibilità'
+        ordering = ['creata_il']
+        constraints = [models.UniqueConstraint(fields=['extra', 'dipendente'], name='una_disponibilita')]
+
+
+class AvvisoAssenza(models.Model):
+    """Malattia, uscita anticipata, ritardo: lo vedono solo il responsabile turni e il capo turno."""
+
+    class Tipo(models.TextChoices):
+        MALATTIA = 'MALATTIA', 'Malattia'
+        USCITA = 'USCITA', 'Uscita anticipata'
+        RITARDO = 'RITARDO', 'Ritardo'
+        ALTRO = 'ALTRO', 'Altro'
+
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='avvisi')
+    data = models.DateField()
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    nota = models.CharField(max_length=300, blank=True)
+    creato_il = models.DateTimeField(auto_now_add=True)
+    visto_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    visto_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'avviso di assenza'
+        verbose_name_plural = 'avvisi di assenza'
+        ordering = ['-creato_il']
+
+    def __str__(self):
+        return f'{self.dipendente} {self.data:%d/%m} {self.get_tipo_display()}'

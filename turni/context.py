@@ -2,8 +2,8 @@ from django.utils import timezone
 
 
 def navigazione(request):
-    from .models import CambioTurno, RichiestaFerie
-    from .richieste import e_responsabile
+    from .models import AvvisoAssenza, CambioTurno, Disponibilita, RichiestaFerie
+    from .richieste import e_responsabile, extra_per
     from .views import e_capoturno
 
     user = getattr(request, 'user', None)
@@ -21,9 +21,16 @@ def navigazione(request):
         contesto['nav_da_rispondere'] = CambioTurno.objects.filter(
             collega=dip, stato=CambioTurno.Stato.ATTESA_COLLEGA, giorno1__gt=timezone.localdate()
         ).count()
+        contesto['nav_extra'] = sum(1 for e in extra_per(dip) if not e.mia)
     if responsabile:
         contesto['nav_da_approvare'] = (
             CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_UFFICIO).count()
             + RichiestaFerie.objects.filter(stato=RichiestaFerie.Stato.ATTESA).count()
+            + AvvisoAssenza.objects.filter(visto_il__isnull=True).count()
         )
+        # volontari che aspettano la conferma dell'ufficio
+        contesto['nav_volontari'] = Disponibilita.objects.filter(
+            confermata=False, extra__chiusa=False, extra__data__gte=timezone.localdate()
+        ).count()
+        contesto['nav_ufficio_badge'] = contesto['nav_da_approvare'] + contesto['nav_volontari']
     return contesto

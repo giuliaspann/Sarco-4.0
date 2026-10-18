@@ -3,7 +3,24 @@
 {% block contenuto %}
 <div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
 
-{% if not cambi and not ferie %}
+{% if avvisi %}
+<section class="scheda avvisi">
+  <h2>Avvisi di assenza</h2>
+  <ul class="elenco">
+  {% for a in avvisi %}
+    <li class="{% if not a.visto_il %}nuovo{% endif %}">
+      <span><b>{{ a.dipendente.nome_breve }}</b> · {{ a.get_tipo_display }}<br>
+        <span class="tenue piccolo">{{ a.data|date:'D j M' }} · inviato {{ a.creato_il|date:'d/m H:i' }}</span>
+        {% if a.nota %}<br>“{{ a.nota }}”{% endif %}</span>
+      {% if a.visto_il %}<span class="stato-richiesta ok">Visto</span>
+      {% else %}<form method="post">{% csrf_token %}<input type="hidden" name="avviso" value="{{ a.pk }}"><button class="bottone">Visto</button></form>{% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if not cambi and not ferie and not avvisi %}
   <div class="vuoto"><p>Nessuna richiesta da approvare.{% if in_attesa_collega %} {{ in_attesa_collega }} cambi aspettano ancora la risposta del collega.{% endif %}</p></div>
 {% endif %}
 

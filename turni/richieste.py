@@ -1,4 +1,6 @@
-"""Cambi turno tra colleghi e richieste di ferie: controlli e applicazione ai turni."""
+"""Cambi turno, ferie e turni extra: controlli e applicazione ai turni."""
+
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Q
@@ -158,3 +160,72 @@ def decisione_ufficio_ferie(richiesta, utente, approva, nota=''):
 
 def ferie_approvate(dipendente, giorno):
     return dipendente.richieste_ferie.filter(stato=RichiestaFerie.Stato.APPROVATA, dal__lte=giorno, al__gte=giorno).first()
+
+
+# ---------------------------------------------------------------- turni extra (volontari)
+
+
+def extra_per(dipendente):
+    """Richieste di volontari aperte che riguardano il dipendente: quelle dei giorni in cui
+    non lavora già, più quelle a cui ha già risposto."""
+    from .models import TurnoExtra
+
+    oggi = timezone.localdate()
+    aperte = list(
+        TurnoExtra.objects.filter(chiusa=False, data__gte=oggi).prefetch_related('disponibilita')
+    )
+    turni = {t.data: t for t in dipendente.turni.filter(data__in=[e.data for e in aperte])}
+    risultato = []
+    for e in aperte:
+        mia = next((d for d in e.disponibilita.all() if d.dipendente_id == dipendente.pk), None)
+        t = turni.get(e.data)
+        if mia or not (t and t.lavora):
+            e.mia = mia
+            risultato.append(e)
+    return risultato
+
+
+def offri(extra, dipendente):
+    from .models import Disponibilita
+
+    if extra.chiusa or extra.data < timezone.localdate():
+        raise RichiestaNonValida('Questa richiesta è già chiusa.')
+    Disponibilita.objects.get_or_create(extra=extra, dipendente=dipendente)
+
+
+def ritira(extra, dipendente):
+    disp = extra.disponibilita.filter(dipendente=dipendente).first()
+    if disp and disp.confermata:
+        raise RichiestaNonValida("L'ufficio ti ha già confermato: per ritirarti avvisa l'ufficio.")
+    if disp:
+        disp.delete()
+
+
+def conferma_volontario(disponibilita):
+    """Il volontario scelto lavora quel giorno: il turno compare nel suo calendario."""
+    from .models import Settimana
+
+    extra = disponibilita.extra
+    if disponibilita.confermata:
+        return
+    if extra.mancano == 0:
+        raise RichiestaNonValida('I posti sono già tutti coperti.')
+    lunedi = extra.data - timedelta(days=extra.data.weekday())
+    settimana = Settimana.objects.filter(lunedi=lunedi).first()
+    if settimana is None:
+        raise RichiestaNonValida(f'Carica prima i turni della settimana del {lunedi:%d/%m}.')
+    with transaction.atomic():
+        turno, _ = Turno.objects.get_or_create(
+            dipendente=disponibilita.dipendente, data=extra.data, defaults={'settimana': settimana, 'fascia': extra.fascia}
+        )
+        turno.fascia = extra.fascia
+        turno.postazione = extra.postazione
+        turno.capoturno = False
+        turno.codice = 'EXTRA'
+        turno.nota_modifica = 'Turno extra (volontario)'
+        turno.save()
+        disponibilita.confermata = True
+        disponibilita.save()
+        if extra.mancano == 0:
+            extra.chiusa = True
+            extra.save(update_fields=['chiusa'])

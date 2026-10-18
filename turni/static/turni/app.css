@@ -181,7 +181,7 @@ body.larga .pagina { max-width: 1200px; }
 
 /* ------------------------------------------------ moduli */
 label { display: grid; gap: 4px; margin-bottom: 12px; font-size: .9rem; font-weight: 600; }
-input[type=text], input[type=password], input[type=date], input[type=file], select {
+input[type=text], input[type=password], input[type=date], input[type=number], input[type=file], select {
   width: 100%; font: inherit; font-weight: 400; padding: 11px 12px; border-radius: 10px;
   border: 1px solid var(--bordo); background: var(--sfondo); color: var(--testo); min-height: 44px;
 }
@@ -326,3 +326,18 @@ h2.grande { font-size: 1.2rem; margin: 2px 0 6px; }
 .cal-num { font-size: .95rem; }
 .cal-sigla { font-size: .95rem; padding: 5px 0; }
 .cal-posto { font-size: .64rem; padding: 4px 0; }
+
+/* turni extra e avvisi */
+.extra { border: 2px solid #ff7a00; background: #fff6ec; }
+.extra-offerto { border-color: var(--bordo); background: var(--carta); }
+.extra-ok { border-color: #16a34a; background: #effaf2; }
+@media (prefers-color-scheme: dark) { .extra { background: #33240f; } .extra-ok { background: #12301c; } }
+.extra-titolo { margin: 0 0 4px; font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: .03em; }
+.piena-larghezza { width: 100%; margin-top: 8px; }
+.azioni-pagina .piena-riga { grid-column: span 2; }
+.avvisi { border-left: 6px solid var(--errore); }
+.elenco li.nuovo b { color: var(--errore); }
+
+/* i pulsanti non si spezzano mai lettera per lettera */
+.bottone { overflow-wrap: normal; white-space: nowrap; }
+.elenco li > form, .elenco li > .azioni { flex: none; }

@@ -1,0 +1,51 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Turni extra{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+
+<form method="post" class="scheda">{% csrf_token %}
+  <h2>Cerca volontari</h2>
+  <p class="tenue piccolo">La richiesta compare in cima ai Turni degli operai che quel giorno non lavorano.</p>
+  <input type="hidden" name="azione" value="crea">
+  <div class="riga-form">
+    <label>Giorno<input type="date" name="data" min="{{ oggi|date:'Y-m-d' }}" required></label>
+    <label>Persone<input type="number" name="posti" min="1" max="20" value="1" inputmode="numeric"></label>
+  </div>
+  <div class="riga-form">
+    <label>Turno
+      <select name="fascia" required>{% for v, nome in fasce %}<option value="{{ v }}">{{ nome }}</option>{% endfor %}</select>
+    </label>
+    <label>Postazione
+      <select name="postazione"><option value="">Qualsiasi</option>{% for v, nome in postazioni %}<option value="{{ v }}">{{ nome }}</option>{% endfor %}</select>
+    </label>
+  </div>
+  <label>Nota<input type="text" name="nota" maxlength="300" placeholder="Es. serve un manutentore"></label>
+  <button class="bottone pieno piena-larghezza">Pubblica richiesta</button>
+</form>
+
+{% for e in aperte %}
+<section class="scheda {% if not e.chiusa %}extra{% endif %}">
+  <p class="extra-titolo">{% if e.chiusa %}Chiusa{% elif e.mancano %}Mancano {{ e.mancano }} su {{ e.posti }}{% else %}Coperta{% endif %}</p>
+  <h2 class="grande">{{ e.data|date:'l j F'|capfirst }} · {{ e.descrizione }}</h2>
+  {% if e.nota %}<p class="tenue piccolo">{{ e.nota }}</p>{% endif %}
+  <ul class="elenco">
+    {% for d in e.disponibilita.all %}
+      <li><span>{{ d.dipendente.nome_breve }}<br><span class="tenue piccolo">si è offerto il {{ d.creata_il|date:'d/m H:i' }}</span></span>
+        {% if d.confermata %}<span class="stato-richiesta ok">Confermato</span>
+        {% elif not e.chiusa and e.mancano %}
+          <form method="post">{% csrf_token %}<input type="hidden" name="azione" value="conferma"><input type="hidden" name="disponibilita" value="{{ d.pk }}"><button class="bottone pieno">Conferma</button></form>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="tenue">Ancora nessun volontario.</li>
+    {% endfor %}
+  </ul>
+  <form method="post">{% csrf_token %}<input type="hidden" name="extra" value="{{ e.pk }}">
+    {% if e.chiusa %}<button class="bottone leggero piena-larghezza" name="azione" value="riapri">Riapri</button>
+    {% else %}<button class="bottone leggero piena-larghezza" name="azione" value="chiudi">Chiudi richiesta</button>{% endif %}
+  </form>
+</section>
+{% empty %}
+  <div class="vuoto"><p>Nessuna richiesta di volontari aperta.</p></div>
+{% endfor %}
+{% endblock %}

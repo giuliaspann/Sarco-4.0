@@ -6,6 +6,7 @@
 <div class="azioni-pagina">
   <a class="bottone pieno" href="{% url 'turni:nuovo_cambio' %}">Cambio turno</a>
   <a class="bottone" href="{% url 'turni:nuove_ferie' %}">Ferie / permesso</a>
+  <a class="bottone avviso-btn piena-riga" href="{% url 'turni:nuovo_avviso' %}">Avviso assenza (malattia, uscita, ritardo)</a>
 </div>
 
 {% for c in da_rispondere %}
@@ -54,6 +55,19 @@
   {% endfor %}
   </ul>
 </section>
+
+{% if avvisi %}
+<section class="scheda">
+  <h2>I tuoi avvisi</h2>
+  <p class="tenue piccolo">Li vedono solo l'ufficio e il capo turno.</p>
+  <ul class="elenco">
+  {% for a in avvisi %}
+    <li><span><b>{{ a.get_tipo_display }}</b> {{ a.data|date:'D j M' }}{% if a.nota %}<br><span class="tenue piccolo">{{ a.nota }}</span>{% endif %}</span>
+      <span class="stato-richiesta {% if a.visto_il %}ok{% else %}attesa{% endif %}">{% if a.visto_il %}Visto dall'ufficio{% else %}Inviato{% endif %}</span></li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <section class="scheda">
   <h2>Ferie e permessi</h2>

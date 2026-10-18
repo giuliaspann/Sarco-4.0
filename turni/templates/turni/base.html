@@ -32,7 +32,7 @@
   <nav class="menu">
     {% if nav_dipendente %}
       <a href="{% url 'turni:miei_turni' %}" class="{% if request.resolver_match.url_name == 'miei_turni' %}attivo{% endif %}">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Turni</a>
+        <span class="icona-badge"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>{% if nav_extra %}<b class="badge">{{ nav_extra }}</b>{% endif %}</span>Turni</a>
     {% endif %}
     <a href="{% url 'turni:squadra' %}" class="{% if request.resolver_match.url_name == 'squadra' %}attivo{% endif %}">
       <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 1.6 5.5 5"/></svg>Squadra</a>
@@ -50,7 +50,7 @@
     {% endif %}
     {% if nav_ufficio %}
       <a href="{% if nav_responsabile %}{% url 'turni:ufficio_richieste' %}{% else %}{% url 'turni:importa' %}{% endif %}" class="{% if '/ufficio/' in request.path %}attivo{% endif %}">
-        <span class="icona-badge"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>{% if nav_da_approvare %}<b class="badge">{{ nav_da_approvare }}</b>{% endif %}</span>Ufficio</a>
+        <span class="icona-badge"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>{% if nav_ufficio_badge %}<b class="badge">{{ nav_ufficio_badge }}</b>{% endif %}</span>Ufficio</a>
     {% endif %}
   </nav>
   {% endif %}

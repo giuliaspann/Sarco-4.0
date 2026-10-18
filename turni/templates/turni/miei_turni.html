@@ -7,6 +7,24 @@
   <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
 </div>
 
+{% for e in extra %}
+<section class="scheda extra {% if e.mia.confermata %}extra-ok{% elif e.mia %}extra-offerto{% endif %}">
+  <p class="extra-titolo">{% if e.mia.confermata %}✅ Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}🙋 Cercasi volontari{% endif %}</p>
+  <h2 class="grande">{{ e.data|date:'l j F'|capfirst }} · {{ e.descrizione }}</h2>
+  {% if e.nota %}<p>{{ e.nota }}</p>{% endif %}
+  {% if not e.mia.confermata %}
+  <form method="post" action="{% url 'turni:rispondi_extra' e.pk %}">{% csrf_token %}
+    {% if e.mia %}
+      <p class="tenue piccolo">L'ufficio ti farà sapere se servi.</p>
+      <button class="bottone leggero piena-larghezza" name="azione" value="ritira">Ritira la disponibilità</button>
+    {% else %}
+      <button class="bottone pieno piena-larghezza" name="azione" value="offri">Sono disponibile</button>
+    {% endif %}
+  </form>
+  {% endif %}
+</section>
+{% endfor %}
+
 <ul class="legenda">
   <li><i class="f-mattina">1T</i>Mattina</li>
   <li><i class="f-pomeriggio">2T</i>Pomeriggio</li>

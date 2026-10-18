@@ -1,6 +1,7 @@
 {% with n=request.resolver_match.url_name %}
 <div class="filtri due">
-  {% if nav_responsabile %}<a href="{% url 'turni:ufficio_richieste' %}" class="{% if n == 'ufficio_richieste' %}attivo{% endif %}">Richieste{% if nav_da_approvare %} ({{ nav_da_approvare }}){% endif %}</a>{% endif %}
+  {% if nav_responsabile %}<a href="{% url 'turni:ufficio_richieste' %}" class="{% if n == 'ufficio_richieste' %}attivo{% endif %}">Richieste{% if nav_da_approvare %} ({{ nav_da_approvare }}){% endif %}</a>
+  <a href="{% url 'turni:ufficio_extra' %}" class="{% if n == 'ufficio_extra' %}attivo{% endif %}">Turni extra{% if nav_volontari %} ({{ nav_volontari }}){% endif %}</a>{% endif %}
   {% if user.is_staff %}
   <a href="{% url 'turni:importa' %}" class="{% if n == 'importa' or n == 'anteprima' %}attivo{% endif %}">Carica turni</a>
   <a href="{% url 'turni:dipendenti' %}" class="{% if n == 'dipendenti' %}attivo{% endif %}">Dipendenti</a>

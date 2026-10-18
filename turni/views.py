@@ -19,6 +19,7 @@ from . import importa
 from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Pulizia, Settimana, Turno
 from .pulizie import genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
+from .richieste import extra_per
 
 ORDINE_FASCE = [Fascia.MATTINA, Fascia.GIORNALIERO, Fascia.POMERIGGIO, Fascia.NOTTE, Fascia.ALTRO]
 
@@ -117,6 +118,7 @@ def miei_turni(request):
             'note': note,
             'prec': inizio - timedelta(days=7),
             'succ': inizio + timedelta(days=7),
+            'extra': extra_per(dip),
         },
     )
 
@@ -251,10 +253,13 @@ def capoturno(request):
     if fascia:
         turni = [t for t in turni if t.fascia == fascia]
     turni.sort(key=lambda t: (-t.n_da_verificare, ORDINE_FASCE.index(t.fascia), t.dipendente.nome))
+    from .models import AvvisoAssenza
+
     return render(
         request,
         'turni/capoturno.html',
         {
+            'avvisi': AvvisoAssenza.objects.filter(data=giorno).select_related('dipendente'),
             'giorno': giorno,
             'turni': turni,
             'fascia': fascia,

@@ -6,9 +6,10 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from . import richieste as svc
-from .models import CambioTurno, Dipendente, RichiestaFerie, Turno
+from .models import AvvisoAssenza, CambioTurno, Dipendente, Disponibilita, Postazione, RichiestaFerie, Turno, TurnoExtra
 from .views import dipendente_di
 
 # Il giorno di recupero si cerca entro due settimane dal giorno del cambio
@@ -78,7 +79,12 @@ def richieste(request):
     return render(
         request,
         'turni/richieste.html',
-        {'da_rispondere': da_rispondere, 'cambi': cambi, 'ferie': dip.richieste_ferie.all()[:20]},
+        {
+            'da_rispondere': da_rispondere,
+            'cambi': cambi,
+            'ferie': dip.richieste_ferie.all()[:20],
+            'avvisi': dip.avvisi.all()[:10],
+        },
     )
 
 
@@ -195,7 +201,11 @@ def ufficio_richieste(request):
         approva = request.POST.get('azione') == 'approva'
         nota = request.POST.get('nota', '')
         try:
-            if request.POST.get('cambio'):
+            if request.POST.get('avviso'):
+                a = get_object_or_404(AvvisoAssenza, pk=request.POST['avviso'])
+                a.visto_da, a.visto_il = request.user, timezone.now()
+                a.save(update_fields=['visto_da', 'visto_il'])
+            elif request.POST.get('cambio'):
                 c = get_object_or_404(CambioTurno, pk=request.POST['cambio'])
                 svc.decisione_ufficio_cambio(c, request.user, approva, nota)
                 messages.success(request, f'Cambio {c.richiedente.nome_breve} ↔ {c.collega.nome_breve} {"approvato" if approva else "rifiutato"}.')
@@ -225,14 +235,105 @@ def ufficio_richieste(request):
     storico_cambi = CambioTurno.objects.exclude(stato__in=CambioTurno.IN_CORSO).select_related('richiedente', 'collega')[:15]
     storico_ferie = RichiestaFerie.objects.exclude(stato=RichiestaFerie.Stato.ATTESA).select_related('dipendente')[:15]
     in_attesa_collega = CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_COLLEGA).count()
+    avvisi = AvvisoAssenza.objects.filter(
+        Q(visto_il__isnull=True) | Q(data__gte=timezone.localdate() - timedelta(days=2))
+    ).select_related('dipendente', 'visto_da')
     return render(
         request,
         'turni/ufficio_richieste.html',
         {
+            'avvisi': avvisi,
             'cambi': cambi,
             'ferie': ferie,
             'storico_cambi': storico_cambi,
             'storico_ferie': storico_ferie,
             'in_attesa_collega': in_attesa_collega,
+        },
+    )
+
+
+# ---------------------------------------------------------------- turni extra e avvisi
+
+
+@login_required
+@require_POST
+def rispondi_extra(request, extra_id):
+    dip = _serve_dipendente(request)
+    extra = get_object_or_404(TurnoExtra, pk=extra_id)
+    try:
+        if request.POST.get('azione') == 'ritira':
+            svc.ritira(extra, dip)
+            messages.info(request, 'Disponibilità ritirata.')
+        else:
+            svc.offri(extra, dip)
+            messages.success(request, "Grazie! L'ufficio ti farà sapere se servi.")
+    except svc.RichiestaNonValida as e:
+        messages.error(request, str(e))
+    return redirect('turni:miei_turni')
+
+
+@login_required
+def nuovo_avviso(request):
+    dip = _serve_dipendente(request)
+    oggi = timezone.localdate()
+    if request.method == 'POST':
+        giorno = _data(request.POST.get('data')) or oggi
+        tipo = request.POST.get('tipo')
+        if tipo not in AvvisoAssenza.Tipo.values:
+            messages.error(request, 'Scegli il tipo di avviso.')
+        elif abs((giorno - oggi).days) > 30:
+            messages.error(request, 'La data è troppo lontana.')
+        else:
+            AvvisoAssenza.objects.create(dipendente=dip, data=giorno, tipo=tipo, nota=request.POST.get('nota', '')[:300])
+            messages.success(request, "Avviso inviato all'ufficio e al capo turno.")
+            return redirect('turni:richieste')
+    return render(
+        request, 'turni/avviso_nuovo.html', {'tipi': AvvisoAssenza.Tipo.choices, 'oggi': oggi, 'dati': request.POST}
+    )
+
+
+@login_required
+def ufficio_extra(request):
+    if not svc.e_responsabile(request.user):
+        raise PermissionDenied
+    oggi = timezone.localdate()
+    if request.method == 'POST':
+        azione = request.POST.get('azione')
+        try:
+            if azione == 'crea':
+                giorno = _data(request.POST.get('data'))
+                fascia = request.POST.get('fascia')
+                if not giorno or giorno < oggi or fascia not in dict(TurnoExtra._meta.get_field('fascia').choices):
+                    raise svc.RichiestaNonValida('Indica un giorno da oggi in poi e il turno.')
+                posti = max(1, min(20, int(request.POST.get('posti') or 1)))
+                postazione = request.POST.get('postazione', '')
+                if postazione not in Postazione.values:
+                    postazione = ''
+                TurnoExtra.objects.create(
+                    data=giorno, fascia=fascia, postazione=postazione, posti=posti,
+                    nota=request.POST.get('nota', '')[:300], creata_da=request.user,
+                )
+                messages.success(request, 'Richiesta pubblicata: gli operai liberi quel giorno la vedono nei Turni.')
+            elif azione == 'conferma':
+                disp = get_object_or_404(Disponibilita, pk=request.POST.get('disponibilita'))
+                svc.conferma_volontario(disp)
+                messages.success(request, f'{disp.dipendente.nome_breve} confermato: il turno è nel suo calendario.')
+            elif azione in ('chiudi', 'riapri'):
+                extra = get_object_or_404(TurnoExtra, pk=request.POST.get('extra'))
+                extra.chiusa = azione == 'chiudi'
+                extra.save(update_fields=['chiusa'])
+        except (svc.RichiestaNonValida, ValueError) as e:
+            messages.error(request, str(e) or 'Dati non validi.')
+        return redirect('turni:ufficio_extra')
+
+    aperte = TurnoExtra.objects.filter(data__gte=oggi).prefetch_related('disponibilita__dipendente')
+    return render(
+        request,
+        'turni/ufficio_extra.html',
+        {
+            'aperte': aperte,
+            'fasce': TurnoExtra._meta.get_field('fascia').choices,
+            'postazioni': Postazione.choices,
+            'oggi': oggi,
         },
     )
