@@ -92,3 +92,18 @@ class MessaggiTest(TestCase):
 
         push.invia([self.utenti['spano'].pk], 'x', 'y')
         self.assertFalse(IscrizionePush.objects.filter(utente=self.utenti['spano']).exists())
+
+
+class GruppiChatTest(TestCase):
+    def test_separatori_e_gruppi_come_whatsapp(self):
+        from .views_messaggi import con_gruppi
+
+        msg = [
+            {'giorno': '2026-10-17', 'autore_id': 1},
+            {'giorno': '2026-10-18', 'autore_id': 1},
+            {'giorno': '2026-10-18', 'autore_id': 1},
+            {'giorno': '2026-10-18', 'autore_id': 2},
+        ]
+        con_gruppi(msg)
+        self.assertEqual([m['nuovo_giorno'] for m in msg], [True, True, False, False])
+        self.assertEqual([m['primo'] for m in msg], [True, True, False, True])

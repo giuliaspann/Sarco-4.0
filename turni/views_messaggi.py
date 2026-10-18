@@ -1,6 +1,7 @@
 """Messaggi: Bacheca (scrive l'ufficio) e Chat di gruppo (scrivono tutti), con notifiche."""
 
 import json
+from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -9,6 +10,7 @@ from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
 from . import push
@@ -40,17 +42,45 @@ def destinatari(escluso, solo_chat=False):
     return utenti.values_list('pk', flat=True)
 
 
+def etichetta_giorno(giorno):
+    """Separatore come su WhatsApp: Oggi, Ieri, giorno della settimana o data."""
+    oggi = timezone.localdate()
+    if giorno == oggi:
+        return 'Oggi'
+    if giorno == oggi - timedelta(days=1):
+        return 'Ieri'
+    if (oggi - giorno).days < 7:
+        return date_format(giorno, 'l').capitalize()
+    return date_format(giorno, 'j F Y')
+
+
 def _messaggio_json(m, utente, responsabile):
+    quando = timezone.localtime(m.creato_il)
     return {
         'id': m.pk,
         'autore': nome_di(m.autore),
+        'autore_id': m.autore_id,
+        # colore del nome, fisso per persona (come i gruppi WhatsApp)
+        'colore': m.autore_id % 8,
         'mio': m.autore_id == utente.pk,
         'ufficio': getattr(m.autore, 'dipendente', None) is None,
         'testo': '' if m.eliminato else m.testo,
         'eliminato': m.eliminato,
-        'ora': timezone.localtime(m.creato_il).strftime('%d/%m %H:%M'),
+        'giorno': quando.date().isoformat(),
+        'etichetta_giorno': etichetta_giorno(quando.date()),
+        'ora': quando.strftime('%H:%M'),
         'eliminabile': not m.eliminato and (m.autore_id == utente.pk or responsabile),
     }
+
+
+def con_gruppi(messaggi):
+    """Segna dove serve il separatore di data e dove inizia un gruppo di messaggi della stessa persona."""
+    precedente = None
+    for m in messaggi:
+        m['nuovo_giorno'] = precedente is None or precedente['giorno'] != m['giorno']
+        m['primo'] = m['nuovo_giorno'] or precedente['autore_id'] != m['autore_id']
+        precedente = m
+    return messaggi
 
 
 @login_required
@@ -98,7 +128,8 @@ def messaggi(request):
         ultimi = list(
             MessaggioChat.objects.select_related('autore', 'autore__dipendente').order_by('-pk')[:MESSAGGI_MOSTRATI]
         )[::-1]
-        contesto['chat'] = [_messaggio_json(m, request.user, responsabile) for m in ultimi]
+        contesto['chat'] = con_gruppi([_messaggio_json(m, request.user, responsabile) for m in ultimi])
+        contesto['membri'] = get_user_model().objects.filter(is_active=True).count()
         contesto['ultimo_id'] = ultimi[-1].pk if ultimi else 0
         if ultimi:
             stato.chat_letta_fino = ultimi[-1].pk

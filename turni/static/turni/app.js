@@ -92,7 +92,16 @@ async function iscrivi(riquadro) {
   const iphone = /iPhone|iPad|iPod/.test(navigator.userAgent);
   const installata = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
-    if (iphone && !installata) document.getElementById('notifiche-iphone').hidden = false;
+    const box = document.getElementById('notifiche-iphone');
+    let nascosto = false;
+    try { nascosto = localStorage.getItem('notifiche-iphone-chiuso') === '1'; } catch (e) {}
+    if (iphone && !installata && !nascosto) {
+      box.hidden = false;
+      document.getElementById('chiudi-iphone').addEventListener('click', () => {
+        box.hidden = true;
+        try { localStorage.setItem('notifiche-iphone-chiuso', '1'); } catch (e) {}
+      });
+    }
     return;
   }
   if (Notification.permission === 'granted') {
@@ -109,32 +118,60 @@ async function iscrivi(riquadro) {
   }
 })();
 
-// ---------------------------------------------------------------- chat che si aggiorna da sola
+// ---------------------------------------------------------------- chat (stile WhatsApp) che si aggiorna da sola
 (function () {
   const chat = document.getElementById('chat');
   if (!chat) return;
-  const fondo = () => document.getElementById('fondo').scrollIntoView({ block: 'end' });
+  // come WhatsApp: si parte dagli ultimi messaggi
+  const fondo = () => window.scrollTo(0, document.documentElement.scrollHeight);
   fondo();
+  window.addEventListener('load', fondo);
 
-  function bolla(m) {
-    const d = document.createElement('div');
-    d.className = 'bolla' + (m.mio ? ' mia' : '') + (m.ufficio ? ' ufficio' : '');
-    d.dataset.id = m.id;
-    if (!m.mio) {
+  // tocco sul proprio fumetto: compare "Elimina"
+  chat.addEventListener('click', e => {
+    const msg = e.target.closest('.wa-msg');
+    if (msg && msg.querySelector('.wa-elimina') && !e.target.closest('button')) msg.classList.toggle('aperto');
+  });
+
+  // il campo di scrittura si allarga mentre scrivi
+  const campo = document.querySelector('.wa-scrivi textarea');
+  if (campo) campo.addEventListener('input', () => { campo.style.height = 'auto'; campo.style.height = Math.min(campo.scrollHeight, 130) + 'px'; });
+
+  function ultimo() {
+    const tutti = chat.querySelectorAll('.wa-msg');
+    return tutti.length ? tutti[tutti.length - 1] : null;
+  }
+
+  function aggiungi(m) {
+    const prec = ultimo();
+    const nuovoGiorno = !prec || prec.dataset.giorno !== m.giorno;
+    if (nuovoGiorno) {
+      const d = document.createElement('div');
+      d.className = 'wa-data';
+      const s = document.createElement('span');
+      s.textContent = m.etichetta_giorno;
+      d.appendChild(s);
+      chat.appendChild(d);
+    }
+    const primo = nuovoGiorno || prec.dataset.autore !== String(m.autore_id);
+    const b = document.createElement('div');
+    b.className = 'wa-msg' + (m.mio ? ' mio' : '') + (primo ? ' primo' : '');
+    b.dataset.id = m.id; b.dataset.autore = m.autore_id; b.dataset.giorno = m.giorno;
+    if (!m.mio && primo) {
       const a = document.createElement('span');
-      a.className = 'bolla-autore';
+      a.className = 'wa-autore c' + m.colore;
       a.textContent = m.autore;
-      d.appendChild(a);
+      b.appendChild(a);
     }
     const t = document.createElement('span');
-    t.className = 'bolla-testo' + (m.eliminato ? ' tenue' : '');
+    t.className = 'wa-testo' + (m.eliminato ? ' eliminato' : '');
     t.textContent = m.eliminato ? 'Messaggio eliminato' : m.testo;
-    d.appendChild(t);
+    b.appendChild(t);
     const o = document.createElement('span');
-    o.className = 'bolla-ora';
+    o.className = 'wa-ora';
     o.textContent = m.ora;
-    d.appendChild(o);
-    return d;
+    b.appendChild(o);
+    chat.appendChild(b);
   }
 
   async function aggiorna() {
@@ -146,7 +183,7 @@ async function iscrivi(riquadro) {
       const vuota = document.getElementById('chat-vuota');
       if (vuota) vuota.remove();
       const inFondo = window.innerHeight + window.scrollY >= document.body.scrollHeight - 150;
-      messaggi.forEach(m => chat.appendChild(bolla(m)));
+      messaggi.forEach(aggiungi);
       chat.dataset.ultimo = messaggi[messaggi.length - 1].id;
       if (inFondo) fondo();
     } catch (e) { /* rete assente: riprova al giro dopo */ }
@@ -154,15 +191,3 @@ async function iscrivi(riquadro) {
   setInterval(aggiorna, 8000);
   document.addEventListener('visibilitychange', aggiorna);
 })();
-
-// ---------------------------------------------------------------- tastierino PIN (pagina di accesso)
-document.querySelectorAll('[data-tastierino]').forEach(tastierino => {
-  const campo = document.getElementById(tastierino.dataset.tastierino);
-  if (!campo) return;
-  tastierino.hidden = false;
-  tastierino.addEventListener('click', e => {
-    const tasto = e.target.closest('[data-tasto]');
-    if (!tasto) return;
-    campo.value = tasto.dataset.tasto === 'canc' ? campo.value.slice(0, -1) : campo.value + tasto.dataset.tasto;
-  });
-});

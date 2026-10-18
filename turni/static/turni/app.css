@@ -551,3 +551,95 @@ body.accesso .barra { display: none; }
 .gt-cella.vuota { color: var(--spento, #999); background: transparent; }
 .gt-cella.cambiabile { box-shadow: inset 0 0 0 2px var(--testo); }
 @media (max-width: 360px) { .gt-riga { grid-template-columns: minmax(0, 1fr) repeat(7, 26px); } }
+
+/* ------------------------------------------------ chat in stile WhatsApp */
+.notifiche-barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 10px; padding: 8px 12px; border-radius: 10px; background: var(--carta); border: 1px solid var(--bordo); font-size: .85rem;
+}
+.notifiche-barra[hidden] { display: none; }
+.notifiche-barra .bottone { min-height: 36px; padding: 0 14px; }
+details.notifiche-barra { display: block; }
+details.notifiche-barra summary { cursor: pointer; list-style: none; }
+details.notifiche-barra summary::-webkit-details-marker { display: none; }
+details.notifiche-barra p { margin: 6px 0; }
+
+.pagina-chat .pagina { padding-bottom: 0; }
+.wa { margin: 0 -16px; display: flex; flex-direction: column; min-height: calc(100vh - 210px); }
+.wa-testa {
+  display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--carta);
+  border-top: 1px solid var(--bordo); border-bottom: 1px solid var(--bordo); position: relative;
+}
+.wa-avatar { width: 40px; height: 40px; border-radius: 50%; background: #dfe5e7; display: grid; place-items: center; flex: none; }
+.wa-avatar svg { width: 24px; height: 24px; fill: none; stroke: #54656f; stroke-width: 1.8; stroke-linecap: round; }
+.wa-titolo { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.wa-titolo small { color: var(--tenue); font-size: .78rem; }
+.wa-menu summary { list-style: none; cursor: pointer; font-size: 1.5rem; line-height: 1; padding: 4px 10px; color: var(--tenue); }
+.wa-menu summary::-webkit-details-marker { display: none; }
+.wa-menu-voci {
+  position: absolute; right: 12px; top: 52px; z-index: 5; min-width: 220px; padding: 6px 0;
+  background: var(--carta); border-radius: 10px; box-shadow: 0 6px 24px rgba(0, 0, 0, .18);
+}
+.wa-menu-voci a, .wa-menu-voci button {
+  display: block; width: 100%; text-align: left; padding: 11px 16px; background: none; border: 0;
+  font: inherit; color: var(--testo); text-decoration: none; cursor: pointer;
+}
+
+/* sfondo beige con un motivo leggero, come WhatsApp */
+.wa-sfondo {
+  flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 22px;
+  background-color: #efeae2;
+  background-image: radial-gradient(rgba(0, 0, 0, .045) 1.2px, transparent 1.3px), radial-gradient(rgba(0, 0, 0, .03) 1px, transparent 1.1px);
+  background-size: 22px 22px, 34px 34px; background-position: 0 0, 11px 17px;
+}
+.wa-info { align-self: center; max-width: 90%; margin: 4px 0 8px; padding: 6px 12px; border-radius: 8px; background: #fff5c4; color: #54656f; font-size: .78rem; text-align: center; }
+.wa-info a { color: inherit; font-weight: 700; }
+.wa-data { align-self: center; margin: 8px 0 6px; }
+.wa-data span { display: inline-block; padding: 5px 12px; border-radius: 8px; background: #fff; color: #54656f; font-size: .75rem; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+
+.wa-msg {
+  position: relative; align-self: flex-start; max-width: 82%; padding: 6px 8px 7px 9px; margin-top: 1px;
+  background: #fff; color: #111b21; border-radius: 8px; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); font-size: .95rem; line-height: 1.32;
+}
+.wa-msg.primo { margin-top: 6px; border-top-left-radius: 0; }
+.wa-msg.primo::before {
+  content: ""; position: absolute; top: 0; left: -8px; width: 8px; height: 13px; background: inherit;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+.wa-msg.mio { align-self: flex-end; background: #d9fdd3; }
+.wa-msg.mio.primo { border-top-left-radius: 8px; border-top-right-radius: 0; }
+.wa-msg.mio.primo::before { left: auto; right: -8px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.wa-autore { display: block; font-size: .8rem; font-weight: 700; margin-bottom: 1px; }
+.wa-autore.c0 { color: #1f7aec; } .wa-autore.c1 { color: #e542a3; } .wa-autore.c2 { color: #00a884; } .wa-autore.c3 { color: #c4532d; }
+.wa-autore.c4 { color: #7f66ff; } .wa-autore.c5 { color: #d88f00; } .wa-autore.c6 { color: #027eb5; } .wa-autore.c7 { color: #b4527a; }
+.wa-testo { white-space: pre-wrap; overflow-wrap: anywhere; }
+.wa-testo.eliminato { color: #8696a0; font-style: italic; }
+.wa-ora { float: right; margin: 8px 0 -4px 10px; font-size: .68rem; color: #667781; }
+.wa-elimina { display: none; clear: both; text-align: right; padding-top: 4px; }
+.wa-msg.aperto .wa-elimina { display: block; }
+.wa-elimina button { background: none; border: 0; color: #c0392b; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; padding: 2px 0; }
+
+.wa-scrivi {
+  position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 3;
+  display: flex; align-items: flex-end; gap: 8px; padding: 6px 8px 8px; background: #f0f2f5;
+}
+.wa-scrivi textarea {
+  flex: 1; min-height: 44px; max-height: 130px; resize: none; padding: 11px 16px; border-radius: 22px;
+  border: 0; background: #fff; color: #111b21; font: inherit; box-shadow: 0 1px .5px rgba(11, 20, 26, .13);
+}
+.wa-invia {
+  flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; background: #00a884; display: grid; place-items: center; cursor: pointer;
+}
+.wa-invia svg { width: 22px; height: 22px; fill: #fff; stroke: #fff; stroke-width: 1.2; stroke-linejoin: round; }
+
+@media (prefers-color-scheme: dark) {
+  .wa-sfondo { background-color: #0b141a; background-image: radial-gradient(rgba(255, 255, 255, .04) 1.2px, transparent 1.3px), radial-gradient(rgba(255, 255, 255, .03) 1px, transparent 1.1px); }
+  .wa-msg { background: #202c33; color: #e9edef; }
+  .wa-msg.mio { background: #005c4b; }
+  .wa-data span { background: #182229; color: #8696a0; }
+  .wa-info { background: #182229; color: #ffd279; }
+  .wa-scrivi { background: #202c33; }
+  .wa-scrivi textarea { background: #2a3942; color: #e9edef; }
+  .wa-avatar { background: #2a3942; }
+  .wa-ora { color: #8696a0; }
+}

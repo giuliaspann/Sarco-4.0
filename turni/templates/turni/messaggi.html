@@ -1,18 +1,21 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Messaggi{% endblock %}
+{% block classe_body %}{% if vista != 'bacheca' %}pagina-chat{% endif %}{% endblock %}
 {% block contenuto %}
 <div class="filtri schede-messaggi">
   <a href="?vista=bacheca" class="{% if vista == 'bacheca' %}attivo{% endif %}">Bacheca{% if bacheca_nuovi %} <b class="pallino">{{ bacheca_nuovi }}</b>{% endif %}</a>
   <a href="?vista=chat#fondo" class="{% if vista == 'chat' %}attivo{% endif %}">Chat{% if chat_nuovi %} <b class="pallino">{{ chat_nuovi }}</b>{% endif %}</a>
 </div>
 
-<div id="attiva-notifiche" class="scheda notifiche" hidden data-chiave="{{ chiave_push }}" data-url="{% url 'turni:iscrivi_notifiche' %}">
-  <p><b>Ricevi le notifiche sul telefono</b><br><span class="tenue piccolo">Ti avvisiamo dei nuovi avvisi e messaggi.</span></p>
-  <button type="button" class="bottone pieno piena-larghezza" id="bottone-notifiche">Attiva notifiche</button>
+<div id="attiva-notifiche" class="notifiche-barra" hidden data-chiave="{{ chiave_push }}" data-url="{% url 'turni:iscrivi_notifiche' %}">
+  <span>Ricevi le notifiche sul telefono</span>
+  <button type="button" class="bottone pieno" id="bottone-notifiche">Attiva</button>
 </div>
-<div id="notifiche-iphone" class="scheda notifiche" hidden>
-  <p><b>Notifiche su iPhone</b><br><span class="tenue piccolo">Tocca <b>Condividi</b> (il quadrato con la freccia) → <b>Aggiungi alla schermata Home</b>, poi apri l'app dall'icona e torna qui.</span></p>
-</div>
+<details id="notifiche-iphone" class="notifiche-barra" hidden>
+  <summary>Vuoi le notifiche su iPhone? <b>Come fare</b></summary>
+  <p>Tocca <b>Condividi</b> (il quadrato con la freccia) → <b>Aggiungi alla schermata Home</b>, poi apri l'app dall'icona.</p>
+  <button type="button" class="link-piccolo" id="chiudi-iphone">Non mostrare più</button>
+</details>
 
 {% if vista == 'bacheca' %}
   {% if responsabile %}
@@ -42,31 +45,45 @@
   {% endfor %}
 
 {% else %}
-  <div class="chat" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}">
-    {% for m in chat %}
-      <div class="bolla {% if m.mio %}mia{% endif %} {% if m.ufficio %}ufficio{% endif %}" data-id="{{ m.id }}">
-        {% if not m.mio %}<span class="bolla-autore">{{ m.autore }}</span>{% endif %}
-        <span class="bolla-testo {% if m.eliminato %}tenue{% endif %}">{% if m.eliminato %}Messaggio eliminato{% else %}{{ m.testo|linebreaksbr }}{% endif %}</span>
-        <span class="bolla-ora">{{ m.ora }}
-          {% if m.eliminabile %}
-          <form method="post" class="in-linea">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="messaggio" value="{{ m.id }}">
-            <button class="link-piccolo" name="azione" value="elimina_chat">elimina</button></form>
-          {% endif %}
-        </span>
-      </div>
-    {% empty %}
-      <p class="vuoto" id="chat-vuota">Nessun messaggio. Scrivi tu il primo!</p>
-    {% endfor %}
-  </div>
+  <div class="wa">
+    <div class="wa-testa">
+      <span class="wa-avatar"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 1.6 5.5 5"/></svg></span>
+      <span class="wa-titolo"><b>Squadra Sarco</b><small>{{ membri }} membri</small></span>
+      <details class="wa-menu">
+        <summary aria-label="Opzioni">⋮</summary>
+        <div class="wa-menu-voci">
+          <form method="post">{% csrf_token %}<input type="hidden" name="vista" value="chat">
+            <button name="azione" value="notifiche_chat">{% if stato.notifiche_chat %}Disattiva notifiche chat{% else %}Attiva notifiche chat{% endif %}</button></form>
+          <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza (privato)</a>
+          <a href="?vista=bacheca">Bacheca dell'ufficio</a>
+        </div>
+      </details>
+    </div>
 
-  <form method="post" class="scrivi" id="fondo">{% csrf_token %}
-    <input type="hidden" name="vista" value="chat">
-    <textarea name="testo" rows="1" maxlength="1000" required placeholder="Scrivi un messaggio…"></textarea>
-    <button class="bottone pieno" name="azione" value="chat">Invia</button>
-  </form>
-  <p class="tenue piccolo centrato">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e capo turno.</p>
-  <form method="post" class="centrato">{% csrf_token %}<input type="hidden" name="vista" value="chat">
-    <button class="link-piccolo" name="azione" value="notifiche_chat">{% if stato.notifiche_chat %}Notifiche chat attive · disattiva{% else %}Notifiche chat disattivate · attiva{% endif %}</button>
-  </form>
+    <div class="wa-sfondo" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}">
+      <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e capo turno.</p>
+      {% for m in chat %}
+        {% if m.nuovo_giorno %}<div class="wa-data" data-giorno="{{ m.giorno }}"><span>{{ m.etichetta_giorno }}</span></div>{% endif %}
+        <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}">
+          {% if not m.mio and m.primo %}<span class="wa-autore c{{ m.colore }}">{{ m.autore }}</span>{% endif %}
+          <span class="wa-testo{% if m.eliminato %} eliminato{% endif %}">{% if m.eliminato %}Messaggio eliminato{% else %}{{ m.testo|linebreaksbr }}{% endif %}</span><span class="wa-ora">{{ m.ora }}</span>
+          {% if m.eliminabile %}
+          <form method="post" class="wa-elimina">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="messaggio" value="{{ m.id }}">
+            <button name="azione" value="elimina_chat" data-conferma="Eliminare questo messaggio per tutti?">Elimina</button></form>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p class="wa-info" id="chat-vuota">Nessun messaggio. Scrivi tu il primo!</p>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="wa-scrivi" id="fondo">{% csrf_token %}
+      <input type="hidden" name="vista" value="chat">
+      <textarea name="testo" rows="1" maxlength="1000" required placeholder="Messaggio"></textarea>
+      <button class="wa-invia" name="azione" value="chat" aria-label="Invia">
+        <svg viewBox="0 0 24 24"><path d="M3 20.5l18-8.5L3 3.5l2.5 8.5L3 20.5zM5.5 12H13"/></svg>
+      </button>
+    </form>
+  </div>
 {% endif %}
 {% endblock %}
