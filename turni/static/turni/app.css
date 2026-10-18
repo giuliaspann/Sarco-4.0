@@ -718,3 +718,89 @@ p.orario { margin: 2px 0 6px; }
   border: 1.5px solid var(--bordo); background: var(--carta); font-size: .78rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .chip-mansione input { position: absolute; opacity: 0; pointer-events: none; }
 .chip-mansione:has(input:checked) { background: var(--testo); border-color: var(--testo); color: #fff; }
+
+/* ------------------------------------------------ richieste (stesso stile della Home) */
+.stato-chip { flex: none; align-self: center; padding: 4px 9px; border-radius: 99px; font-size: .74rem; font-weight: 800; white-space: nowrap; }
+.stato-chip.attesa { background: #fff1e3; color: #b45309; }
+.stato-chip.ok { background: #dcfce7; color: #166534; }
+.stato-chip.no { background: #fee2e2; color: #b91c1c; }
+.stato-chip.spento { background: var(--altro); color: var(--tenue); }
+@media (prefers-color-scheme: dark) {
+  .stato-chip.attesa { background: #3b2b17; color: #f6b26b; }
+  .stato-chip.ok { background: #14301e; color: #86efac; }
+  .stato-chip.no { background: #3d1f1d; color: #fca5a5; }
+}
+.rq-sezione { margin: 22px 2px 10px; font-size: 1.05rem; }
+.rq-riga {
+  display: flex; align-items: flex-start; gap: 12px; padding: 12px; margin-bottom: 8px;
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio);
+}
+.rq-riga .home-icona { width: 40px; height: 40px; margin: 0; font-size: 1.25rem; flex: none; }
+.rq-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rq-testo b { font-size: .95rem; }
+.rq-testo small { color: var(--tenue); font-size: .8rem; }
+.rq-testo .link-piccolo { align-self: flex-start; padding: 2px 0 0; }
+.rq-rispondi { margin-top: 14px; border: 2px solid #ff7a00; background: #fff6ec; }
+@media (prefers-color-scheme: dark) { .rq-rispondi { background: #33240f; } }
+.rq-scambio { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--bordo); }
+.rq-giorno { font-weight: 700; font-size: .85rem; }
+.rq-freccia { color: var(--tenue); font-weight: 800; }
+.rq-da .posto, .rq-a .posto { display: none; }
+.rq-motivo { font-style: italic; color: var(--tenue); margin: 8px 0; }
+.rq-bottoni { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 6px; }
+
+/* ------------------------------------------------ pulizie */
+.pl-quando {
+  display: block; margin-top: 4px; padding: 8px 12px; border-radius: 10px;
+  background: #fff6ec; border: 1.5px solid #ff7a00; font-size: .9rem;
+}
+@media (prefers-color-scheme: dark) { .pl-quando { background: #33240f; } }
+.pl-progresso, .pl-fatto, .pl-vuoto {
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; margin-bottom: 12px;
+  background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio);
+}
+.pl-numeri { font-size: 1rem; }
+.pl-numeri b { font-size: 1.8rem; line-height: 1; }
+.pl-numeri span { color: var(--tenue); }
+.pl-progresso .avanzamento { height: 14px; }
+.pl-progresso small, .pl-fatto small, .pl-vuoto small { color: var(--tenue); font-size: .82rem; }
+.pl-fatto { align-items: center; text-align: center; border: 2px solid #16a34a; background: #effaf2; }
+.pl-vuoto { align-items: center; text-align: center; }
+@media (prefers-color-scheme: dark) { .pl-fatto { background: #12301c; } }
+.pl-fatto b, .pl-vuoto b { font-size: 1.05rem; }
+
+.pl-voce { padding: 12px; margin-bottom: 10px; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); }
+.pl-testa { display: flex; align-items: center; gap: 12px; }
+.pl-testa .home-icona { width: 44px; height: 44px; margin: 0; flex: none; }
+.pl-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pl-nome b { font-size: 1rem; }
+.pl-nome small { color: var(--tenue); font-size: .8rem; }
+.pl-stato { flex: none; padding: 4px 9px; border-radius: 99px; font-size: .74rem; font-weight: 800; background: var(--altro); color: var(--tenue); white-space: nowrap; }
+.pl-istruzioni { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--sfondo); font-size: .88rem; color: var(--testo); }
+.pl-segnalazione { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; background: #fee2e2; color: #991b1b; font-weight: 600; font-size: .88rem; }
+.pl-foto { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; margin-top: 10px; }
+.pl-azioni { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.pl-azioni .bottone { min-height: 50px; font-size: 1rem; }
+.pl-azioni select { grid-column: 1; }
+.pl-nota, .pl-azioni .link-piccolo { grid-column: span 2; }
+.pl-nota summary { cursor: pointer; color: var(--tenue); font-size: .85rem; padding: 2px 0; }
+.pl-nota input { margin-top: 6px; }
+.pl-modifica { margin-top: 8px; }
+.pl-modifica summary { cursor: pointer; color: var(--tenue); font-size: .85rem; }
+
+/* stati: fatta verde, verificata verde pieno, da rifare rosso */
+.pl-fatta { border: 2px solid #16a34a; background: #f3fbf5; }
+.pl-fatta .pl-stato { background: #dcfce7; color: #166534; }
+.pl-verificata { border: 2px solid #16a34a; background: #e8f7ed; }
+.pl-verificata .pl-stato { background: #16a34a; color: #fff; }
+.pl-segnalata { border: 2px solid #dc2626; }
+.pl-segnalata .pl-stato { background: #dc2626; color: #fff; }
+.pl-da_fare .pl-stato { background: #fff1e3; color: #b45309; }
+@media (prefers-color-scheme: dark) {
+  .pl-fatta { background: #12301c; } .pl-verificata { background: #12301c; }
+  .pl-istruzioni { background: var(--altro); }
+}
+.pl-mezzo { border-style: dashed; }
+.pl-altri { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 14px; font-size: .85rem; color: var(--tenue); }
+.pl-altri a { padding: 4px 10px; border-radius: 99px; background: var(--carta); border: 1px solid var(--bordo); text-decoration: none; color: var(--testo); font-weight: 600; }
+.pl-azioni .bottone, .pl-azioni select { height: 52px; min-height: 52px; padding-top: 0; padding-bottom: 0; }

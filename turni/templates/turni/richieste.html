@@ -1,94 +1,89 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Richieste{% endblock %}
 {% block contenuto %}
-<div class="intestazione"><h1>Richieste</h1></div>
+<div class="intestazione">
+  <p class="occhiello">Richieste</p>
+  <h1>Cosa ti serve?</h1>
+</div>
 
-<div class="azioni-pagina">
-  <a class="bottone pieno" href="{% url 'turni:nuovo_cambio' %}">Cambio turno</a>
-  <a class="bottone" href="{% url 'turni:nuove_ferie' %}">Ferie / permesso</a>
-  <a class="bottone avviso-btn piena-riga" href="{% url 'turni:nuovo_avviso' %}">Avviso assenza (malattia, uscita, ritardo)</a>
+<div class="home-griglia">
+  <a class="home-tasto" href="{% url 'turni:nuovo_cambio' %}">
+    <span class="home-icona">🔁</span><b>Cambio turno</b><small>Scambia con un collega</small>
+  </a>
+  <a class="home-tasto" href="{% url 'turni:nuove_ferie' %}">
+    <span class="home-icona">⏸️</span><b>Ferie / permesso</b><small>Chiedi all'ufficio</small>
+  </a>
+  <a class="home-tasto" href="{% url 'turni:nuovo_avviso' %}">
+    <span class="home-icona">📝</span><b>Avviso assenza</b><small>Malattia, uscita, ritardo · lo vedono solo ufficio e capo turno</small>
+  </a>
 </div>
 
 {% for c in da_rispondere %}
-<section class="scheda">
-  <h2>{{ c.richiedente.nome_breve }} ti chiede un cambio</h2>
-  <table class="scambio">
-    <tr><th>Giorno</th><th>Tu ora</th><td></td><th>Tu dopo</th></tr>
-    {% for r in c.righe %}
-    <tr>
-      <td>{{ r.giorno|date:'D j M' }}</td>
-      <td>{% include 'turni/_pillola.html' with t=r.prima %}</td>
-      <td class="freccia-cella">→</td>
-      <td>{% include 'turni/_pillola.html' with t=r.dopo %}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  {% if c.motivo %}<p class="tenue piccolo">“{{ c.motivo }}”</p>{% endif %}
-  <form method="post" class="riga-form">{% csrf_token %}
+<section class="scheda rq-rispondi">
+  <p class="extra-titolo">Devi rispondere</p>
+  <h2 class="grande">{{ c.richiedente.nome_breve }} ti chiede un cambio</h2>
+  {% for r in c.righe %}
+  <div class="rq-scambio">
+    <span class="rq-giorno">{{ r.giorno|date:'D j M'|capfirst }}</span>
+    <span class="rq-da">{% include 'turni/_pillola.html' with t=r.prima %}</span>
+    <span class="rq-freccia">→</span>
+    <span class="rq-a">{% include 'turni/_pillola.html' with t=r.dopo %}</span>
+  </div>
+  {% endfor %}
+  {% if c.motivo %}<p class="rq-motivo">“{{ c.motivo }}”</p>{% endif %}
+  <form method="post" class="rq-bottoni">{% csrf_token %}
     <input type="hidden" name="cambio" value="{{ c.pk }}">
     <button class="bottone pieno" name="azione" value="accetta">Accetto</button>
     <button class="bottone avviso-btn" name="azione" value="rifiuta">Rifiuto</button>
   </form>
-  <p class="tenue piccolo">Se accetti, il cambio vale solo dopo l'approvazione dell'ufficio.</p>
+  <p class="tenue piccolo">Se accetti, il cambio vale dopo l'approvazione dell'ufficio.</p>
 </section>
 {% endfor %}
 
-<section class="scheda">
-  <h2>Cambi turno</h2>
-  <ul class="elenco">
-  {% for c in cambi %}
-    <li>
-      <span>
-        {% if c.mio %}Con{% else %}Da{% endif %} <b>{{ c.altro.nome_breve }}</b><br>
-        <span class="tenue piccolo">{{ c.giorno1|date:'D j M' }}{% if c.giorno2 %} e {{ c.giorno2|date:'D j M' }}{% endif %}{% if c.nota_ufficio %} · Ufficio: {{ c.nota_ufficio }}{% endif %}</span>
-      </span>
-      <span class="azioni">
-        {% include 'turni/_stato_richiesta.html' with r=c %}
-        {% if c.mio and c.in_corso and not c.scaduto %}
-        <form method="post">{% csrf_token %}<input type="hidden" name="cambio" value="{{ c.pk }}">
-          <button class="bottone leggero" name="azione" value="annulla_cambio">Annulla</button></form>
-        {% endif %}
-      </span>
-    </li>
-  {% empty %}
-    <li class="tenue">Nessun cambio turno.</li>
-  {% endfor %}
-  </ul>
-</section>
+<h2 class="rq-sezione">Le tue richieste</h2>
 
-{% if avvisi %}
-<section class="scheda">
-  <h2>I tuoi avvisi</h2>
-  <p class="tenue piccolo">Li vedono solo l'ufficio e il capo turno.</p>
-  <ul class="elenco">
-  {% for a in avvisi %}
-    <li><span><b>{{ a.get_tipo_display }}</b> {{ a.data|date:'D j M' }}{% if a.nota %}<br><span class="tenue piccolo">{{ a.nota }}</span>{% endif %}</span>
-      <span class="stato-richiesta {% if a.visto_il %}ok{% else %}attesa{% endif %}">{% if a.visto_il %}Visto dall'ufficio{% else %}Inviato{% endif %}</span></li>
-  {% endfor %}
-  </ul>
-</section>
+{% for c in cambi %}
+<div class="rq-riga">
+  <span class="home-icona">🔁</span>
+  <span class="rq-testo">
+    <b>Cambio {% if c.mio %}con{% else %}da{% endif %} {{ c.altro.nome_breve }}</b>
+    <small>{{ c.giorno1|date:'D j M'|capfirst }}{% if c.giorno2 %} e {{ c.giorno2|date:'D j M' }}{% endif %}{% if c.nota_ufficio %} · Ufficio: {{ c.nota_ufficio }}{% endif %}</small>
+    {% if c.mio and c.in_corso and not c.scaduto %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="cambio" value="{{ c.pk }}">
+      <button class="link-piccolo" name="azione" value="annulla_cambio" data-conferma="Annullare la richiesta di cambio?">Annulla richiesta</button></form>
+    {% endif %}
+  </span>
+  {% include 'turni/_stato_richiesta.html' with r=c %}
+</div>
+{% endfor %}
+
+{% for f in ferie %}
+<div class="rq-riga">
+  <span class="home-icona">⏸️</span>
+  <span class="rq-testo">
+    <b>{{ f.get_tipo_display }} · {{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}</b>
+    <small>Dal {{ f.dal|date:'j M' }} al {{ f.al|date:'j M Y' }}{% if f.nota_ufficio %} · Ufficio: {{ f.nota_ufficio }}{% endif %}</small>
+    {% if f.stato == 'ATTESA' %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="ferie" value="{{ f.pk }}">
+      <button class="link-piccolo" name="azione" value="annulla_ferie" data-conferma="Annullare la richiesta di ferie?">Annulla richiesta</button></form>
+    {% endif %}
+  </span>
+  {% include 'turni/_stato_richiesta.html' with r=f %}
+</div>
+{% endfor %}
+
+{% for a in avvisi %}
+<div class="rq-riga">
+  <span class="home-icona">📝</span>
+  <span class="rq-testo">
+    <b>{{ a.get_tipo_display }}</b>
+    <small>{{ a.data|date:'D j M'|capfirst }}{% if a.nota %} · {{ a.nota }}{% endif %}</small>
+  </span>
+  <span class="stato-chip {% if a.visto_il %}ok{% else %}attesa{% endif %}">{% if a.visto_il %}Visto{% else %}Inviato{% endif %}</span>
+</div>
+{% endfor %}
+
+{% if not cambi and not ferie and not avvisi %}
+  <div class="vuoto"><p>Non hai ancora fatto richieste.</p></div>
 {% endif %}
-
-<section class="scheda">
-  <h2>Ferie e permessi</h2>
-  <ul class="elenco">
-  {% for f in ferie %}
-    <li>
-      <span>
-        <b>{{ f.get_tipo_display }}</b> dal {{ f.dal|date:'j M' }} al {{ f.al|date:'j M Y' }}<br>
-        <span class="tenue piccolo">{{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}{% if f.nota_ufficio %} · Ufficio: {{ f.nota_ufficio }}{% endif %}</span>
-      </span>
-      <span class="azioni">
-        {% include 'turni/_stato_richiesta.html' with r=f %}
-        {% if f.stato == 'ATTESA' %}
-        <form method="post">{% csrf_token %}<input type="hidden" name="ferie" value="{{ f.pk }}">
-          <button class="bottone leggero" name="azione" value="annulla_ferie">Annulla</button></form>
-        {% endif %}
-      </span>
-    </li>
-  {% empty %}
-    <li class="tenue">Nessuna richiesta.</li>
-  {% endfor %}
-  </ul>
-</section>
 {% endblock %}

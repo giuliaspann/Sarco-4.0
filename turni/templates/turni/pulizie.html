@@ -4,77 +4,107 @@
 <div class="intestazione">
   <p class="occhiello">Fine turno</p>
   <h1>Pulizie</h1>
-  {% if turno %}<p class="tenue">{{ turno.data|date:'l j F'|capfirst }} · {% include 'turni/_pillola.html' with t=turno %}</p>
-  {% if turno.orario_pulizie %}<p class="ora-pulizie">Da fare dalle <b>{{ turno.orario_pulizie|slice:':5' }}</b> alle <b>{{ turno.orario_pulizie|slice:'-5:' }}</b>, a fine turno. Scatta una foto a lavoro finito.</p>{% endif %}{% endif %}
 </div>
 
 {% if not turno or not turno.lavora %}
-  <div class="vuoto">
-    <p>{% if turno %}Oggi: {% include 'turni/_pillola.html' with t=turno %}.{% else %}Oggi non hai turni.{% endif %} Nessuna pulizia da fare.</p>
+  <div class="pl-vuoto">
+    <span class="home-icona">☕</span>
+    <b>Nessuna pulizia da fare</b>
+    <small>{% if turno %}Oggi: {% include 'turni/_pillola.html' with t=turno %}{% else %}Oggi non hai turni.{% endif %}</small>
   </div>
 {% else %}
+  <div class="home-oggi {{ turno.classe_fascia }}-bordo">
+    <span class="home-etichetta">{{ turno.data|date:'l j F'|capfirst }}</span>
+    <span class="home-turno">{% include 'turni/_pillola.html' with t=turno %}</span>
+    {% if turno.orario_pulizie %}
+      <span class="pl-quando">🕒 Da fare dalle <b>{{ turno.orario_pulizie|slice:':5' }}</b> alle <b>{{ turno.orario_pulizie|slice:'-5:' }}</b></span>
+    {% endif %}
+  </div>
+
   {% if voci %}
-    <div class="scheda progresso">
-      <div class="progresso-testa"><span>Completate</span><span class="mono">{{ fatte }} / {{ voci|length }}</span></div>
-      <div class="avanzamento" role="progressbar" aria-label="Pulizie completate" aria-valuenow="{{ fatte }}" aria-valuemin="0" aria-valuemax="{{ voci|length }}">
-        <span style="width: {% widthratio fatte voci|length 100 %}%"></span>
+    {% if fatte == voci|length %}
+      <div class="pl-fatto">
+        <span class="home-icona">✅</span>
+        <b>Tutto completato!</b>
+        <small>Il capo turno controllerà le pulizie.</small>
       </div>
-    </div>
+    {% else %}
+      <div class="pl-progresso">
+        <div class="pl-numeri"><b>{{ fatte }}</b> di {{ voci|length }} <span>completate</span></div>
+        <div class="avanzamento" role="progressbar" aria-label="Pulizie completate" aria-valuenow="{{ fatte }}" aria-valuemin="0" aria-valuemax="{{ voci|length }}">
+          <span style="width: {% widthratio fatte voci|length 100 %}%"></span>
+        </div>
+        <small>Tocca <b>Fatto</b> su ogni voce. La foto aiuta il capo turno a controllare.</small>
+      </div>
+    {% endif %}
   {% else %}
-    <div class="vuoto"><p>Per il tuo ruolo non ci sono pulizie previste. Se hai usato un mezzo, aggiungilo qui sotto.</p></div>
+    <div class="pl-vuoto">
+      <span class="home-icona">👍</span>
+      <b>Per il tuo ruolo non ci sono pulizie previste</b>
+      <small>Se hai usato un mezzo, aggiungilo qui sotto.</small>
+    </div>
   {% endif %}
 
-  <ul class="voci">
   {% for v in voci %}
-    <li class="voce stato-{{ v.stato|lower }}">
-      <div class="voce-testa">
-        <span class="spunta" aria-hidden="true"></span>
-        <div>
-          <strong>{{ v.elemento.nome }}</strong>
-          <span class="tenue piccolo">{{ v.elemento.get_tipo_display }}{% if v.aggiunta_da_operaio %} · mezzo usato{% endif %}</span>
-        </div>
-        <span class="stato">{{ v.get_stato_display }}</span>
-      </div>
-      {% if v.elemento.istruzioni %}<p class="istruzioni">{{ v.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
-      {% if v.stato == 'SEGNALATA' and v.nota_verifica %}<p class="avviso avviso-warning">Capo turno: {{ v.nota_verifica }}</p>{% endif %}
-      {% if v.foto %}<img class="miniatura" src="{% url 'turni:foto' v.pk %}" alt="Foto pulizia {{ v.elemento.nome }}" loading="lazy">{% endif %}
+  <div class="pl-voce pl-{{ v.stato|lower }}">
+    <div class="pl-testa">
+      <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
+      <span class="pl-nome">
+        <b>{{ v.elemento.nome }}</b>
+        <small>{{ v.elemento.get_tipo_display }}{% if v.aggiunta_da_operaio %} · mezzo usato{% endif %}</small>
+      </span>
+      <span class="pl-stato">
+        {% if v.stato == 'VERIFICATA' %}✓✓ Verificata{% elif v.stato == 'FATTA' %}✓ Fatta{% elif v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}
+      </span>
+    </div>
 
-      {% if v.stato != 'VERIFICATA' %}
-      {% if v.stato == 'FATTA' %}<details class="modifica"><summary class="tenue piccolo">Modifica</summary>{% endif %}
-      <form method="post" enctype="multipart/form-data" class="form-voce">{% csrf_token %}
-        <input type="hidden" name="pulizia" value="{{ v.pk }}">
-        <label class="bottone foto-btn">
-          <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
-          <span>{% if v.foto %}Cambia foto{% else %}Scatta foto{% endif %}</span>
-        </label>
-        <input type="text" name="nota" placeholder="Nota (facoltativa)" value="{{ v.nota }}" maxlength="300">
-        <button class="bottone pieno" name="azione" value="fatta">{% if v.stato == 'DA_FARE' %}Fatto{% else %}Aggiorna{% endif %}</button>
-        {% if v.aggiunta_da_operaio and v.stato == 'DA_FARE' %}
-          <button class="bottone leggero" name="azione" value="rimuovi">Togli</button>
-        {% endif %}
-      </form>
-      {% if v.stato == 'FATTA' %}</details>{% endif %}
+    {% if v.elemento.istruzioni and v.stato != 'VERIFICATA' %}<p class="pl-istruzioni">{{ v.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
+    {% if v.stato == 'SEGNALATA' and v.nota_verifica %}<p class="pl-segnalazione">Capo turno: {{ v.nota_verifica }}</p>{% endif %}
+    {% if v.foto %}<img class="pl-foto" src="{% url 'turni:foto' v.pk %}" alt="Foto pulizia {{ v.elemento.nome }}" loading="lazy">{% endif %}
+
+    {% if v.stato != 'VERIFICATA' %}
+    {% if v.stato == 'FATTA' %}<details class="pl-modifica"><summary>Modifica</summary>{% endif %}
+    <form method="post" enctype="multipart/form-data" class="pl-azioni">{% csrf_token %}
+      <input type="hidden" name="pulizia" value="{{ v.pk }}">
+      <label class="bottone foto-btn">
+        <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+        <span>📷 {% if v.foto %}Cambia foto{% else %}Foto{% endif %}</span>
+      </label>
+      <button class="bottone pieno" name="azione" value="fatta">{% if v.stato == 'DA_FARE' %}✓ Fatto{% else %}✓ Aggiorna{% endif %}</button>
+      <details class="pl-nota">
+        <summary>{% if v.nota %}Nota: {{ v.nota|truncatechars:30 }}{% else %}Aggiungi una nota{% endif %}</summary>
+        <input type="text" name="nota" placeholder="Es. manca il detergente" value="{{ v.nota }}" maxlength="300">
+      </details>
+      {% if v.aggiunta_da_operaio and v.stato == 'DA_FARE' %}
+        <button class="link-piccolo" name="azione" value="rimuovi">Togli dalla lista</button>
       {% endif %}
-    </li>
+    </form>
+    {% if v.stato == 'FATTA' %}</details>{% endif %}
+    {% endif %}
+  </div>
   {% endfor %}
-  </ul>
 
   {% if mezzi %}
-  <form method="post" class="scheda aggiungi">{% csrf_token %}
-    <h2>Hai usato un mezzo?</h2>
-    <select name="elemento" required>
-      <option value="">Scegli il mezzo…</option>
-      {% for m in mezzi %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}
-    </select>
-    <button class="bottone" name="azione" value="aggiungi">Aggiungi alla lista</button>
+  <form method="post" class="pl-voce pl-mezzo">{% csrf_token %}
+    <div class="pl-testa">
+      <span class="home-icona">🚜</span>
+      <span class="pl-nome"><b>Hai usato un mezzo?</b><small>Aggiungilo e puliscilo a fine turno</small></span>
+    </div>
+    <div class="pl-azioni">
+      <select name="elemento" required>
+        <option value="">Scegli il mezzo…</option>
+        {% for m in mezzi %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}
+      </select>
+      <button class="bottone" name="azione" value="aggiungi">Aggiungi</button>
+    </div>
   </form>
   {% endif %}
 {% endif %}
 
 {% if recenti|length > 1 %}
-<p class="tenue piccolo centrato">Altri turni:
-  {% for r in recenti %}{% if r.pk != turno.pk %}<a href="{% url 'turni:pulizie_turno' r.pk %}">{{ r.data|date:'D j' }}</a> {% endif %}{% endfor %}
-</p>
+<div class="pl-altri">
+  <span>Altri turni:</span>
+  {% for r in recenti %}{% if r.pk != turno.pk %}<a href="{% url 'turni:pulizie_turno' r.pk %}">{{ r.data|date:'D j'|capfirst }}</a>{% endif %}{% endfor %}
+</div>
 {% endif %}
 {% endblock %}
