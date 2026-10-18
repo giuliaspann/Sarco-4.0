@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Turni{% endblock %}
 {% block contenuto %}
-<p class="occhiello centrato">I miei turni</p>
+<p class="occhiello centrato">I miei turni · settimana {{ inizio|date:'W' }}</p>
 <div class="naviga mese">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
   <h1>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</h1>
@@ -26,11 +26,11 @@
 </section>
 {% endfor %}
 
-<ul class="legenda">
-  <li><i class="f-mattina">1T</i>1° turno <small>6–14</small></li>
-  <li><i class="f-pomeriggio">2T</i>2° turno <small>14–22</small></li>
-  <li><i class="f-notte">N</i>Notturno <small>22–6</small></li>
-  <li><i class="f-giorno">G</i>Giornaliero <small>8–17:30</small></li>
+<ul class="legenda legenda-due-righe">
+  <li><i class="f-mattina">1T</i>1° turno</li>
+  <li><i class="f-pomeriggio">2T</i>2° turno</li>
+  <li><i class="f-notte">N</i>Notturno</li>
+  <li><i class="f-giorno">G</i>Giornaliero</li>
   <li><i class="f-capo">CT</i>Capo turno</li>
   <li><i class="f-riposo">R</i>Riposo</li>
   <li><i class="f-ferie">F</i>Ferie</li>

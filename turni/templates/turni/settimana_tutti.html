@@ -2,6 +2,7 @@
 {% block titolo %}Turni di tutti{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Home</a>
+<p class="occhiello centrato">Settimana {{ lunedi|date:'W' }}</p>
 <div class="naviga mese">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
   <h1>{{ lunedi|date:'j' }} – {{ giorni.6|date:'j F' }}</h1>

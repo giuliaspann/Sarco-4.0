@@ -2,7 +2,7 @@
 {% block titolo %}Intervento #{{ i.pk }}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  <a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
+  <a class="tasto-indietro" href="{% url 'turni:interventi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Interventi</a>
   <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% else %}Guasto{% endif %} #{{ i.pk }}</p>
   <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona }} {{ i.macchina.nome }}</a></h1>
   <div class="mn-etichette">
@@ -15,7 +15,12 @@
 
 <section class="scheda">
   <p class="mn-descrizione">{{ i.descrizione|linebreaksbr }}</p>
-  <p class="tenue piccolo">{% if i.segnalata_da %}Segnalato da {{ i.segnalata_da.dipendente.nome_breve|default:i.segnalata_da.username }}{% else %}Creato dall'app{% endif %} · {{ i.segnalata_il|date:'D j M, H:i' }}</p>
+  <dl class="mn-chi-scheda">
+    <div><dt>📣 Segnalato da</dt><dd>{{ i.chi_ha_segnalato|default:'—' }} <small>{{ i.segnalata_il|date:'D j M, H:i' }}</small></dd></div>
+    {% if i.approvata_da %}<div><dt>👍 Approvato da</dt><dd>{{ i.chi_ha_approvato }} <small>{{ i.approvata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
+    {% if i.assegnata_a and i.stato != 'COMPLETATA' %}<div><dt>🔧 Se ne occupa</dt><dd>{{ i.assegnata_a.nome_breve }}</dd></div>{% endif %}
+    {% if i.stato == 'COMPLETATA' %}<div><dt>✅ Sistemato da</dt><dd>{{ i.chi_ha_sistemato }} <small>{{ i.completata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
+  </dl>
   {% if i.foto_guasto or i.foto_riparazione %}
   <div class="mn-foto-coppia">
     {% if i.foto_guasto %}<figure><img src="{% url 'turni:foto_mn' 'guasto' i.pk %}" alt="Foto del guasto" loading="lazy"><figcaption>Prima</figcaption></figure>{% endif %}
@@ -26,7 +31,7 @@
   <div class="mn-fatto">
     <b>Lavoro fatto</b>
     <p>{{ i.lavoro_svolto|linebreaksbr }}</p>
-    <small>{{ i.assegnata_a.nome_breve }} · {{ i.completata_il|date:'D j M, H:i' }}{% if i.ore_lavoro %} · {{ i.ore_lavoro }} ore di lavoro{% endif %}</small>
+    <small>Sistemato da {{ i.chi_ha_sistemato }} · {{ i.completata_il|date:'D j M, H:i' }}{% if i.ore_lavoro %} · {{ i.ore_lavoro }} ore di lavoro{% endif %}</small>
     {% if i.ricambi_usati.all %}<ul>{% for p in i.ricambi_usati.all %}<li>🔩 {{ p.nome }} × {{ p.quantita }}</li>{% endfor %}</ul>{% endif %}
   </div>
   {% endif %}

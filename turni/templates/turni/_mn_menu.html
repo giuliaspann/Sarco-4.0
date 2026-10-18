@@ -1,11 +1,4 @@
+<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
 <div class="intestazione">
-  <p class="occhiello">Manutenzione</p>
-  <h1>{{ titolo_pagina|default:'Macchine e mezzi' }}</h1>
+  <h1>{{ titolo_pagina }}</h1>
 </div>
-<nav class="mn-schede">
-  <a href="{% url 'turni:manutenzione' %}" class="{% if scheda == 'interventi' %}attivo{% endif %}">🛠️<span>Interventi</span></a>
-  <a href="{% url 'turni:macchine' %}" class="{% if scheda == 'macchine' %}attivo{% endif %}">🚜<span>Macchine</span></a>
-  <a href="{% url 'turni:ricambi' %}" class="{% if scheda == 'ricambi' %}attivo{% endif %}">🔩<span>Ricambi</span></a>
-  <a href="{% url 'turni:ordini' %}" class="{% if scheda == 'ordini' %}attivo{% endif %}">📦<span>Ordini</span></a>
-  <a href="{% url 'turni:programmate' %}" class="{% if scheda == 'programmate' %}attivo{% endif %}">🗓️<span>Programmate</span></a>
-</nav>

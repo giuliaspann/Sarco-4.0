@@ -14,7 +14,7 @@
     <b>{{ o.nome }} × {{ o.quantita }}</b>
     <span class="stato-chip {{ o.classe_stato }}">{% if o.urgente and o.aperto %}Urgente · {% endif %}{{ o.get_stato_display }}</span>
   </div>
-  <small class="tenue">{% if o.macchina %}{{ o.macchina.nome }} · {% endif %}chiesto da {{ o.richiesto_da.dipendente.nome_breve|default:o.richiesto_da.username }} il {{ o.richiesto_il|date:'j M' }}{% if o.fornitore %} · fornitore {{ o.fornitore }}{% endif %}</small>
+  <small class="tenue">{% if o.macchina %}{{ o.macchina.nome }} · {% endif %}chiesto da {{ o.richiesto_da.dipendente.nome_breve|default:'Ufficio' }} il {{ o.richiesto_il|date:'j M' }}{% if o.approvato_da %} · approvato da {{ o.approvato_da.dipendente.nome_breve|default:'Ufficio' }}{% endif %}{% if o.fornitore %} · fornitore {{ o.fornitore }}{% endif %}</small>
   {% if o.nota %}<p class="rq-motivo">“{{ o.nota }}”</p>{% endif %}
   <div class="mn-ordine-prove">
     {% if o.intervento %}<a href="{% url 'turni:intervento' o.intervento.pk %}">🛠️ Intervento #{{ o.intervento.pk }}{% if o.intervento.foto_guasto %} · foto del guasto{% endif %}</a>{% endif %}

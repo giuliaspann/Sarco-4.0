@@ -678,11 +678,12 @@ class Luogo(models.TextChoices):
     METALLI = 'METALLI', 'Metalli'
     SABBIA = 'SABBIA', 'Sabbia'
     MEZZI = 'MEZZI', 'Mezzi interni'
+    ESTERNI = 'ESTERNI', 'Mezzi esterni'
 
 
 class Macchina(models.Model):
     class Tipo(models.TextChoices):
-        IMPIANTO = 'IMPIANTO', 'Macchina'
+        IMPIANTO = 'IMPIANTO', 'Macchinario / attrezzatura'
         MEZZO = 'MEZZO', 'Mezzo'
 
     codice = models.CharField(max_length=20, unique=True)
@@ -754,6 +755,7 @@ class Intervento(models.Model):
     assegnata_a = models.ForeignKey('Dipendente', null=True, blank=True, on_delete=models.SET_NULL, related_name='interventi')
     iniziata_il = models.DateTimeField(null=True, blank=True)
     completata_il = models.DateTimeField(null=True, blank=True)
+    completata_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     lavoro_svolto = models.TextField(blank=True)
     foto_riparazione = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
     ore_lavoro = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
@@ -783,6 +785,29 @@ class Intervento(models.Model):
         if self.stato == self.Stato.SEGNALATA and self.tipo == self.Tipo.PROGRAMMATA:
             return 'Da assegnare'
         return self.get_stato_display()
+
+    @staticmethod
+    def _nome(utente):
+        if utente is None:
+            return ''
+        dip = getattr(utente, 'dipendente', None)
+        return dip.nome_breve if dip else 'Ufficio'
+
+    @property
+    def chi_ha_segnalato(self):
+        if self.segnalata_da_id:
+            return self._nome(self.segnalata_da)
+        return 'Programmata' if self.tipo == self.Tipo.PROGRAMMATA else ''
+
+    @property
+    def chi_ha_approvato(self):
+        return self._nome(self.approvata_da)
+
+    @property
+    def chi_ha_sistemato(self):
+        if self.completata_da_id:
+            return self._nome(self.completata_da)
+        return self.assegnata_a.nome_breve if self.assegnata_a_id and self.stato == self.Stato.COMPLETATA else ''
 
     @property
     def ore_fermo(self):

@@ -55,14 +55,14 @@
       <a href="{% url 'turni:pulizie' %}" class="{% if 'pulizie' in request.resolver_match.url_name %}attivo{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/></svg>Pulizie</a>
     {% endif %}
+    <a href="{% url 'turni:manutenzione' %}" class="{% if '/manutenzione/' in request.path %}attivo{% endif %}">
+      <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>{% if nav_manutenzione %}<b class="badge">{{ nav_manutenzione }}</b>{% endif %}</span><span class="menu-lungo">Manutenzione</span></a>
     {% if nav_dipendente %}
       <a href="{% url 'turni:richieste' %}" class="{% if '/richieste/' in request.path and '/ufficio/' not in request.path %}attivo{% endif %}">
         <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>{% if nav_da_rispondere %}<b class="badge">{{ nav_da_rispondere }}</b>{% endif %}</span>Richieste</a>
     {% endif %}
     <a href="{% url 'turni:messaggi' %}" class="{% if '/messaggi/' in request.path %}attivo{% endif %}">
       <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>{% if nav_messaggi %}<b class="badge">{{ nav_messaggi }}</b>{% endif %}</span>Messaggi</a>
-    <a href="{% url 'turni:manutenzione' %}" class="{% if '/manutenzione/' in request.path %}attivo{% endif %}">
-      <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>{% if nav_manutenzione %}<b class="badge">{{ nav_manutenzione }}</b>{% endif %}</span><span class="menu-lungo">Manutenzione</span></a>
     {% if nav_capoturno and not nav_dipendente %}
       <a href="{% url 'turni:capoturno' %}" class="{% if request.resolver_match.url_name == 'capoturno' %}attivo{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/><path d="M5 20h14"/></svg>Verifica</a>

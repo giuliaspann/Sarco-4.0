@@ -18,7 +18,12 @@ from .accessi import qr_svg
 from .esempi_manutenzione import togli
 from .models import Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
 
-LUOGHI_BREVI = [('IMP1', 'Imp. 1'), ('IMP2', 'Imp. 2'), ('PIAZZALE', 'Piazzale'), ('METALLI', 'Metalli'), ('SABBIA', 'Sabbia'), ('MEZZI', 'Mezzi interni')]
+# prima si sceglie il gruppo, poi il luogo
+GRUPPI = [
+    ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA']),
+    ('mezzi', 'Mezzi', '🚚', ['MEZZI', 'ESTERNI']),
+]
+ICONE_LUOGHI = {'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜', 'ESTERNI': '🚛'}
 
 
 class MacchinaForm(forms.ModelForm):
@@ -56,13 +61,52 @@ def _luogo(request):
     return luogo if luogo in Luogo.values else ''
 
 
+def _filtro(request):
+    """Filtro a due livelli: gruppo (macchinari / mezzi) e poi luogo. Restituisce i luoghi ammessi."""
+    luogo = _luogo(request)
+    gruppo = request.GET.get('gruppo', '')
+    if luogo:
+        gruppo = next(g for g, _, _, luoghi in GRUPPI if luogo in luoghi)
+    voce = next((x for x in GRUPPI if x[0] == gruppo), None)
+    ammessi = [luogo] if luogo else (voce[3] if voce else None)
+    return {
+        'gruppo': voce[0] if voce else '', 'luogo': luogo, 'gruppi_filtro': GRUPPI,
+        'sotto': [(v, Luogo(v).label) for v in voce[3]] if voce else [],
+    }, ammessi
+
+
 @login_required
 def manutenzione(request):
+    """Pagina iniziale: un pulsante per riga, con i numeri che contano."""
     mn.genera_programmate()
-    luogo = _luogo(request)
-    aperti = Intervento.objects.filter(stato__in=Intervento.APERTI).select_related('macchina', 'assegnata_a')
-    if luogo:
-        aperti = aperti.filter(macchina__luogo=luogo)
+    permessi = _permessi(request.user)
+    dip = mn.dipendente_di(request.user)
+    aperti = Intervento.objects.filter(stato__in=Intervento.APERTI)
+    badge_interventi = aperti.filter(assegnata_a=dip, stato=Intervento.Stato.ASSEGNATA).count() if dip else 0
+    if permessi['approvatore']:
+        badge_interventi += aperti.filter(stato=Intervento.Stato.SEGNALATA).count()
+    S = OrdineRicambio.Stato
+    badge_ordini = OrdineRicambio.objects.filter(stato=S.RICHIESTO).count() if permessi['resp'] else 0
+    if dip and dip.acquisti:
+        badge_ordini += OrdineRicambio.objects.filter(stato=S.APPROVATO).count()
+    entro = timezone.localdate() + timedelta(days=3)
+    return render(request, 'turni/mn_home.html', {
+        'aperti': aperti.count(),
+        'ferme': aperti.filter(macchina_ferma=True, tipo=Intervento.Tipo.GUASTO).count(),
+        'badge_interventi': badge_interventi, 'badge_ordini': badge_ordini,
+        'sotto_scorta': sum(1 for r in Ricambio.objects.all() if r.sotto_scorta),
+        'ordini_aperti': OrdineRicambio.objects.filter(stato__in=[S.RICHIESTO, S.APPROVATO, S.ORDINATO]).count(),
+        'in_scadenza': sum(1 for p in ManutenzioneProgrammata.objects.filter(attiva=True) if p.prossima <= entro),
+    })
+
+
+@login_required
+def interventi(request):
+    mn.genera_programmate()
+    filtro, ammessi = _filtro(request)
+    aperti = Intervento.objects.filter(stato__in=Intervento.APERTI).select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente')
+    if ammessi:
+        aperti = aperti.filter(macchina__luogo__in=ammessi)
     aperti = list(aperti)
     dip = mn.dipendente_di(request.user)
     permessi = _permessi(request.user)
@@ -71,11 +115,11 @@ def manutenzione(request):
     altri = [i for i in aperti if i not in da_approvare and i not in miei]
     recenti = Intervento.objects.filter(
         stato=Intervento.Stato.COMPLETATA, completata_il__gte=timezone.now() - timedelta(days=7)
-    ).select_related('macchina').order_by('-completata_il')
-    if luogo:
-        recenti = recenti.filter(macchina__luogo=luogo)
-    return render(request, 'turni/mn_home.html', {
-        **permessi, 'luogo': luogo, 'luoghi': LUOGHI_BREVI, 'scheda': 'interventi',
+    ).select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente', 'completata_da__dipendente').order_by('-completata_il')
+    if ammessi:
+        recenti = recenti.filter(macchina__luogo__in=ammessi)
+    return render(request, 'turni/mn_interventi.html', {
+        **permessi, **filtro, 'mostra_gruppi': True,
         'da_approvare': da_approvare, 'miei': miei, 'altri': altri, 'recenti': recenti[:5],
         'aperti_totale': len(aperti),
         'ferme': sum(1 for i in aperti if i.macchina_ferma),
@@ -86,12 +130,9 @@ def manutenzione(request):
     })
 
 
-ICONE_LUOGHI = {'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜'}
-
-
 @login_required
 def segnala(request):
-    """In tre passi senza menu a tendina: luogo → macchina (pulsanti grandi, con ricerca) → cosa succede e foto."""
+    """Senza menu a tendina: macchinari o mezzi → luogo → macchina (pulsanti grandi, con ricerca) → guasto e foto."""
     macchine = Macchina.objects.filter(attiva=True)
     scelta = request.POST.get('macchina') or request.GET.get('macchina') or ''
     macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
@@ -117,18 +158,24 @@ def segnala(request):
             if q:
                 elenco = elenco.filter(Q(nome__icontains=q) | Q(codice__icontains=q) | Q(categoria__icontains=q) | Q(marca__icontains=q))
             contesto.update(luogo=luogo, nome_luogo=Luogo(luogo).label if luogo else '', q=q,
+                            gruppo_luogo=next((g for g, _, _, luoghi in GRUPPI if luogo in luoghi), ''),
                             elenco=mn.stato_macchine(list(elenco)))
         else:
             conti = {v: 0 for v in Luogo.values}
             for v in macchine.values_list('luogo', flat=True):
                 conti[v] += 1
-            contesto['luoghi'] = [(v, nome, ICONE_LUOGHI[v], conti[v]) for v, nome in Luogo.choices if conti[v]]
+            gruppo = next((x for x in GRUPPI if x[0] == request.GET.get('gruppo')), None)
+            if gruppo:
+                contesto['gruppo'] = gruppo
+                contesto['luoghi'] = [(v, Luogo(v).label, ICONE_LUOGHI[v], conti[v]) for v in gruppo[3]]
+            else:
+                contesto['gruppi'] = [(g, nome, icona, sum(conti[v] for v in luoghi)) for g, nome, icona, luoghi in GRUPPI]
     return render(request, 'turni/mn_segnala.html', contesto)
 
 
 @login_required
 def intervento(request, intervento_id):
-    i = get_object_or_404(Intervento.objects.select_related('macchina', 'assegnata_a', 'segnalata_da', 'piano'), pk=intervento_id)
+    i = get_object_or_404(Intervento.objects.select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente', 'approvata_da__dipendente', 'completata_da__dipendente', 'piano'), pk=intervento_id)
     permessi = _permessi(request.user)
     lavora = mn.puo_lavorare(request.user, i)
     if request.method == 'POST':
@@ -229,17 +276,18 @@ def macchine(request):
             return redirect('turni:macchina', m.pk)
     else:
         form = MacchinaForm()
-    luogo = _luogo(request)
+    filtro, ammessi = _filtro(request)
     q = (request.GET.get('q') or '').strip()
     elenco = Macchina.objects.filter(attiva=True)
-    if luogo:
-        elenco = elenco.filter(luogo=luogo)
+    if ammessi:
+        elenco = elenco.filter(luogo__in=ammessi)
     if q:
         elenco = elenco.filter(Q(nome__icontains=q) | Q(codice__icontains=q) | Q(categoria__icontains=q) | Q(marca__icontains=q))
     elenco = mn.stato_macchine(list(elenco))
     gruppi = [(nome, [m for m in elenco if m.luogo == v]) for v, nome in Luogo.choices]
     return render(request, 'turni/mn_macchine.html', {
-        **permessi, 'scheda': 'macchine', 'luogo': luogo, 'luoghi': LUOGHI_BREVI, 'q': q,
+        **permessi, **filtro, 'q': q, 'mostra_gruppi': not filtro['gruppo'],
+        'titolo': next((nome for g, nome, _, _ in GRUPPI if g == filtro['gruppo']), 'Macchine e mezzi'),
         'gruppi': [g for g in gruppi if g[1]], 'form': form,
         'ci_sono_esempi': Macchina.objects.filter(esempio=True).exists(),
     })
@@ -264,7 +312,7 @@ def macchina(request, macchina_id):
             messages.error(request, 'Scrivi le ore come numero.')
         return redirect('turni:macchina', m.pk)
     mn.stato_macchine([m])
-    interventi = m.interventi.select_related('assegnata_a').order_by('-segnalata_il')
+    interventi = m.interventi.select_related('assegnata_a', 'segnalata_da__dipendente', 'completata_da__dipendente').order_by('-segnalata_il')
     return render(request, 'turni/mn_macchina.html', {
         **permessi, 'm': m, 'form': form,
         'aperti': [i for i in interventi if i.aperto],
@@ -312,7 +360,7 @@ def ordini(request):
         if mn.avanza_ordine(request.user, o, request.POST.get('azione'), request.POST.get('fornitore') or ''):
             messages.success(request, f'{o.nome}: {o.get_stato_display().lower()}.')
         return redirect('turni:ordini')
-    tutti = OrdineRicambio.objects.select_related('ricambio', 'macchina', 'intervento', 'richiesto_da', 'richiesto_da__dipendente')
+    tutti = OrdineRicambio.objects.select_related('ricambio', 'macchina', 'intervento', 'richiesto_da', 'richiesto_da__dipendente', 'approvato_da__dipendente')
     S = OrdineRicambio.Stato
     gruppi = [
         ('Da approvare', tutti.filter(stato=S.RICHIESTO)),
@@ -387,9 +435,9 @@ def etichette(request):
     if not (mn.e_resp(request.user) or request.user.is_staff):
         raise PermissionDenied
     base = request.build_absolute_uri(reverse('turni:segnala'))
-    luogo = _luogo(request)
-    elenco = list(Macchina.objects.filter(attiva=True, **({'luogo': luogo} if luogo else {})))
+    filtro, ammessi = _filtro(request)
+    elenco = list(Macchina.objects.filter(attiva=True, **({'luogo__in': ammessi} if ammessi else {})))
     for m in elenco:
         m.qr = qr_svg(f'{base}?macchina={m.pk}')
-    return render(request, 'turni/mn_etichette.html', {'elenco': elenco, 'luogo': luogo, 'luoghi': LUOGHI_BREVI})
+    return render(request, 'turni/mn_etichette.html', {'elenco': elenco, **filtro, 'mostra_gruppi': True})
 

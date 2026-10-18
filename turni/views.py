@@ -117,9 +117,8 @@ def miei_turni(request):
     settimane = []
     for lun in (inizio, inizio + timedelta(days=7)):
         distanza = (lun - lunedi_oggi).days // 7
-        nome = {0: 'Questa settimana', 1: 'Prossima settimana', -1: 'Settimana scorsa'}.get(
-            distanza, f'Dal {lun:%d/%m}'
-        )
+        quale = {0: 'questa', 1: 'prossima', -1: 'scorsa'}.get(distanza, '')
+        nome = f'Settimana {lun.isocalendar()[1]}' + (f' · {quale}' if quale else '')
         giorni = [{'data': lun + timedelta(days=i), 'turno': turni.get(lun + timedelta(days=i))} for i in range(7)]
         settimane.append({'nome': nome, 'giorni': giorni, 'caricata': any(c['turno'] for c in giorni)})
 

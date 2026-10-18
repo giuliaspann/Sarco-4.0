@@ -26,6 +26,7 @@ urlpatterns = [
     path('messaggi/chat/nuovi/', views_messaggi.chat_nuovi, name='chat_nuovi'),
     path('notifiche/iscrivi/', views_messaggi.iscrivi_notifiche, name='iscrivi_notifiche'),
     path('manutenzione/', views_manutenzione.manutenzione, name='manutenzione'),
+    path('manutenzione/interventi/', views_manutenzione.interventi, name='interventi'),
     path('manutenzione/segnala/', views_manutenzione.segnala, name='segnala'),
     path('manutenzione/interventi/<int:intervento_id>/', views_manutenzione.intervento, name='intervento'),
     path('manutenzione/macchine/', views_manutenzione.macchine, name='macchine'),

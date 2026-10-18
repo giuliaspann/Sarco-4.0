@@ -143,6 +143,7 @@ class ManutenzioneTest(TestCase):
         i.refresh_from_db(); filtro.refresh_from_db()
         self.assertEqual((i.stato, float(i.ore_lavoro)), ('COMPLETATA', 1.5))
         self.assertTrue(i.foto_riparazione)
+        self.assertEqual((i.chi_ha_segnalato, i.chi_ha_approvato, i.chi_ha_sistemato), ('Rossi Marco', 'Bianchi Luca', 'Torre Vito'))
         self.assertEqual(filtro.scorta, scorta + 1)
         self.assertEqual(sorted(p.nome for p in i.ricambi_usati.all()), ['Fascetta', 'Filtro olio motore'])
         self.assertEqual(self.avvisati(), ['marchese', 'operaio'])
@@ -150,10 +151,12 @@ class ManutenzioneTest(TestCase):
         self.assertEqual(diario[0], 'Guasto segnalato · macchina ferma')
         self.assertEqual(diario[-1], 'Riparato')
 
-    def test_segnala_in_tre_passi(self):
+    def test_segnala_a_passi(self):
         self.entra('operaio')
         r = self.client.get(reverse('turni:segnala'))
-        self.assertIn('Mezzi interni', [nome for _, nome, _, _ in r.context['luoghi']])
+        self.assertEqual([g for g, _, _, _ in r.context['gruppi']], ['macchinari', 'mezzi'])
+        r = self.client.get(reverse('turni:segnala'), {'gruppo': 'mezzi'})
+        self.assertEqual([nome for _, nome, _, _ in r.context['luoghi']], ['Mezzi interni', 'Mezzi esterni'])
         r = self.client.get(reverse('turni:segnala'), {'luogo': 'MEZZI'})
         self.assertIn(self.pala, r.context['elenco'])
         self.assertTrue(all(m.luogo == 'MEZZI' for m in r.context['elenco']))
@@ -209,7 +212,7 @@ class ManutenzioneTest(TestCase):
 
     def test_pagine_e_permessi(self):
         self.entra('operaio')
-        for nome in ('manutenzione', 'macchine', 'ricambi', 'ordini', 'programmate', 'segnala'):
+        for nome in ('manutenzione', 'interventi', 'macchine', 'ricambi', 'ordini', 'programmate', 'segnala'):
             self.assertEqual(self.client.get(reverse(f'turni:{nome}')).status_code, 200, nome)
         self.assertEqual(self.client.get(reverse('turni:macchina', args=[self.pala.pk])).status_code, 200)
         self.assertEqual(self.client.get(reverse('turni:etichette')).status_code, 403)

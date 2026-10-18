@@ -177,6 +177,7 @@ def completa(utente, i, lavoro, foto, ore, pezzi):
     """pezzi: lista di (ricambio o None, descrizione, quantità). Scala la scorta di magazzino."""
     i.stato = Intervento.Stato.COMPLETATA
     i.completata_il = timezone.now()
+    i.completata_da = utente
     i.iniziata_il = i.iniziata_il or i.completata_il
     i.lavoro_svolto = lavoro
     i.ore_lavoro = ore

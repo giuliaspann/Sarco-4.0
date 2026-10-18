@@ -1,9 +1,9 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Macchine{% endblock %}
 {% block contenuto %}
-{% include 'turni/_mn_menu.html' with titolo_pagina='Macchine e mezzi' %}
+{% include 'turni/_mn_menu.html' with titolo_pagina=titolo %}
 <form class="mn-cerca" method="get">
-  {% if luogo %}<input type="hidden" name="luogo" value="{{ luogo }}">{% endif %}
+  {% if luogo %}<input type="hidden" name="luogo" value="{{ luogo }}">{% elif gruppo %}<input type="hidden" name="gruppo" value="{{ gruppo }}">{% endif %}
   <input type="search" name="q" value="{{ q }}" placeholder="Cerca per nome, codice, marca…">
 </form>
 {% include 'turni/_mn_luoghi.html' %}

@@ -1,0 +1,24 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Interventi{% endblock %}
+{% block contenuto %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Interventi' %}
+{% include 'turni/_mn_luoghi.html' %}
+
+{% if da_approvare %}
+<h2 class="rq-sezione">Da approvare e assegnare <span class="mn-conta">{{ da_approvare|length }}</span></h2>
+{% for i in da_approvare %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
+{% endif %}
+
+{% if miei %}
+<h2 class="rq-sezione">I tuoi lavori <span class="mn-conta">{{ miei|length }}</span></h2>
+{% for i in miei %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
+{% endif %}
+
+<h2 class="rq-sezione">{% if miei or da_approvare %}Altri interventi aperti{% else %}Interventi aperti{% endif %}</h2>
+{% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}. 👍</p>{% endfor %}
+
+{% if recenti %}
+<h2 class="rq-sezione">Riparati negli ultimi 7 giorni</h2>
+{% for i in recenti %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
+{% endif %}
+{% endblock %}

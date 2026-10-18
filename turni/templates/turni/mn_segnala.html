@@ -3,12 +3,14 @@
 {% block contenuto %}
 <div class="intestazione">
   {% if macchina %}<a class="tasto-indietro" href="?luogo={{ macchina.luogo }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia macchina</a>
-  {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia luogo</a>
+  {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}{% if gruppo_luogo %}?gruppo={{ gruppo_luogo }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia luogo</a>
+  {% elif gruppo %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Indietro</a>
   {% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
   <h1>Segnala un guasto</h1>
   <ol class="sg-passi">
-    <li class="{% if not macchina and not luogo and not q %}ora{% else %}fatto{% endif %}">Luogo</li>
-    <li class="{% if macchina %}fatto{% elif luogo or q %}ora{% endif %}">Macchina</li>
+    <li class="{% if not macchina and not luogo and not q and not gruppo %}ora{% else %}fatto{% endif %}">Cosa</li>
+    <li class="{% if gruppo %}ora{% elif macchina or luogo or q %}fatto{% endif %}">Dove</li>
+    <li class="{% if macchina %}fatto{% elif luogo or q %}ora{% endif %}">Quale</li>
     <li class="{% if macchina %}ora{% endif %}">Guasto</li>
   </ol>
 </div>
@@ -54,14 +56,22 @@
     {% endfor %}
   </div>
 
+{% elif gruppo %}
+  <h2 class="rq-sezione">{% if gruppo.0 == 'mezzi' %}Interno o esterno?{% else %}Dove si trova?{% endif %}</h2>
+  <div class="sg-luoghi">
+    {% for v, nome, icona, n in luoghi %}
+    <a href="?luogo={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} {% if gruppo.0 == 'mezzi' %}mezz{{ n|pluralize:'o,i' }}{% else %}macchin{{ n|pluralize:'a,e' }}{% endif %}</small></a>
+    {% endfor %}
+  </div>
+
 {% else %}
   <form class="mn-cerca" method="get">
     <input type="search" name="q" placeholder="Sai già il nome o il codice? Cerca qui">
   </form>
-  <h2 class="rq-sezione">Dove si trova?</h2>
-  <div class="sg-luoghi">
-    {% for v, nome, icona, n in luoghi %}
-    <a href="?luogo={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} macchin{{ n|pluralize:'a,e' }}</small></a>
+  <h2 class="rq-sezione">Cosa si è rotto?</h2>
+  <div class="sg-gruppi">
+    {% for g, nome, icona, n in gruppi %}
+    <a href="?gruppo={{ g }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} in elenco</small></a>
     {% endfor %}
   </div>
 {% endif %}

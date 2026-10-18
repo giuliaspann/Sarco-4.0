@@ -1,36 +1,47 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Manutenzione{% endblock %}
 {% block contenuto %}
-{% include 'turni/_mn_menu.html' with titolo_pagina='Interventi' %}
-
-<a class="mn-segnala" href="{% url 'turni:segnala' %}">
-  <span>⚠️</span><b>Segnala un guasto</b><small>Foto e due righe: arriva subito al capo turno e al responsabile</small>
-</a>
-
-<div class="mn-numeri">
-  <div class="{% if ferme %}rosso{% endif %}"><b>{{ ferme }}</b><small>macchine ferme</small></div>
-  <div><b>{{ aperti_totale }}</b><small>interventi aperti</small></div>
-  <a href="{% url 'turni:ordini' %}"><b>{{ ordini_aperti }}</b><small>pezzi in ordine</small></a>
-  {% if chiede_pezzi %}<a href="{% url 'turni:ricambi' %}?sotto=1" class="{% if sotto_scorta %}arancio{% endif %}"><b>{{ sotto_scorta }}</b><small>ricambi sotto scorta</small></a>{% endif %}
+<div class="intestazione">
+  <h1>Manutenzione</h1>
 </div>
 
-{% include 'turni/_mn_luoghi.html' %}
+<div class="home-griglia">
+  <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
+    <span class="home-icona">⚠️</span>
+    <b>Segnala un guasto</b><small>Foto e due righe, arriva subito</small>
+  </a>
 
-{% if da_approvare %}
-<h2 class="rq-sezione">Da approvare e assegnare <span class="mn-conta">{{ da_approvare|length }}</span></h2>
-{% for i in da_approvare %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
-{% endif %}
+  <a class="home-tasto" href="{% url 'turni:interventi' %}">
+    {% if badge_interventi %}<i class="home-badge">{{ badge_interventi }}</i>{% endif %}
+    <span class="home-icona">🛠️</span>
+    <b>Interventi</b>
+    <small>{% if aperti %}{{ aperti }} apert{{ aperti|pluralize:'o,i' }}{% if ferme %} · {{ ferme }} macchin{{ ferme|pluralize:'a ferma,e ferme' }}{% endif %}{% else %}Nessun guasto aperto 👍{% endif %}</small>
+  </a>
 
-{% if miei %}
-<h2 class="rq-sezione">I tuoi lavori <span class="mn-conta">{{ miei|length }}</span></h2>
-{% for i in miei %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
-{% endif %}
+  <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=macchinari">
+    <span class="home-icona">🏭</span>
+    <b>Macchinari e attrezzature</b><small>Impianto 1, Impianto 2, piazzale, metalli, sabbia</small>
+  </a>
 
-<h2 class="rq-sezione">{% if miei or da_approvare %}Altri interventi aperti{% else %}Interventi aperti{% endif %}</h2>
-{% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}. 👍</p>{% endfor %}
+  <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=mezzi">
+    <span class="home-icona">🚚</span>
+    <b>Mezzi</b><small>Interni ed esterni</small>
+  </a>
 
-{% if recenti %}
-<h2 class="rq-sezione">Riparati negli ultimi 7 giorni</h2>
-{% for i in recenti %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
-{% endif %}
+  <a class="home-tasto" href="{% url 'turni:ricambi' %}">
+    <span class="home-icona">🔩</span>
+    <b>Ricambi</b><small>{% if sotto_scorta %}{{ sotto_scorta }} sotto scorta{% else %}Magazzino pezzi{% endif %}</small>
+  </a>
+
+  <a class="home-tasto" href="{% url 'turni:ordini' %}">
+    {% if badge_ordini %}<i class="home-badge">{{ badge_ordini }}</i>{% endif %}
+    <span class="home-icona">📦</span>
+    <b>Ordini pezzi</b><small>{% if ordini_aperti %}{{ ordini_aperti }} in corso{% else %}Nessun ordine in corso{% endif %}</small>
+  </a>
+
+  <a class="home-tasto" href="{% url 'turni:programmate' %}">
+    <span class="home-icona">🗓️</span>
+    <b>Manutenzioni programmate</b><small>{% if in_scadenza %}{{ in_scadenza }} in scadenza{% else %}Tagliandi e controlli periodici{% endif %}</small>
+  </a>
+</div>
 {% endblock %}
