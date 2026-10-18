@@ -36,8 +36,15 @@ def mezzi_aggiungibili(turno):
     return ElementoPulizia.objects.filter(attivo=True, tipo=ElementoPulizia.Tipo.MEZZO).exclude(pk__in=gia)
 
 
+MAX_FOTO = 15 * 1024 * 1024
+# immagini enormi (decine di migliaia di pixel per lato) vengono rifiutate
+Image.MAX_IMAGE_PIXELS = 50_000_000
+
+
 def salva_foto(pulizia, file):
     """Riduce la foto (il telefono la manda già piccola, ma non sempre) e la salva in JPEG."""
+    if file.size > MAX_FOTO:
+        raise ValueError('foto troppo grande')
     img = ImageOps.exif_transpose(Image.open(file)).convert('RGB')
     img.thumbnail((1600, 1600))
     buf = BytesIO()

@@ -31,9 +31,7 @@
     {% else %}
       <div class="pl-progresso">
         <div class="pl-numeri"><b>{{ fatte }}</b> di {{ voci|length }} <span>completate</span></div>
-        <div class="avanzamento" role="progressbar" aria-label="Pulizie completate" aria-valuenow="{{ fatte }}" aria-valuemin="0" aria-valuemax="{{ voci|length }}">
-          <span style="width: {% widthratio fatte voci|length 100 %}%"></span>
-        </div>
+        <progress class="barra-avanzamento" value="{{ fatte }}" max="{{ voci|length }}" aria-label="Pulizie completate"></progress>
         <small>Tocca <b>Fatto</b> su ogni voce. La foto aiuta il capo turno a controllare.</small>
       </div>
     {% endif %}

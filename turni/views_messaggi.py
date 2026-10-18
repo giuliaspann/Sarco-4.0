@@ -105,6 +105,10 @@ def messaggi(request):
             messages.success(request, 'Avviso pubblicato in bacheca.')
         elif azione == 'elimina_annuncio' and responsabile:
             get_object_or_404(Annuncio, pk=request.POST.get('annuncio')).delete()
+        elif azione == 'chat' and testo and MessaggioChat.objects.filter(
+            autore=request.user, creato_il__gte=timezone.now() - timedelta(minutes=1)
+        ).count() >= 10:
+            messages.error(request, 'Stai scrivendo troppi messaggi di seguito: aspetta un minuto.')
         elif azione == 'chat' and testo:
             m = MessaggioChat.objects.create(autore=request.user, testo=testo[:1000])
             push.invia(destinatari(request.user, solo_chat=True), f'Chat · {nome_di(request.user)}', m.testo,
@@ -169,6 +173,10 @@ def iscrivi_notifiche(request):
     try:
         dati = json.loads(request.body)
         endpoint, chiavi = dati['endpoint'], dati['keys']
+        from .sicurezza import endpoint_push_valido
+
+        if not endpoint_push_valido(endpoint) or len(str(chiavi['p256dh'])) > 200 or len(str(chiavi['auth'])) > 100:
+            return HttpResponseBadRequest()
         IscrizionePush.objects.update_or_create(
             endpoint=endpoint,
             defaults={'utente': request.user, 'p256dh': chiavi['p256dh'], 'auth': chiavi['auth']},

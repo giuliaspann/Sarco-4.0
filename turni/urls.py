@@ -29,4 +29,5 @@ urlpatterns = [
     path('ufficio/importa/', views.importa_turni, name='importa'),
     path('ufficio/importa/anteprima/', views.anteprima, name='anteprima'),
     path('ufficio/dipendenti/', views.dipendenti, name='dipendenti'),
+    path('ufficio/credenziali/', views.credenziali, name='credenziali'),
 ]

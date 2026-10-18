@@ -78,13 +78,22 @@ class MessaggiTest(TestCase):
         from pywebpush import WebPushException
 
         self.client.login(username='drame', password='123456')
+        # un indirizzo che non è di un servizio di notifiche viene rifiutato (niente richieste verso server interni)
+        for falso in ('https://push.example/nuovo', 'http://fcm.googleapis.com/x', 'https://169.254.169.254/latest'):
+            r = self.client.post(
+                reverse('turni:iscrivi_notifiche'),
+                json.dumps({'endpoint': falso, 'keys': {'p256dh': 'p', 'auth': 'a'}}),
+                content_type='application/json',
+            )
+            self.assertEqual(r.status_code, 400, falso)
+        vero = 'https://fcm.googleapis.com/fcm/send/abc123'
         r = self.client.post(
             reverse('turni:iscrivi_notifiche'),
-            json.dumps({'endpoint': 'https://push.example/nuovo', 'keys': {'p256dh': 'p', 'auth': 'a'}}),
+            json.dumps({'endpoint': vero, 'keys': {'p256dh': 'p', 'auth': 'a'}}),
             content_type='application/json',
         )
         self.assertEqual(r.status_code, 200)
-        self.assertTrue(IscrizionePush.objects.filter(endpoint='https://push.example/nuovo').exists())
+        self.assertTrue(IscrizionePush.objects.filter(endpoint=vero).exists())
 
         risposta = mock.Mock(status_code=410)
         self.webpush.side_effect = WebPushException('revocata', response=risposta)

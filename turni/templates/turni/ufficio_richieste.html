@@ -40,7 +40,7 @@
   </table>
   {% if c.motivo %}<p class="tenue piccolo">Motivo: “{{ c.motivo }}”</p>{% endif %}
   {% if c.scaduto %}<div class="avviso avviso-warning">Il giorno del cambio è già arrivato: si può solo rifiutare.</div>{% endif %}
-  <form method="post" class="form-voce" style="margin-left:0">{% csrf_token %}
+  <form method="post" class="form-voce senza-rientro">{% csrf_token %}
     <input type="hidden" name="cambio" value="{{ c.pk }}">
     <input type="text" name="nota" placeholder="Nota per i dipendenti (facoltativa)" maxlength="300">
     {% if not c.scaduto %}<button class="bottone pieno" name="azione" value="approva">Approva</button>{% endif %}
@@ -61,7 +61,7 @@
     <p class="avviso avviso-warning">Già in ferie in quei giorni: {% for a in f.colleghi_assenti %}{{ a.dipendente.nome_breve }} ({{ a.dal|date:'j/m' }}–{{ a.al|date:'j/m' }}){% if not forloop.last %}, {% endif %}{% endfor %}</p>
   {% endif %}
   {% if f.motivo %}<p class="tenue piccolo">Note: “{{ f.motivo }}”</p>{% endif %}
-  <form method="post" class="form-voce" style="margin-left:0">{% csrf_token %}
+  <form method="post" class="form-voce senza-rientro">{% csrf_token %}
     <input type="hidden" name="ferie" value="{{ f.pk }}">
     <input type="text" name="nota" placeholder="Nota per il dipendente (facoltativa)" maxlength="300">
     <button class="bottone pieno" name="azione" value="approva">Approva</button>

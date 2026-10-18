@@ -199,3 +199,25 @@ async function iscrivi(riquadro) {
   setInterval(aggiorna, 8000);
   document.addEventListener('visibilitychange', aggiorna);
 })();
+
+// ---------------------------------------------------------------- tastierino PIN (pagina di accesso)
+document.querySelectorAll('[data-tastierino]').forEach(tastierino => {
+  const campo = document.getElementById(tastierino.dataset.tastierino);
+  if (!campo) return;
+  tastierino.hidden = false;
+  tastierino.addEventListener('click', e => {
+    const tasto = e.target.closest('[data-tasto]');
+    if (!tasto) return;
+    campo.value = tasto.dataset.tasto === 'canc' ? campo.value.slice(0, -1) : campo.value + tasto.dataset.tasto;
+  });
+});
+
+// ---------------------------------------------------------------- accesso e tessere
+document.querySelectorAll('[data-stampa]').forEach(b => b.addEventListener('click', () => window.print()));
+(function () {
+  // arrivando dal QR della tessera il nome utente è già scritto: si parte dal PIN
+  const nome = document.getElementById('id_username');
+  const pin = document.getElementById('id_password');
+  if (!nome || !pin) return;
+  (nome.value ? pin : nome).focus();
+})();

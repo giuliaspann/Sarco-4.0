@@ -14,7 +14,7 @@
     <label>Al<input type="date" name="al" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.al }}" required></label>
   </div>
   <label>Note per l'ufficio (facoltative)<textarea name="motivo" rows="2" maxlength="300">{{ dati.motivo }}</textarea></label>
-  <button class="bottone pieno" style="width:100%">Invia all'ufficio</button>
+  <button class="bottone pieno piena-larghezza">Invia all'ufficio</button>
   <p class="tenue piccolo">Quando l'ufficio approva, i giorni compaiono come ferie nei tuoi turni.</p>
 </form>
 {% endblock %}

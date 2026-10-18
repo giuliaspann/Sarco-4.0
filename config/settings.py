@@ -56,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'turni.sicurezza.IntestazioniSicurezza',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -124,6 +125,18 @@ MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', BASE_DIR / 'media'))
 DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
 
+# Email all'ufficio turni con le credenziali dei dipendenti.
+# Su Railway Trial/Hobby l'SMTP è bloccato: usare RESEND_API_KEY (invio via HTTPS); in alternativa EMAIL_HOST & co.
+UFFICIO_TURNI_EMAIL = os.environ.get('UFFICIO_TURNI_EMAIL', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_MITTENTE', 'App Turni Sarco <turni@example.com>')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes')
+EMAIL_TIMEOUT = 15
+
 LOGIN_URL = 'turni:login'
 LOGIN_REDIRECT_URL = 'turni:home'
 LOGOUT_REDIRECT_URL = 'turni:login'
@@ -131,8 +144,30 @@ LOGOUT_REDIRECT_URL = 'turni:login'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 180
 
 
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 # Dietro il proxy HTTPS di Railway
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    # tutto solo in HTTPS; /health/ resta raggiungibile in HTTP per il controllo interno di Railway
+    SECURE_SSL_REDIRECT = True
+    SECURE_REDIRECT_EXEMPT = [r'^health/$']
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {
+        'turni': {'handlers': ['console'], 'level': 'INFO'},
+        # errori 500 nei log di Railway (con DEBUG spento Django altrimenti non li stampa)
+        'django.request': {'handlers': ['console'], 'level': 'ERROR', 'propagate': False},
+    },
+}

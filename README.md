@@ -32,3 +32,23 @@ Lettura dei codici del file: `1T`/`2T`/`N`/`G` = fascia; `Imp. 1`, `Imp. 2`, `An
 
 Le foto servono su disco persistente: aggiungere un **Volume** al servizio montato su `/data` e la variabile `MEDIA_ROOT=/data/media`. Senza volume le foto si perdono a ogni deploy.
 Primo utente ufficio: `python manage.py createsuperuser` dalla shell del servizio.
+
+### Sicurezza (verificata ottobre 2026)
+
+- Accesso: PIN di 8 cifre generato dall'app (mai scelto dal dipendente, niente PIN in fila o ripetuti), conservato solo come impronta. Blocco dei tentativi sbagliati per nome utente (5 → 15 min) e per indirizzo di rete (20 → 30 min), anche per l'utente ufficio e per il pannello `/admin/`.
+- Nuovo PIN: quello vecchio smette subito di valere, su tutti i telefoni.
+- HTTPS obbligatorio con HSTS (un anno), cookie solo sicuri, Content-Security-Policy senza script o stili inline, protezione dal clickjacking, Referrer-Policy `same-origin`.
+- Permessi verificati con i test (`turni/test_sicurezza.py`): pagine dell'ufficio, foto, avvisi di assenza e pulizie di altri non sono raggiungibili.
+- Notifiche: si accettano solo indirizzi dei servizi push dei browser (niente richieste verso server interni). Chat: massimo 10 messaggi al minuto per persona.
+- File: Excel massimo 5 MB, foto massimo 15 MB e 50 milioni di pixel.
+- Dipendenze controllate con `pip-audit`: nessuna vulnerabilità nota.
+
+### Credenziali all'ufficio turni (email)
+
+Variabili da impostare su Railway (servizio app):
+
+- `UFFICIO_TURNI_EMAIL`: indirizzo che riceve nome utente e PIN.
+- `RESEND_API_KEY` + `EMAIL_MITTENTE` (es. `App Turni <turni@dominio-verificato>`): invio via HTTPS con Resend. Su Railway Trial/Hobby le porte SMTP sono chiuse, quindi questa è la strada consigliata.
+- In alternativa (piano Pro): `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`.
+
+Senza queste variabili le credenziali si vedono solo sulla pagina delle tessere (una volta sola).

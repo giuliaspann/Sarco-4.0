@@ -1,0 +1,41 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Tessere di accesso{% endblock %}
+{% block classe_body %}pagina-tessere{% endblock %}
+{% block contenuto %}
+<div class="intestazione non-stampare">
+  <p class="occhiello">Ufficio</p>
+  <h1>Tessere di accesso</h1>
+</div>
+
+<div class="non-stampare">
+  {% if email_inviata %}
+    <div class="avviso">Credenziali inviate a <b>{{ ufficio_email }}</b>.</div>
+  {% elif email_ok %}
+    <div class="avviso avviso-error">L'email all'ufficio turni non è partita: stampa le tessere o annota i PIN adesso.</div>
+  {% else %}
+    <div class="avviso avviso-warning">L'invio email non è configurato: stampa le tessere o annota i PIN adesso.</div>
+  {% endif %}
+  <p class="tenue piccolo"><b>I PIN si vedono solo ora</b>: l'app non li conserva. Se chiudi la pagina, per rivederli serve un nuovo PIN.</p>
+  <button type="button" class="bottone pieno piena-larghezza" data-stampa>🖨️ Stampa le tessere</button>
+  <a class="bottone leggero piena-larghezza" href="{% url 'turni:dipendenti' %}">Torna ai dipendenti</a>
+</div>
+
+<div class="tessere">
+  {% for c in credenziali %}
+  <div class="tessera">
+    <div class="tessera-testa">
+      <b>Sarco · Turni</b>
+      <span>{{ c.nome }}</span>
+    </div>
+    <div class="tessera-corpo">
+      <img src="{{ c.qr }}" alt="QR per entrare nell'app" width="116" height="116">
+      <dl>
+        <dt>Nome utente</dt><dd>{{ c.username }}</dd>
+        <dt>PIN</dt><dd class="tessera-pin">{{ c.pin|slice:':4' }} {{ c.pin|slice:'4:' }}</dd>
+      </dl>
+    </div>
+    <p class="tessera-aiuto">Inquadra il QR con la fotocamera, scrivi il PIN e tocca Entra. Poi «Aggiungi alla schermata Home». Non dare il PIN a nessuno.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

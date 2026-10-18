@@ -804,3 +804,31 @@ p.orario { margin: 2px 0 6px; }
 .pl-altri { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0 14px; font-size: .85rem; color: var(--tenue); }
 .pl-altri a { padding: 4px 10px; border-radius: 99px; background: var(--carta); border: 1px solid var(--bordo); text-decoration: none; color: var(--testo); font-weight: 600; }
 .pl-azioni .bottone, .pl-azioni select { height: 52px; min-height: 52px; padding-top: 0; padding-bottom: 0; }
+
+/* senza stili inline (Content-Security-Policy) */
+.senza-rientro { margin-left: 0; }
+.barra-avanzamento { width: 100%; height: 14px; border: 0; border-radius: 99px; overflow: hidden; background: var(--bordo); appearance: none; -webkit-appearance: none; }
+.barra-avanzamento::-webkit-progress-bar { background: var(--bordo); border-radius: 99px; }
+.barra-avanzamento::-webkit-progress-value { background: var(--ok, #2e7a14); border-radius: 99px; }
+.barra-avanzamento::-moz-progress-bar { background: var(--ok, #2e7a14); border-radius: 99px; }
+
+/* ------------------------------------------------ tessere di accesso (anche stampabili) */
+.accessi-tutti { border: 2px solid var(--primario); }
+.tessere { display: grid; gap: 12px; margin-top: 14px; }
+.tessera { background: #fff; color: #00384f; border: 2px solid #00384f; border-radius: 14px; padding: 12px 14px; break-inside: avoid; }
+.tessera-testa { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border-bottom: 1px solid #dcdfe0; padding-bottom: 6px; }
+.tessera-testa span { font-weight: 800; font-size: 1.05rem; text-align: right; }
+.tessera-corpo { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.tessera-corpo img { flex: none; image-rendering: pixelated; }
+.tessera dl { margin: 0; }
+.tessera dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #54595f; }
+.tessera dd { margin: 0 0 8px; font-weight: 800; font-size: 1.05rem; word-break: break-all; }
+.tessera-pin { font-family: var(--font-mono, monospace); font-size: 1.5rem !important; letter-spacing: .08em; }
+.tessera-aiuto { margin: 8px 0 0; font-size: .74rem; color: #54595f; }
+@media print {
+  .barra, .menu, .non-stampare, .avviso { display: none !important; }
+  body { background: #fff; padding: 0; }
+  .pagina { max-width: none; padding: 0; }
+  .tessere { grid-template-columns: 1fr 1fr; gap: 8mm; }
+  .tessera { border-width: 1.5px; }
+}

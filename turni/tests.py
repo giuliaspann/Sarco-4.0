@@ -240,9 +240,9 @@ class AccessoTest(TestCase):
             self.client.post(url, {'username': 'rossi.mario', 'password': '000000'})
         r = self.client.post(url, {'username': 'Rossi.Mario', 'password': '123456'})
         self.assertContains(r, 'Troppi tentativi')
-        self.dip.refresh_from_db()
-        self.dip.bloccato_fino = timezone.now() - timedelta(seconds=1)
-        self.dip.save()
+        from .models import BloccoAccesso
+
+        BloccoAccesso.objects.update(bloccato_fino=timezone.now() - timedelta(seconds=1))
         r = self.client.post(url, {'username': 'Rossi.Mario', 'password': '123456'})
         self.assertRedirects(r, reverse('turni:home'), fetch_redirect_response=False)
 

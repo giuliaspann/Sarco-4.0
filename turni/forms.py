@@ -1,21 +1,18 @@
-from datetime import timedelta
-
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
-from django.utils import timezone
 
-from .models import Dipendente
+from .sicurezza import MESSAGGIO_BLOCCO, ProtezioneAccesso
 
-TENTATIVI_MAX = 5
-BLOCCO = timedelta(minutes=15)
+# Il file turni settimanale pesa qualche centinaio di KB: 5 MB bastano e avanzano
+MAX_EXCEL = 5 * 1024 * 1024
 
 
-class AccessoForm(AuthenticationForm):
+class AccessoForm(ProtezioneAccesso, AuthenticationForm):
     """Login con nome utente e PIN, con blocco temporaneo dopo troppi PIN sbagliati."""
 
     username = forms.CharField(
         label='Nome utente',
-        widget=forms.TextInput(attrs={'autocapitalize': 'none', 'autocomplete': 'username', 'autofocus': True}),
+        widget=forms.TextInput(attrs={'autocapitalize': 'none', 'autocomplete': 'username'}),
     )
     password = forms.CharField(
         label='PIN o password',
@@ -27,30 +24,8 @@ class AccessoForm(AuthenticationForm):
     error_messages = {
         **AuthenticationForm.error_messages,
         'invalid_login': 'Nome utente o PIN sbagliati.',
-        'bloccato': 'Troppi tentativi sbagliati: riprova tra qualche minuto o chiedi in ufficio.',
+        'bloccato': MESSAGGIO_BLOCCO,
     }
-
-    def clean(self):
-        username = (self.cleaned_data.get('username') or '').strip().lower()
-        self.cleaned_data['username'] = username
-        dip = Dipendente.objects.filter(utente__username=username).first()
-        if dip and dip.bloccato_fino and dip.bloccato_fino > timezone.now():
-            raise forms.ValidationError(self.error_messages['bloccato'], code='bloccato')
-        try:
-            pulito = super().clean()
-        except forms.ValidationError:
-            if dip:
-                dip.tentativi_falliti += 1
-                if dip.tentativi_falliti >= TENTATIVI_MAX:
-                    dip.bloccato_fino = timezone.now() + BLOCCO
-                    dip.tentativi_falliti = 0
-                dip.save(update_fields=['tentativi_falliti', 'bloccato_fino'])
-            raise
-        if dip and (dip.tentativi_falliti or dip.bloccato_fino):
-            dip.tentativi_falliti = 0
-            dip.bloccato_fino = None
-            dip.save(update_fields=['tentativi_falliti', 'bloccato_fino'])
-        return pulito
 
 
 class ImportaForm(forms.Form):
@@ -66,4 +41,6 @@ class ImportaForm(forms.Form):
         f = self.cleaned_data['file']
         if not f.name.lower().endswith(('.xlsx', '.xlsm')):
             raise forms.ValidationError('Serve un file Excel .xlsx')
+        if f.size > MAX_EXCEL:
+            raise forms.ValidationError('Il file è troppo grande (massimo 5 MB).')
         return f

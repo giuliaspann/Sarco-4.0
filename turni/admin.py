@@ -2,7 +2,17 @@ from django.contrib import admin
 
 from .models import CambioTurno, Dipendente, RichiestaFerie, ElementoPulizia, NotaSettimana, Pulizia, RegolaPulizia, Settimana, Turno
 
+from django.contrib.admin.forms import AdminAuthenticationForm
+
+from .sicurezza import ProtezioneAccesso
+
+
+class AdminAccessoForm(ProtezioneAccesso, AdminAuthenticationForm):
+    pass
+
+
 admin.site.site_header = 'Sarco 4.0'
+admin.site.login_form = AdminAccessoForm
 
 
 class RegolaInline(admin.TabularInline):

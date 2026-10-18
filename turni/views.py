@@ -1,7 +1,7 @@
-import secrets
 from datetime import date, timedelta
 from itertools import groupby
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
@@ -11,11 +11,12 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from . import importa
+from . import accessi, importa
 from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
 from .pulizie import genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
@@ -29,6 +30,12 @@ class Accesso(LoginView):
     form_class = AccessoForm
     template_name = 'turni/login.html'
     redirect_authenticated_user = True
+
+    def get_initial(self):
+        iniziali = super().get_initial()
+        if self.request.GET.get('u'):
+            iniziali['username'] = self.request.GET['u'][:150]
+        return iniziali
 
 
 def dipendente_di(request):
@@ -283,6 +290,12 @@ def pulizie(request, turno_id=None):
 
     if request.method == 'POST':
         azione = request.POST.get('azione')
+        if azione == 'pin_tutti':
+            senza = list(Dipendente.objects.filter(attivo=True, utente__isnull=True).order_by('nome'))
+            if not senza:
+                messages.info(request, 'Tutti i dipendenti attivi hanno già un accesso.')
+                return redirect('turni:dipendenti')
+            return _consegna_credenziali(request, senza)
         if azione == 'aggiungi':
             elemento = get_object_or_404(mezzi_aggiungibili(turno), pk=request.POST.get('elemento'))
             Pulizia.objects.get_or_create(turno=turno, elemento=elemento, defaults={'aggiunta_da_operaio': True})
@@ -489,20 +502,16 @@ def genera_turni_prova(dip):
             )
 
 
-def nome_utente_per(dip):
-    parole = [p for p in slugify(dip.nome.replace("'", ' ')).split('-') if len(p) > 1]
-    base = '.'.join(parole[:2]) or f'dip{dip.pk}'
-    nome, i = base, 2
-    User = get_user_model()
-    while User.objects.filter(username=nome).exclude(dipendente=dip).exists():
-        nome, i = f'{base}{i}', i + 1
-    return nome
-
-
 @staff_member_required
 def dipendenti(request):
     if request.method == 'POST':
         azione = request.POST.get('azione')
+        if azione == 'pin_tutti':
+            senza = list(Dipendente.objects.filter(attivo=True, utente__isnull=True).order_by('nome'))
+            if not senza:
+                messages.info(request, 'Tutti i dipendenti attivi hanno già un accesso.')
+                return redirect('turni:dipendenti')
+            return _consegna_credenziali(request, senza)
         if azione == 'aggiungi':
             nome = ' '.join((request.POST.get('nome') or '').split()).upper()
             if len(nome) < 3:
@@ -544,21 +553,7 @@ def dipendenti(request):
             messages.success(request, f'{nome} eliminato.')
             return redirect('turni:dipendenti')
         if azione == 'pin':
-            pin = f'{secrets.randbelow(10**6):06d}'
-            utente = dip.utente
-            if utente is None:
-                utente = get_user_model().objects.create_user(nome_utente_per(dip), first_name=dip.nome_breve)
-                dip.utente = utente
-            utente.set_password(pin)
-            utente.is_active = True
-            utente.save()
-            dip.tentativi_falliti, dip.bloccato_fino = 0, None
-            dip.save()
-            messages.success(
-                request,
-                f'{dip.nome_breve} — nome utente: {utente.username} — PIN: {pin}. '
-                'Annotalo e comunicalo alla persona: non verrà più mostrato.',
-            )
+            return _consegna_credenziali(request, [dip])
         elif azione == 'attivo':
             dip.attivo = not dip.attivo
             dip.save(update_fields=['attivo'])
@@ -569,7 +564,52 @@ def dipendenti(request):
     elenco = Dipendente.objects.select_related('utente').annotate(n_turni=Count('turni')).order_by('-attivo', 'nome')
     from .models import Mansione
 
-    return render(request, 'turni/ufficio_dipendenti.html', {'elenco': elenco, 'mansioni': Mansione.choices})
+    return render(
+        request,
+        'turni/ufficio_dipendenti.html',
+        {
+            'elenco': elenco,
+            'mansioni': Mansione.choices,
+            'senza_accesso': Dipendente.objects.filter(attivo=True, utente__isnull=True).count(),
+            'email_ok': accessi.email_configurata(),
+        },
+    )
+
+
+def _indirizzo_app(request):
+    return request.build_absolute_uri(reverse('turni:login'))
+
+
+def _consegna_credenziali(request, dipendenti):
+    """Genera i PIN, li manda all'ufficio turni e mostra le tessere UNA volta sola."""
+    credenziali = []
+    for dip in dipendenti:
+        username, pin = accessi.crea_credenziali(dip)
+        credenziali.append({'nome': dip.nome_breve, 'username': username, 'pin': pin})
+    inviata = accessi.invia_all_ufficio(credenziali, _indirizzo_app(request))
+    request.session['credenziali'] = {'elenco': credenziali, 'email': inviata}
+    return redirect('turni:credenziali')
+
+
+@staff_member_required
+def credenziali(request):
+    """Tessere stampabili: nome, nome utente, PIN e QR che apre l'app con il nome già scritto.
+    I PIN non sono salvati da nessuna parte: ricaricando la pagina spariscono."""
+    dati = request.session.pop('credenziali', None)
+    if not dati:
+        return redirect('turni:dipendenti')
+    base = _indirizzo_app(request)
+    for c in dati['elenco']:
+        c['link'] = f"{base}?u={c['username']}"
+        c['qr'] = accessi.qr_svg(c['link'])
+    risposta = render(
+        request,
+        'turni/ufficio_credenziali.html',
+        {'credenziali': dati['elenco'], 'email_inviata': dati['email'], 'email_ok': accessi.email_configurata(),
+         'ufficio_email': getattr(settings, 'UFFICIO_TURNI_EMAIL', '')},
+    )
+    risposta['Cache-Control'] = 'no-store'  # il browser non deve conservare la pagina con i PIN
+    return risposta
 
 
 # ---------------------------------------------------------------- app installabile

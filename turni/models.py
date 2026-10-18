@@ -609,3 +609,16 @@ class ChiaviPush(models.Model):
 
     privata_pem = models.TextField()
     pubblica = models.CharField(max_length=200)
+
+
+class BloccoAccesso(models.Model):
+    """Tentativi di accesso sbagliati, per nome utente ("u:...") e per indirizzo di rete ("ip:...")."""
+
+    chiave = models.CharField(max_length=200, unique=True)
+    tentativi = models.PositiveIntegerField(default=0)
+    bloccato_fino = models.DateTimeField(null=True, blank=True)
+    aggiornato_il = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'blocco accesso'
+        verbose_name_plural = 'blocchi accesso'
