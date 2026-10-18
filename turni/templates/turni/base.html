@@ -22,7 +22,7 @@
         <source srcset="{% static 'turni/logo-bianco.png' %}" media="(prefers-color-scheme: dark)">
         <img src="{% static 'turni/logo-blu.png' %}" alt="Sarco" width="115" height="34">
       </picture>
-      <span class="marchio-modulo">Turni &amp;<br>Pulizie</span>
+      <span class="marchio-modulo">Turni</span>
     </span>
     {% if user.is_authenticated %}
       <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}

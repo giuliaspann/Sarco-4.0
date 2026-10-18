@@ -36,6 +36,13 @@ document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
   });
 });
 
+// Azioni irreversibili: chiedi conferma (il click arriva prima dell'invio del modulo)
+document.querySelectorAll('[data-conferma]').forEach(b => {
+  b.addEventListener('click', e => {
+    if (!confirm(b.dataset.conferma)) e.preventDefault();
+  });
+});
+
 // Evita doppi invii quando la rete è lenta
 document.querySelectorAll('form').forEach(form => {
   form.addEventListener('submit', e => {

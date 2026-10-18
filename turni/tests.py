@@ -338,3 +338,36 @@ class HomeTest(TestCase):
     def test_capo_turno_vede_la_verifica(self):
         self.client.login(username='crimi', password='123456')  # martedì capo turno di notte
         self.assertContains(self.client.get(reverse('turni:home')), 'Verifica pulizie')
+
+
+class GestioneDipendentiTest(TestCase):
+    def setUp(self):
+        get_user_model().objects.create_user('ufficio', password='x', is_staff=True)
+        self.client.login(username='ufficio', password='x')
+
+    def test_aggiungi_crea_accesso_ed_elimina(self):
+        url = reverse('turni:dipendenti')
+        self.client.post(url, {'azione': 'aggiungi', 'nome': '  spanò   giulia '})
+        dip = Dipendente.objects.get(nome='SPANÒ GIULIA')
+        r = self.client.post(url, {'azione': 'aggiungi', 'nome': 'Spanò Giulia'}, follow=True)
+        self.assertContains(r, "già nell")
+        self.assertEqual(Dipendente.objects.count(), 1)
+
+        self.client.post(url, {'dipendente': dip.pk, 'azione': 'pin'})
+        dip.refresh_from_db()
+        utente = dip.utente
+        self.assertIsNotNone(utente)
+
+        self.client.post(url, {'dipendente': dip.pk, 'azione': 'elimina'})
+        self.assertFalse(Dipendente.objects.exists())
+        self.assertFalse(get_user_model().objects.filter(pk=utente.pk).exists())
+        # l'utente dell'ufficio resta
+        self.assertTrue(get_user_model().objects.filter(username='ufficio').exists())
+
+    def test_operaio_non_gestisce_dipendenti(self):
+        d = Dipendente.objects.create(nome='ROSSI MARIO')
+        d.utente = get_user_model().objects.create_user('rossi', password='123456')
+        d.save()
+        self.client.login(username='rossi', password='123456')
+        self.client.post(reverse('turni:dipendenti'), {'dipendente': d.pk, 'azione': 'elimina'})
+        self.assertTrue(Dipendente.objects.filter(pk=d.pk).exists())

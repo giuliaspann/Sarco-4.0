@@ -394,8 +394,29 @@ def nome_utente_per(dip):
 @staff_member_required
 def dipendenti(request):
     if request.method == 'POST':
-        dip = get_object_or_404(Dipendente, pk=request.POST.get('dipendente'))
         azione = request.POST.get('azione')
+        if azione == 'aggiungi':
+            nome = ' '.join((request.POST.get('nome') or '').split()).upper()
+            if len(nome) < 3:
+                messages.error(request, 'Scrivi cognome e nome.')
+            elif Dipendente.objects.filter(nome=nome).exists():
+                messages.error(request, f"{nome.title()} è già nell'elenco.")
+            else:
+                simile = importa.trova_dipendente(nome, list(Dipendente.objects.all()))
+                dip = Dipendente.objects.create(nome=nome)
+                messages.success(request, f'{dip.nome_breve} aggiunto. Ora puoi creare il suo accesso.')
+                if simile:
+                    messages.warning(request, f'Attenzione: assomiglia a {simile.nome_breve}. Se è la stessa persona, elimina il doppione.')
+            return redirect('turni:dipendenti')
+
+        dip = get_object_or_404(Dipendente, pk=request.POST.get('dipendente'))
+        if azione == 'elimina':
+            nome, utente = dip.nome_breve, dip.utente
+            dip.delete()  # con lui spariscono turni, pulizie e richieste
+            if utente and not (utente.is_staff or utente.is_superuser):
+                utente.delete()
+            messages.success(request, f'{nome} eliminato.')
+            return redirect('turni:dipendenti')
         if azione == 'pin':
             pin = f'{secrets.randbelow(10**6):06d}'
             utente = dip.utente

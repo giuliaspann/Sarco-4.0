@@ -3,24 +3,35 @@
 {% block contenuto %}
 <div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
 
+<form method="post" class="scheda">{% csrf_token %}
+  <h2>Aggiungi dipendente</h2>
+  <p class="tenue piccolo">Chi è nel file turni si aggiunge da solo al caricamento. Qui puoi aggiungere chi non c'è (nuovi assunti, prove).</p>
+  <div class="riga-form riga-aggiungi">
+    <input type="text" name="nome" placeholder="Cognome e nome" autocapitalize="characters" required>
+    <button class="bottone pieno" name="azione" value="aggiungi">Aggiungi</button>
+  </div>
+</form>
+
 <section class="scheda">
   <h2>Dipendenti e PIN</h2>
-  <p class="tenue piccolo">I dipendenti si aggiungono da soli caricando il file turni. «Nuovo PIN» crea l'accesso (o lo reimposta se è stato dimenticato).</p>
-  <ul class="elenco">
+  <p class="tenue piccolo">«Crea accesso» genera nome utente e PIN; «Nuovo PIN» lo reimposta se è stato dimenticato. «Disattiva» blocca l'accesso ma tiene lo storico; «Elimina» cancella tutto.</p>
+  <ul class="elenco elenco-dipendenti">
   {% for d in elenco %}
     <li class="{% if not d.attivo %}spento{% endif %}">
       <span>
         <b>{{ d.nome_breve }}</b><br>
         <span class="tenue piccolo">{% if d.utente %}utente: {{ d.utente.username }}{% else %}nessun accesso{% endif %}{% if d.tutor %} · tutor: {{ d.tutor|title }}{% endif %}</span>
       </span>
-      <form method="post" class="azioni">{% csrf_token %}
+      <form method="post" class="azioni-dipendente">{% csrf_token %}
         <input type="hidden" name="dipendente" value="{{ d.pk }}">
         {% if d.attivo %}<button class="bottone" name="azione" value="pin">{% if d.utente %}Nuovo PIN{% else %}Crea accesso{% endif %}</button>{% endif %}
         <button class="bottone leggero" name="azione" value="attivo">{% if d.attivo %}Disattiva{% else %}Riattiva{% endif %}</button>
+        <button class="bottone avviso-btn" name="azione" value="elimina"
+                data-conferma="Eliminare {{ d.nome_breve }}? Verranno cancellati anche i suoi turni, le pulizie e le richieste. Non si può annullare.">Elimina</button>
       </form>
     </li>
   {% empty %}
-    <li>Nessun dipendente: carica prima un file turni.</li>
+    <li>Nessun dipendente: carica un file turni o aggiungine uno qui sopra.</li>
   {% endfor %}
   </ul>
 </section>

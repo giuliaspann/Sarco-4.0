@@ -528,3 +528,12 @@ body.accesso .barra { display: none; }
   box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
 }
 .home-griglia > .home-tasto:last-child:nth-child(odd) { grid-column: span 2; min-height: 0; }
+
+/* dipendenti: nome sopra, tre pulsanti uguali sotto (niente scorrimento laterale) */
+.riga-aggiungi { flex-wrap: nowrap; }
+.riga-aggiungi input { flex: 1; }
+.riga-aggiungi .bottone { flex: none; }
+.elenco-dipendenti li { flex-wrap: wrap; }
+.elenco-dipendenti li > span { flex: 1 1 100%; }
+.azioni-dipendente { flex: 1 1 100% !important; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 6px; }
+.azioni-dipendente .bottone { padding: 0 6px; font-size: .88rem; }
