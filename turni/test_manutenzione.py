@@ -241,7 +241,7 @@ class ManutenzioneTest(TestCase):
         self.assertEqual(self.client.get(reverse('turni:segnala'), {'lavoro': '1'}).status_code, 403)
         self.entra('vito')
         r = self.client.get(reverse('turni:segnala'), {'lavoro': '1', 'gruppo': 'macchinari'})
-        self.assertContains(r, 'lavoro=1&gruppo=macchinari&luogo=IMP1')
+        self.assertContains(r, 'lavoro=1&amp;gruppo=macchinari&luogo=IMP1')
         vaglio = Macchina.objects.get(codice='IMP1-VAG')
         cinghia = Ricambio.objects.get(nome='Cinghia trapezoidale B68')
         scorta = cinghia.scorta
