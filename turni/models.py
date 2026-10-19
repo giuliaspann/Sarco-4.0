@@ -1345,6 +1345,7 @@ class ConversazioneAssistente(models.Model):
     utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversazioni')
     messaggi = models.JSONField(default=list)
     proposte = models.JSONField(default=list)
+    foto = models.ImageField(upload_to='assistente/%Y/%m/', blank=True)  # ultima foto allegata con 📷
     creata_il = models.DateTimeField(auto_now_add=True)
     aggiornata_il = models.DateTimeField(auto_now=True)
 
@@ -1361,7 +1362,9 @@ class ConversazioneAssistente(models.Model):
         righe = []
         for m in self.messaggi:
             c = m['content']
-            if m['role'] == 'user' and isinstance(c, str) and not c.startswith('['):
+            if m['role'] == 'user' and isinstance(c, list) and any(b.get('type') == 'image' for b in c):
+                righe.append({'chi': 'io', 'testo': '📷 ' + next((b['text'] for b in c if b.get('type') == 'text'), '').replace(' [foto allegata]', '')})
+            elif m['role'] == 'user' and isinstance(c, str) and not c.startswith('['):
                 righe.append({'chi': 'io', 'testo': c})
             elif m['role'] == 'user' and isinstance(c, str):
                 righe.append({'chi': 'esito', 'testo': c.strip('[]')})

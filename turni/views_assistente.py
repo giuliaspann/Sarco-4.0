@@ -33,14 +33,17 @@ def _dati(request):
 def chat(request):
     _serve(request)
     if request.method == 'POST':
-        testo = (_dati(request).get('testo') or '').strip()
-        if not testo:
+        foto = request.FILES.get('foto')
+        testo = ((request.POST.get('testo') if foto or request.POST else _dati(request).get('testo')) or '').strip()
+        if not testo and not foto:
             return JsonResponse({'errore': 'Scrivi un messaggio.'}, status=400)
         c = _conversazione(request.user)
         try:
-            risposta, proposte = assistente.rispondi(c, testo, request.user)
+            risposta, proposte = assistente.rispondi(c, testo, request.user, foto)
         except assistente.Errore as e:
             return JsonResponse({'errore': str(e)}, status=502)
+        except (ValueError, OSError):
+            return JsonResponse({'errore': 'La foto non è valida.'}, status=400)
         return JsonResponse({'risposta': risposta, 'proposte': [{'id': p['id'], 'riassunto': p['riassunto']} for p in proposte]})
     c = ConversazioneAssistente.objects.filter(utente=request.user).first()
     return JsonResponse({

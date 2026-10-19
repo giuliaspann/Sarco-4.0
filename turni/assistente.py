@@ -55,13 +55,13 @@ def suggerimenti(utente):
     r = ruoli(utente)
     frasi = []
     if r['dipendente']:
-        frasi += ['Che turno faccio sabato?', 'Con chi lavoro domani?', 'Domani entro alle 9:30',
-                  'Chiedo ferie dal 3 al 7 novembre', 'Vorrei cambiare il turno di giovedì con Drame']
+        frasi += ['Che turno faccio sabato?', 'Impianto 1 fermo dalle 20 per rottura nastro', 'Ho finito la pulizia della pala',
+                  'Domani entro alle 9:30', 'Chiedo ferie dal 3 al 7 novembre', 'Vorrei cambiare il turno di giovedì con Drame']
     if r['responsabile']:
         frasi += ['Quali richieste devo approvare?', 'Approva le ferie di Rossi']
     if r['ufficio']:
         frasi += ['Chi lavora al 2° turno mercoledì?', 'Metti Crimi al 1° turno Impianto 1 venerdì']
-    return frasi[:6]
+    return frasi[:8]
 
 
 # ---------------------------------------------------------------- strumenti
@@ -71,7 +71,7 @@ ORA = {'type': 'string', 'description': 'Ora HH:MM'}
 
 
 def _strumento(nome, descrizione, proprieta, richiesti):
-    return {'name': nome, 'description': descrizione, 'strict': True, 'input_schema': {
+    return {'name': nome, 'description': descrizione, 'input_schema': {
         'type': 'object', 'properties': proprieta, 'required': richiesti, 'additionalProperties': False}}
 
 
@@ -120,6 +120,9 @@ def strumenti(utente):
             {'nome': {'type': 'string'}, 'giorno': DATA, 'fascia': {'type': 'string', 'enum': list(Fascia.values)},
              'postazione': {'type': 'string', 'enum': [''] + list(Postazione.values)}, 'capoturno': {'type': 'boolean'}},
             ['nome', 'giorno', 'fascia', 'postazione', 'capoturno']))
+    from . import assistente_app
+
+    t += assistente_app.strumenti(utente)
     return t
 
 
@@ -139,8 +142,14 @@ def istruzioni(utente):
         "Per fare qualcosa usa gli strumenti che iniziano con proponi_: preparano l'azione e l'utente la conferma con un tasto "
         "sotto il tuo messaggio. Non dire mai che è fatto: di' che basta premere Conferma. Se manca un dato importante "
         "(il giorno, l'ora), chiedilo in una frase.\n"
-        "Se ti chiedono cose che non puoi fare, di' dove trovarle nell'app: Area personale (turni e richieste), Pulizie, "
-        "Manutenzione (guasti, fermi impianto), Statistiche (produzione e analisi), Messaggi (bacheca e chat)."
+        "Puoi fare quasi tutto quello che si fa nell'app: turni e richieste, fermi e ripartenze degli impianti, guasti, "
+        "manutenzioni fatte o programmate, pulizie (fatte, aggiuntive, richieste a un collega, non eseguibili), produzione "
+        "e analisi, report, messaggi nelle chat, bacheca, turni extra, presa visione. Per una macchina cerca prima l'id "
+        "con elenco_macchine; per le pulizie usa elenco_pulizie. Guasti, manutenzioni fatte e pulizie non eseguibili "
+        "vogliono una foto: se manca chiedi di premere 📷 e di allegarla. Se l'utente allega la foto di un display o di "
+        "un'analisi, leggi tu i numeri e proponi l'inserimento.\n"
+        "Se una cosa davvero non si può fare da qui, di' dove trovarla: Area personale, Pulizie, Manutenzione, "
+        "Statistiche, Messaggi."
     )
 
 
@@ -334,7 +343,7 @@ def esegui(nome, dati, utente):
 # ---------------------------------------------------------------- conversazione
 
 
-def rispondi(conversazione, testo, utente):
+def rispondi(conversazione, testo, utente, foto=None):
     """Aggiunge il messaggio dell'utente, fa girare Claude con gli strumenti e restituisce
     (testo della risposta, proposte da confermare). La storia si allunga e basta: niente si riscrive."""
     import anthropic
@@ -346,7 +355,20 @@ def rispondi(conversazione, testo, utente):
         raise Errore(CHIAVE_SBAGLIATA)
     client = anthropic.Anthropic(timeout=75.0, max_retries=1)
     messaggi = conversazione.messaggi
-    messaggi.append({'role': 'user', 'content': testo[:2000]})
+    if foto:
+        import base64
+
+        from .manutenzione import comprimi_foto
+
+        jpeg = comprimi_foto(foto).read()
+        conversazione.foto.save('chat.jpg', __import__('django.core.files.base', fromlist=['ContentFile']).ContentFile(jpeg), save=False)
+        piccola = _rimpicciolisci(jpeg)
+        messaggi.append({'role': 'user', 'content': [
+            {'type': 'image', 'source': {'type': 'base64', 'media_type': 'image/jpeg', 'data': base64.standard_b64encode(piccola).decode()}},
+            {'type': 'text', 'text': (testo or 'Ecco la foto.')[:2000] + ' [foto allegata]'},
+        ]})
+    else:
+        messaggi.append({'role': 'user', 'content': testo[:2000]})
     proposte = []
     risposta = ''
     for _ in range(MAX_PASSI):
@@ -369,9 +391,22 @@ def rispondi(conversazione, testo, utente):
         if r.stop_reason != 'tool_use' or not chiamate:
             break
         risultati = []
+        from . import assistente_app
+
         for c in chiamate:
             try:
-                if c.name.startswith('proponi_'):
+                if assistente_app.gestisce(c.name) and c.name.startswith('proponi_'):
+                    riassunto = assistente_app.prepara(c.name, c.input, utente, ha_foto=bool(conversazione.foto))
+                    p = {'id': uuid.uuid4().hex[:12], 'nome': c.name, 'dati': c.input, 'riassunto': riassunto,
+                         'foto': conversazione.foto.name if conversazione.foto else ''}
+                    if p['foto']:
+                        p['riassunto'] += ' · con foto'
+                    conversazione.proposte = [*conversazione.proposte, p]
+                    proposte.append(p)
+                    esito = f'Proposta mostrata all\'utente: "{p["riassunto"]}". Non è ancora fatta: aspetta che prema Conferma.'
+                elif assistente_app.gestisce(c.name):
+                    esito = assistente_app.leggi(c.name, c.input, utente)
+                elif c.name.startswith('proponi_'):
                     riassunto = prepara(c.name, c.input, utente)
                     p = {'id': uuid.uuid4().hex[:12], 'nome': c.name, 'dati': c.input, 'riassunto': riassunto}
                     conversazione.proposte = [*conversazione.proposte, p]
@@ -380,7 +415,7 @@ def rispondi(conversazione, testo, utente):
                 else:
                     esito = leggi(c.name, c.input, utente)
                 risultati.append({'type': 'tool_result', 'tool_use_id': c.id, 'content': esito})
-            except (Errore, svc.RichiestaNonValida, ValueError) as e:
+            except (Errore, assistente_app.Errore, svc.RichiestaNonValida, ValueError, KeyError, TypeError) as e:
                 risultati.append({'type': 'tool_result', 'tool_use_id': c.id, 'content': str(e), 'is_error': True})
         messaggi.append({'role': 'user', 'content': risultati})
     conversazione.messaggi = messaggi
@@ -394,9 +429,21 @@ def conferma(conversazione, id_proposta, accetta, utente):
         raise Errore('Questa proposta non è più valida.')
     conversazione.proposte = [x for x in conversazione.proposte if x['id'] != id_proposta]
     if accetta:
+        from . import assistente_app
+
         try:
-            esito = esegui(p['nome'], p['dati'], utente)
-        except (Errore, svc.RichiestaNonValida, ValueError) as e:
+            if assistente_app.gestisce(p['nome']):
+                foto = None
+                if p.get('foto'):
+                    from django.core.files.base import ContentFile
+                    from django.core.files.storage import default_storage
+
+                    with default_storage.open(p['foto'], 'rb') as f:
+                        foto = ContentFile(f.read(), name='foto.jpg')
+                esito = assistente_app.esegui(p['nome'], p['dati'], utente, foto)
+            else:
+                esito = esegui(p['nome'], p['dati'], utente)
+        except (Errore, assistente_app.Errore, svc.RichiestaNonValida, ValueError, KeyError, TypeError, OSError) as e:
             esito = f'Non è stato possibile: {e}'
     else:
         esito = 'Annullato.'
@@ -405,3 +452,16 @@ def conferma(conversazione, id_proposta, accetta, utente):
                               {'role': 'assistant', 'content': 'Ok.'}]
     conversazione.save()
     return esito
+
+
+def _rimpicciolisci(jpeg):
+    """Per Claude basta una foto da 1000 px: costa meno e la storia della chat resta leggera."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    img = Image.open(BytesIO(jpeg))
+    img.thumbnail((1000, 1000))
+    buf = BytesIO()
+    img.convert('RGB').save(buf, 'JPEG', quality=70)
+    return buf.getvalue()

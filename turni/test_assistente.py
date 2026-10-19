@@ -9,6 +9,7 @@ from django.urls import reverse
 from . import assistente
 from .models import AvvisoAssenza, ConversazioneAssistente, ModificaTurno, Turno
 from . import test_richieste
+from .tests import LUNEDI
 
 
 def blocco(tipo, **campi):
@@ -96,3 +97,80 @@ class AssistenteTest(TestCase):
             self.assertEqual(r.status_code, 502)
             self.assertIn('non è scritta bene', r.json()['errore'])
             finto.assert_not_called()
+
+
+class AssistenteAppTest(TestCase):
+    """Le altre funzioni dell'app passate dall'assistente: sempre con conferma, stesse regole."""
+
+    MAR = test_richieste.RichiesteTest.MAR
+
+    def setUp(self):
+        test_richieste.RichiesteTest.setUp(self)
+        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij'})
+        p.start()
+        self.addCleanup(p.stop)
+        w = mock.patch('pywebpush.webpush')
+        w.start()
+        self.addCleanup(w.stop)
+        self.u = self.spano.utente
+
+    def test_fermo_e_ripartenza(self):
+        from . import assistente_app as app
+        from .models import FermoImpianto
+
+        dati = {'impianto': 'IMP1', 'causa': 'NASTRO', 'macchina_id': 0, 'descrizione': 'nastro rotto',
+                'giorno': LUNEDI.isoformat(), 'dalle': '07:00', 'ripartito_alle': ''}
+        self.assertIn('Fermo Impianto 1', app.prepara('proponi_fermo', dati, self.u))
+        self.assertFalse(FermoImpianto.objects.exists())
+        app.esegui('proponi_fermo', dati, self.u)
+        f = FermoImpianto.objects.get()
+        self.assertIn(f'id={f.pk}', app.leggi('fermi_in_corso', {}, self.u))
+        app.esegui('proponi_ripartenza', {'fermo_id': f.pk, 'alle': '', 'sistemazione': 'nastro cambiato'}, self.u)
+        f.refresh_from_db()
+        self.assertIsNotNone(f.ripartito_il)
+
+    def test_guasto_vuole_la_foto(self):
+        from . import assistente_app as app
+        from .models import Macchina
+
+        m = Macchina.objects.filter(attiva=True).first() or Macchina.objects.create(codice='T1', nome='Vaglio', luogo='IMP1')
+        with self.assertRaises(app.Errore):
+            app.prepara('proponi_guasto', {'macchina_id': m.pk, 'descrizione': 'fa rumore', 'macchina_ferma': False}, self.u)
+
+    def test_produzione_e_analisi(self):
+        from . import assistente_app as app
+        from .models import AnalisiProdotto, ProduzioneTurno
+
+        app.esegui('proponi_produzione', {'giorno': LUNEDI.isoformat(), 'fascia': '1T',
+                                          'righe': [{'codice': 'a', 'tonnellate': 40.5}, {'codice': 'E-', 'tonnellate': 2}]}, self.u)
+        self.assertEqual(ProduzioneTurno.objects.get().righe.count(), 2)
+        with self.assertRaises(app.Errore):
+            app.prepara('proponi_produzione', {'giorno': LUNEDI.isoformat(), 'fascia': '1T', 'righe': [{'codice': 'ZZ', 'tonnellate': 1}]}, self.u)
+        testo = app.prepara('proponi_analisi', {'giorno': LUNEDI.isoformat(), 'fascia': '', 'campione': 'BIANCO', 'peso_kg': 20,
+                                                'numero': 57, 'csp': 0.8, 'vetro_ceramico': None, 'metallo': None,
+                                                'organico': None, 'plastica': None, 'cristallo': None}, self.u)
+        self.assertIn('FUORI LIMITE: CSP', testo)
+        self.assertFalse(AnalisiProdotto.objects.exists())
+
+    def test_foto_in_chat_va_con_la_proposta(self):
+        from .models import ConversazioneAssistente
+        from .test_statistiche import jpeg_finto
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        risposte = [
+            risposta('tool_use', blocco('tool_use', id='t1', name='proponi_produzione', input={
+                'giorno': LUNEDI.isoformat(), 'fascia': '2T', 'righe': [{'codice': 'A', 'tonnellate': 41}], 'note': ''})),
+            risposta('end_turn', blocco('text', text='Premi Conferma.')),
+        ]
+        finto = mock.MagicMock()
+        finto.return_value.beta.messages.create.side_effect = risposte
+        self.client.login(username='spano', password='123456')
+        with self.settings(MEDIA_ROOT=__import__('tempfile').mkdtemp()), mock.patch('anthropic.Anthropic', finto):
+            j = self.client.post(reverse('turni:assistente'), {'testo': 'ecco il display', 'foto': SimpleUploadedFile('d.jpg', jpeg_finto(), 'image/jpeg')}).json()
+            self.assertIn('con foto', j['proposte'][0]['riassunto'])
+            primo = finto.return_value.beta.messages.create.call_args_list[0].kwargs['messages'][0]['content']
+            self.assertEqual(primo[0]['type'], 'image')
+            self.client.post(reverse('turni:assistente_conferma'), {'id': j['proposte'][0]['id'], 'accetta': True}, content_type='application/json')
+            from .models import ProduzioneTurno
+            self.assertTrue(ProduzioneTurno.objects.get().foto)
+        self.assertTrue(ConversazioneAssistente.objects.get().foto)

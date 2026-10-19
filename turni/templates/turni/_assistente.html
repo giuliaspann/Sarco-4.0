@@ -10,7 +10,9 @@
     <div class="as-msg bot">Ciao! Scrivimi o premi 🎤 e parla. Posso dirti i turni, preparare avvisi, ferie e cambi: tu confermi con un tasto.</div>
   </div>
   <div class="as-suggerimenti" id="as-suggerimenti"></div>
+  <div class="as-allegato" id="as-allegato" hidden><span>📷 Foto pronta</span><button type="button" id="as-togli">✕</button></div>
   <form class="as-scrivi" id="as-scrivi">{% csrf_token %}
+    <label class="as-foto" aria-label="Allega una foto"><input type="file" id="as-file" accept="image/*" capture="environment" hidden>📷</label>
     <button type="button" class="as-mic" id="as-mic" aria-label="Parla" hidden>🎤</button>
     <input type="text" id="as-testo" placeholder="Scrivi un messaggio…" autocomplete="off" maxlength="2000">
     <button class="as-invia" aria-label="Invia">➤</button>

@@ -324,16 +324,31 @@ document.querySelectorAll('[data-condividi]').forEach(btn => {
     });
   };
 
+  const file = document.getElementById('as-file'), allegato = document.getElementById('as-allegato');
+  file.addEventListener('change', () => { allegato.hidden = !file.files.length; });
+  document.getElementById('as-togli').addEventListener('click', () => { file.value = ''; allegato.hidden = true; });
+
   async function manda(testo) {
     testo = (testo || '').trim();
-    if (!testo || occupato) return;
+    const foto = file.files[0];
+    if ((!testo && !foto) || occupato) return;
     occupato = true;
     sugg.innerHTML = '';
-    fumetto('io', testo);
+    fumetto('io', (foto ? '📷 ' : '') + testo);
     campo.value = '';
     const attesa = fumetto('bot attesa', '…');
     try {
-      const j = await invia('/turni/assistente/', { testo });
+      let j;
+      if (foto) {
+        const dati = new FormData();
+        dati.append('testo', testo);
+        dati.append('foto', foto);
+        file.value = ''; allegato.hidden = true;
+        j = await fetch('/turni/assistente/', { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: dati })
+          .then(r => r.json().then(x => (r.ok ? x : Promise.reject(x.errore || 'Errore'))));
+      } else {
+        j = await invia('/turni/assistente/', { testo });
+      }
       attesa.remove();
       fumetto('bot', j.risposta);
       j.proposte.forEach(proposta);
