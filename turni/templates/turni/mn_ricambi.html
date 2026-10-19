@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Ricambi{% endblock %}
 {% block contenuto %}
-{% include 'turni/_mn_menu.html' with titolo_pagina='Magazzino ricambi' %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Lista ricambi' %}
 <form class="mn-cerca" method="get">
   <input type="search" name="q" value="{{ q }}" placeholder="Cerca pezzo, codice o macchina…">
 </form>

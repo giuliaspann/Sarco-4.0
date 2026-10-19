@@ -1,8 +1,9 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Squadra{% endblock %}
+{% block titolo %}Con chi lavoro oggi{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Home</a>
 <div class="intestazione">
+  <p class="occhiello centrato">Con chi lavoro oggi</p>
   <div class="naviga">
     <a class="freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno precedente">‹</a>
     <h1>{% if oggi %}Oggi, {% endif %}{{ giorno|date:'l j F' }}</h1>

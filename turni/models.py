@@ -699,7 +699,7 @@ class Macchina(models.Model):
     class Tipo(models.TextChoices):
         IMPIANTO = 'IMPIANTO', 'Macchinario / attrezzatura'
         MEZZO = 'MEZZO', 'Mezzo'
-        SEGNALETICA = 'SEGNALETICA', 'Segnaletica e specchi'
+        SEGNALETICA = 'SEGNALETICA', 'Inventario piazzale'
 
     codice = models.CharField(max_length=20, unique=True)
     nome = models.CharField(max_length=80)
@@ -739,7 +739,7 @@ class Intervento(models.Model):
     class Tipo(models.TextChoices):
         GUASTO = 'GUASTO', 'Guasto'
         PROGRAMMATA = 'PROGRAMMATA', 'Programmata'
-        LAVORO = 'LAVORO', 'Manutenzione fatta'  # ripristino o sostituzione registrato senza segnalazione
+        LAVORO = 'LAVORO', 'Manutenzione completata'  # ripristino o sostituzione registrato senza segnalazione
 
     class Priorita(models.IntegerChoices):
         BASSA = 1, 'Bassa'

@@ -405,7 +405,8 @@ def macchine(request):
     gruppi = [(nome, [m for m in elenco if m.luogo == v]) for v, nome in Luogo.choices]
     return render(request, 'turni/mn_macchine.html', {
         **permessi, **filtro, 'q': q, 'mostra_gruppi': not filtro['gruppo'],
-        'titolo': next((nome for g, nome, _, _ in GRUPPI if g == filtro['gruppo']), 'Macchine e mezzi'),
+        'titolo': {'macchinari': 'Lista macchinari e attrezzature', 'mezzi': 'Lista mezzi',
+                   'segnaletica': 'Inventario piazzale'}.get(filtro['gruppo'], 'Macchine e mezzi'),
         'gruppi': [g for g in gruppi if g[1]], 'form': form,
         'ci_sono_esempi': Macchina.objects.filter(esempio=True).exists(),
     })

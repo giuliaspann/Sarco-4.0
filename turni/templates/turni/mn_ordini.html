@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Ordini ricambi{% endblock %}
+{% block titolo %}Ordini{% endblock %}
 {% block contenuto %}
-{% include 'turni/_mn_menu.html' with titolo_pagina='Ordini dei pezzi' %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Ordini' %}
 {% if chiede_pezzi %}<a class="bottone pieno piena-larghezza" href="{% url 'turni:nuovo_ordine' %}">📦 Chiedi un pezzo</a>{% endif %}
 <p class="tenue piccolo mn-spiega">Il manutentore chiede il pezzo → il responsabile manutenzione approva → gli acquisti ordinano → all'arrivo la scorta sale da sola.</p>
 
