@@ -4,7 +4,7 @@
     <b>{{ i.macchina.nome }}</b>
     <small>{{ i.descrizione|truncatechars:70 }}</small>
     <small class="mn-meta">{{ i.macchina.get_luogo_display }} · {{ i.segnalata_il|timesince }} fa{% if i.priorita >= 3 and i.aperto %} · <em class="mn-prio p{{ i.priorita }}">{{ i.get_priorita_display }}</em>{% endif %}</small>
-    <small class="mn-chi">{% if i.chi_ha_segnalato and i.tipo != 'LAVORO' %}<span>📣 {{ i.chi_ha_segnalato }}</span>{% endif %}{% if i.stato == 'COMPLETATA' %}<span>✅ Sistemato da {{ i.chi_ha_sistemato }}</span>{% elif i.assegnata_a %}<span>🔧 {{ i.assegnata_a.nome_breve }}</span>{% endif %}</small>
+    <small class="mn-chi">{% if i.chi_ha_segnalato and i.tipo != 'LAVORO' %}<span>📣 {{ i.chi_ha_segnalato }}</span>{% endif %}{% if i.stato == 'COMPLETATA' %}<span>✅ Sistemato da {{ i.squadra }}</span>{% elif i.assegnata_a %}<span>🔧 {{ i.assegnata_a.nome_breve }}</span>{% endif %}{% if i.aperto and i.da_fare_il %}<span>📅 {{ i.da_fare_il|date:'D j M' }}</span>{% endif %}{% if i.officina_esterna %}<span>🏭 {{ i.officina_esterna }}</span>{% endif %}</small>
   </span>
   <span class="stato-chip {% if i.macchina_ferma and i.aperto %}no{% else %}{{ i.classe_stato }}{% endif %}">{% if i.macchina_ferma and i.aperto %}Ferma{% else %}{{ i.etichetta_stato }}{% endif %}</span>
 </a>

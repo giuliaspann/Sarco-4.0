@@ -7,6 +7,7 @@ I pezzi da ordinare li chiede il manutentore o il responsabile; il responsabile 
 gli acquisti ordinano, all'arrivo la scorta di magazzino sale da sola.
 """
 
+import os
 from datetime import timedelta
 from io import BytesIO
 
@@ -18,7 +19,7 @@ from PIL import Image, ImageOps
 
 from . import push
 from .models import (
-    Dipendente, EventoIntervento, FermoImpianto, FotoIntervento, Intervento, ManutenzioneProgrammata, Mansione, OrdineRicambio, Turno,
+    Comunicazione, Dipendente, EventoIntervento, FermoImpianto, FotoComunicazione, FotoIntervento, Intervento, ManutenzioneProgrammata, Mansione, OrdineRicambio, Turno,
 )
 from .pulizie import MAX_FOTO
 
@@ -173,6 +174,33 @@ def inizia(utente, i):
     evento(i, utente, 'Lavoro iniziato')
 
 
+MAX_VIDEO = 50 * 1024 * 1024
+ESTENSIONI_VIDEO = ('.mp4', '.mov', '.m4v', '.3gp', '.webm')
+
+
+def controlla_video(f):
+    """Solo video veri e non enormi: estensione, tipo dichiarato e dimensione."""
+    if f is None:
+        return None
+    nome = (f.name or '').lower()
+    if f.size > MAX_VIDEO or not nome.endswith(ESTENSIONI_VIDEO) or not (f.content_type or '').startswith('video/'):
+        raise ValueError('video non valido')
+    return f
+
+
+def dopo_il_lavoro(utente, i, collaboratori, resta_da_fare, video):
+    """Colleghi che hanno aiutato, video e, se serve, il prossimo intervento da approvare."""
+    if collaboratori:
+        i.collaboratori.set(collaboratori)
+    if video:
+        i.video.save('video' + os.path.splitext(video.name)[1].lower(), video, save=True)
+    if resta_da_fare:
+        nuovo = Intervento.objects.create(macchina=i.macchina, descrizione=resta_da_fare, segnalata_da=utente)
+        evento(nuovo, utente, f'Proposto dopo il lavoro #{i.pk}')
+        evento(i, utente, f'Resta da fare: {resta_da_fare} (intervento #{nuovo.pk})')
+        avvisa(responsabili() + capiturno_oggi(), utente, f'Da fare · {i.macchina.nome}', resta_da_fare, url_intervento(nuovo))
+
+
 def completa(utente, i, lavoro, foto, ore, pezzi):
     """pezzi: lista di (ricambio o None, descrizione, quantità). Scala la scorta di magazzino."""
     i.stato = Intervento.Stato.COMPLETATA
@@ -218,27 +246,27 @@ def chiedi_pezzo(utente, ricambio, descrizione, quantita, urgente, nota, interve
     return o
 
 
-def avanza_ordine(utente, o, azione, fornitore=''):
+def avanza_ordine(utente, o, azione, fornitore='', dove=''):
     if azione == 'approva' and o.stato == OrdineRicambio.Stato.RICHIESTO and e_resp(utente):
         o.stato, o.approvato_da = OrdineRicambio.Stato.APPROVATO, utente
         avvisa(acquisti(), utente, 'Pezzo da ordinare', f'{o.nome} × {o.quantita}', reverse('turni:ordini'))
     elif azione == 'ordinato' and o.stato == OrdineRicambio.Stato.APPROVATO and puo_ordinare(utente):
         o.stato, o.ordinato_il, o.fornitore = OrdineRicambio.Stato.ORDINATO, timezone.now(), fornitore[:80]
     elif azione == 'arrivato' and o.stato == OrdineRicambio.Stato.ORDINATO and (puo_ordinare(utente) or e_manutentore(utente)):
-        o.stato, o.arrivato_il = OrdineRicambio.Stato.ARRIVATO, timezone.now()
+        o.stato, o.arrivato_il, o.dove = OrdineRicambio.Stato.ARRIVATO, timezone.now(), dove[:80]
         if o.ricambio:
             o.ricambio.scorta += o.quantita
             o.ricambio.save(update_fields=['scorta'])
         i = o.intervento
         if i:
-            evento(i, utente, f'Arrivato: {o.nome}')
+            evento(i, utente, f'Arrivato: {o.nome}' + (f' · si trova {o.dove}' if o.dove else ''))
             if i.stato == Intervento.Stato.ATTESA_PEZZI and not i.ordini.exclude(pk=o.pk).filter(
                 stato__in=[OrdineRicambio.Stato.RICHIESTO, OrdineRicambio.Stato.APPROVATO, OrdineRicambio.Stato.ORDINATO]
             ).exists():
                 i.stato = Intervento.Stato.IN_CORSO
                 i.save(update_fields=['stato'])
             avvisa([i.assegnata_a.utente_id if i.assegnata_a else None] + responsabili(), utente,
-                   f'📦 Arrivato il pezzo · {i.macchina.nome}', o.nome, url_intervento(i))
+                   f'📦 Arrivato il pezzo · {i.macchina.nome}', o.nome + (f' · si trova {o.dove}' if o.dove else ''), url_intervento(i))
     elif azione == 'annulla' and o.aperto and (e_resp(utente) or o.richiesto_da_id == utente.pk):
         o.stato = OrdineRicambio.Stato.ANNULLATO
     else:
@@ -272,7 +300,10 @@ def stato_macchine(macchine):
     for m in macchine:
         lista = aperti.get(m.pk, [])
         m.aperti = len(lista)
-        if any(i.macchina_ferma for i in lista):
+        fuori = indisponibili_ora().get(m.pk)
+        if fuori:
+            m.stato, m.stato_testo = 'ferma', f"Ferma fino a {timezone.localtime(fuori.al):%d/%m %H:%M}"
+        elif any(i.macchina_ferma for i in lista):
             m.stato, m.stato_testo = 'ferma', 'Ferma'
         elif lista:
             m.stato, m.stato_testo = 'problemi', 'Guasto aperto'
@@ -361,7 +392,7 @@ def fai_ripartire(utente, f, quando, sistemazione, foto=None):
 
 # ---------------------------------------------------------------- lavoro fatto senza segnalazione
 
-MAX_FOTO_LAVORO = 6
+MAX_FOTO_LAVORO = 12
 
 
 def puo_registrare_lavoro(utente):
@@ -390,3 +421,91 @@ def registra_lavoro(utente, macchina, testo, foto, ore, pezzi):
     evento(i, utente, 'Lavoro registrato')
     avvisa(responsabili(), utente, f'✅ {macchina.nome}', testo, url_intervento(i))
     return i
+
+
+# ---------------------------------------------------------------- comunicazioni del responsabile
+
+
+def puo_comunicare(utente):
+    from .views_messaggi import e_direzione
+
+    return e_resp(utente) or e_direzione(utente) or utente.is_staff or e_manutentore(utente) or e_capoturno_oggi(utente)
+
+
+def puo_chiudere(utente, c):
+    return e_resp(utente) or utente.is_staff or c.autore_id == utente.pk or c.in_gestione_da_id == utente.pk
+
+
+def destinatari_di(c):
+    User = get_user_model()
+    attivi = User.objects.filter(is_active=True)
+    if c.destinatari == Comunicazione.A.CAPITURNO:
+        ids = capiturno_oggi() + responsabili()
+    elif c.destinatari == Comunicazione.A.MANUTENTORI:
+        ids = [d.utente_id for d in manutentori()] + responsabili()
+    elif c.destinatari == Comunicazione.A.PALISTI:
+        ids = [d.utente_id for d in Dipendente.objects.filter(attivo=True, mansione__contains=Mansione.PALISTA)] + responsabili()
+    else:
+        ids = list(attivi.values_list('pk', flat=True))
+    return [i for i in ids if i]
+
+
+def indisponibili_ora():
+    adesso = timezone.now()
+    return {c.macchina_id: c for c in Comunicazione.objects.filter(
+        tipo=Comunicazione.Tipo.INDISPONIBILE, macchina__isnull=False, dal__lte=adesso, al__gte=adesso
+    ).exclude(stato=Comunicazione.Stato.RISOLTA)}
+
+
+def avvisi_per(utente):
+    """Mezzi e macchine non disponibili (da ora o in arrivo nelle prossime 48 ore) che questa persona deve sapere."""
+    adesso = timezone.now()
+    qs = Comunicazione.objects.filter(tipo__in=[Comunicazione.Tipo.INDISPONIBILE, Comunicazione.Tipo.FERMO], al__gte=adesso,
+                                      dal__lte=adesso + timedelta(hours=48)).exclude(stato=Comunicazione.Stato.RISOLTA).select_related('macchina')
+    return [c for c in qs if utente.pk in destinatari_di(c)]
+
+
+ORE_FASCIA = {'1T': (6, 8), '2T': (14, 8), 'N': (22, 8)}  # inizio e durata in ore
+
+
+def periodo_fermo(giorno, fascia):
+    """Inizio e fine di un fermo programmato: giornata intera o un turno."""
+    from datetime import datetime, time
+
+    if fascia in ORE_FASCIA:
+        ora, durata = ORE_FASCIA[fascia]
+        inizio = timezone.make_aware(datetime.combine(giorno, time(ora)))
+        return inizio, inizio + timedelta(hours=durata)
+    inizio = timezone.make_aware(datetime.combine(giorno, time(0)))
+    return inizio, inizio + timedelta(days=1)
+
+
+def crea_comunicazione(utente, tipo, testo, luogo, fascia, macchina, dal, al, destinatari, foto, motivo='', urgente=False, valore='', video=None):
+    c = Comunicazione.objects.create(tipo=tipo, testo=testo, luogo=luogo, fascia=fascia, macchina=macchina,
+                                     dal=dal, al=al, destinatari=destinatari, autore=utente, motivo=motivo,
+                                     urgente=urgente, valore=valore)
+    for f in foto[:MAX_FOTO_LAVORO]:
+        FotoComunicazione.objects.create(comunicazione=c, foto=comprimi_foto(f))
+    if video:
+        c.video.save('video' + os.path.splitext(video.name)[1].lower(), video, save=True)
+    titolo = f'{c.icona} {c.get_tipo_display()}' + (f' · {macchina.nome}' if macchina else (f' · {c.get_luogo_display()}' if luogo else ''))
+    if c.tipo == Comunicazione.Tipo.FERMO:
+        titolo = f'🛑 {c.get_luogo_display()} fermo: {c.periodo}'
+    if c.urgente:
+        titolo = '⚠️ URGENTE · ' + titolo
+    avvisa(destinatari_di(c), utente, titolo, testo, reverse('turni:comunicazione', args=[c.pk]))
+    return c
+
+
+def rispondi(utente, c, testo, azione):
+    if azione == 'gestione' and c.stato == Comunicazione.Stato.APERTA:
+        c.stato, c.in_gestione_da = Comunicazione.Stato.IN_GESTIONE, utente
+        c.save(update_fields=['stato', 'in_gestione_da'])
+        testo = testo or 'Me ne occupo'
+    elif azione == 'risolta' and c.stato != Comunicazione.Stato.RISOLTA and puo_chiudere(utente, c):
+        c.stato, c.risolta_da, c.risolta_il = Comunicazione.Stato.RISOLTA, utente, timezone.now()
+        c.save(update_fields=['stato', 'risolta_da', 'risolta_il'])
+        testo = testo or 'Risolta'
+    if testo:
+        c.risposte.create(autore=utente, testo=testo[:500])
+        avvisa([c.autore_id, c.in_gestione_da_id], utente, f'💬 {c.get_tipo_display()}', testo, reverse('turni:comunicazione', args=[c.pk]))

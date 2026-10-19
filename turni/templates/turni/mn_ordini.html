@@ -14,7 +14,7 @@
     <b>{{ o.nome }} × {{ o.quantita }}</b>
     <span class="stato-chip {{ o.classe_stato }}">{% if o.urgente and o.aperto %}Urgente · {% endif %}{{ o.get_stato_display }}</span>
   </div>
-  <small class="tenue">{% if o.macchina %}{{ o.macchina.nome }} · {% endif %}chiesto da {{ o.richiesto_da.dipendente.nome_breve|default:'Ufficio' }} il {{ o.richiesto_il|date:'j M' }}{% if o.approvato_da %} · approvato da {{ o.approvato_da.dipendente.nome_breve|default:'Ufficio' }}{% endif %}{% if o.fornitore %} · fornitore {{ o.fornitore }}{% endif %}</small>
+  <small class="tenue">{% if o.macchina %}{{ o.macchina.nome }} · {% endif %}chiesto da {{ o.richiesto_da.dipendente.nome_breve|default:'Ufficio' }} il {{ o.richiesto_il|date:'j M' }}{% if o.approvato_da %} · approvato da {{ o.approvato_da.dipendente.nome_breve|default:'Ufficio' }}{% endif %}{% if o.fornitore %} · fornitore {{ o.fornitore }}{% endif %}{% if o.dove %} · 📍 {{ o.dove }}{% endif %}</small>
   {% if o.nota %}<p class="rq-motivo">“{{ o.nota }}”</p>{% endif %}
   <div class="mn-ordine-prove">
     {% if o.intervento %}<a href="{% url 'turni:intervento' o.intervento.pk %}">🛠️ Intervento #{{ o.intervento.pk }}{% if o.intervento.foto_guasto %} · foto del guasto{% endif %}</a>{% endif %}
@@ -23,7 +23,7 @@
   <form method="post" class="mn-ordine-azioni">{% csrf_token %}<input type="hidden" name="ordine" value="{{ o.pk }}">
     {% if o.stato == 'RICHIESTO' and resp %}<button class="bottone pieno" name="azione" value="approva">Approva</button>{% endif %}
     {% if o.stato == 'APPROVATO' and ordina %}<input type="text" name="fornitore" maxlength="80" placeholder="Fornitore" value="{{ o.ricambio.fornitore|default:'' }}"><button class="bottone pieno" name="azione" value="ordinato">Ordinato</button>{% endif %}
-    {% if o.stato == 'ORDINATO' and ordina or o.stato == 'ORDINATO' and manutentore %}<button class="bottone pieno" name="azione" value="arrivato">📦 Arrivato</button>{% endif %}
+    {% if o.stato == 'ORDINATO' and ordina or o.stato == 'ORDINATO' and manutentore %}<input type="text" name="dove" maxlength="80" placeholder="Dove si trova (es. in ufficio)"><button class="bottone pieno" name="azione" value="arrivato">📦 Arrivato</button>{% endif %}
     {% if o.aperto and resp or o.aperto and o.richiesto_da_id == user.pk %}<button class="link-piccolo" name="azione" value="annulla" data-conferma="Annullare la richiesta di questo pezzo?">Annulla</button>{% endif %}
   </form>
 </div>

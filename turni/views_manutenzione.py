@@ -16,13 +16,29 @@ from django.utils import timezone
 from . import manutenzione as mn
 from .accessi import qr_svg
 from .esempi_manutenzione import togli
-from .models import FermoImpianto, FotoIntervento, Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
+from .models import Comunicazione, Dipendente, FermoImpianto, FotoComunicazione, FotoIntervento, Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
 
 # prima si sceglie il gruppo, poi il luogo
 GRUPPI = [
     ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA']),
     ('mezzi', 'Mezzi', '🚚', ['MEZZI', 'ESTERNI']),
+    ('segnaletica', 'Segnaletica e specchi', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA']),
 ]
+
+
+def cond_gruppo(gruppo, luogo='', prefisso=''):
+    """Filtro sulle macchine (o, con prefisso 'macchina__', sugli interventi) per gruppo e luogo."""
+    voce = next((x for x in GRUPPI if x[0] == gruppo), None)
+    q = Q()
+    if luogo:
+        q &= Q(**{prefisso + 'luogo': luogo})
+    elif voce:
+        q &= Q(**{prefisso + 'luogo__in': voce[3]})
+    if gruppo == 'segnaletica':
+        q &= Q(**{prefisso + 'tipo': Macchina.Tipo.SEGNALETICA})
+    elif gruppo:
+        q &= ~Q(**{prefisso + 'tipo': Macchina.Tipo.SEGNALETICA})
+    return q
 ICONE_LUOGHI = {'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜', 'ESTERNI': '🚛'}
 
 
@@ -62,17 +78,17 @@ def _luogo(request):
 
 
 def _filtro(request):
-    """Filtro a due livelli: gruppo (macchinari / mezzi) e poi luogo. Restituisce i luoghi ammessi."""
+    """Filtro a due livelli: gruppo (macchinari / mezzi / segnaletica) e poi luogo.
+    Restituisce il contesto e una funzione che dà la condizione (con prefisso per gli interventi)."""
     luogo = _luogo(request)
     gruppo = request.GET.get('gruppo', '')
-    if luogo:
-        gruppo = next(g for g, _, _, luoghi in GRUPPI if luogo in luoghi)
+    if gruppo not in [g for g, _, _, _ in GRUPPI]:
+        gruppo = next((g for g, _, _, luoghi in GRUPPI if luogo in luoghi), '') if luogo else ''
     voce = next((x for x in GRUPPI if x[0] == gruppo), None)
-    ammessi = [luogo] if luogo else (voce[3] if voce else None)
     return {
-        'gruppo': voce[0] if voce else '', 'luogo': luogo, 'gruppi_filtro': GRUPPI,
+        'gruppo': gruppo, 'luogo': luogo, 'gruppi_filtro': GRUPPI,
         'sotto': [(v, Luogo(v).label) for v in voce[3]] if voce else [],
-    }, ammessi
+    }, (lambda prefisso='': cond_gruppo(gruppo, luogo, prefisso))
 
 
 @login_required
@@ -92,6 +108,8 @@ def manutenzione(request):
     entro = timezone.localdate() + timedelta(days=3)
     return render(request, 'turni/mn_home.html', {
         'registra_lavoro': mn.puo_registrare_lavoro(request.user),
+        'comunicazioni_aperte': Comunicazione.objects.exclude(stato=Comunicazione.Stato.RISOLTA).count(),
+        'puo_comunicare': mn.puo_comunicare(request.user),
         'fermi_in_corso': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
         'aperti': aperti.count(),
         'ferme': aperti.filter(macchina_ferma=True, tipo=Intervento.Tipo.GUASTO).count(),
@@ -105,10 +123,9 @@ def manutenzione(request):
 @login_required
 def interventi(request):
     mn.genera_programmate()
-    filtro, ammessi = _filtro(request)
+    filtro, cond = _filtro(request)
     aperti = Intervento.objects.filter(stato__in=Intervento.APERTI).select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente')
-    if ammessi:
-        aperti = aperti.filter(macchina__luogo__in=ammessi)
+    aperti = aperti.filter(cond('macchina__'))
     aperti = list(aperti)
     dip = mn.dipendente_di(request.user)
     permessi = _permessi(request.user)
@@ -118,8 +135,7 @@ def interventi(request):
     recenti = Intervento.objects.filter(
         stato=Intervento.Stato.COMPLETATA, completata_il__gte=timezone.now() - timedelta(days=7)
     ).select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente', 'completata_da__dipendente').order_by('-completata_il')
-    if ammessi:
-        recenti = recenti.filter(macchina__luogo__in=ammessi)
+    recenti = recenti.filter(cond('macchina__'))
     return render(request, 'turni/mn_interventi.html', {
         **permessi, **filtro, 'mostra_gruppi': True,
         'da_approvare': da_approvare, 'miei': miei, 'altri': altri, 'recenti': recenti[:5],
@@ -154,9 +170,11 @@ def segnala(request):
             messages.error(request, 'Scrivi cosa hai fatto e aggiungi almeno una foto.')
         else:
             try:
+                video = mn.controlla_video(request.FILES.get('video'))
                 i = mn.registra_lavoro(request.user, macchina, testo, foto, ore, _pezzi_usati(request))
+                mn.dopo_il_lavoro(request.user, i, _collaboratori(request), (request.POST.get('resta') or '').strip()[:1000], video)
             except (ValueError, OSError):
-                messages.error(request, 'Una delle foto non è valida: riprova.')
+                messages.error(request, 'Una delle foto o il video non sono validi (video: massimo 50 MB).')
             else:
                 messages.success(request, 'Lavoro registrato nello storico della macchina.')
                 return redirect('turni:intervento', i.pk)
@@ -177,27 +195,28 @@ def segnala(request):
                 'lavoro': lavoro, 'pre': 'lavoro=1&' if lavoro else ''}
     if macchina and lavoro:
         compatibili = list(macchina.ricambi.all())
-        contesto.update(ricambi=compatibili + [r for r in Ricambio.objects.all() if r not in compatibili], righe_pezzi=range(3))
+        contesto.update(ricambi=compatibili + [r for r in Ricambio.objects.all() if r not in compatibili], righe_pezzi=range(3),
+                        **_scelta_colleghi(request.user))
     if macchina is None:
         luogo = _luogo(request)
         q = (request.GET.get('q') or '').strip()
+        g = request.GET.get('gruppo', '')
+        g = g if g in [x for x, _, _, _ in GRUPPI] else ''
         if luogo or q:
-            elenco = macchine.filter(luogo=luogo) if luogo else macchine
+            elenco = macchine.filter(cond_gruppo(g, luogo))
             if q:
                 elenco = elenco.filter(Q(nome__icontains=q) | Q(codice__icontains=q) | Q(categoria__icontains=q) | Q(marca__icontains=q))
             contesto.update(luogo=luogo, nome_luogo=Luogo(luogo).label if luogo else '', q=q,
-                            gruppo_luogo=next((g for g, _, _, luoghi in GRUPPI if luogo in luoghi), ''),
+                            gruppo_luogo=g or next((x for x, _, _, luoghi in GRUPPI if luogo in luoghi), ''),
                             elenco=mn.stato_macchine(list(elenco)))
         else:
-            conti = {v: 0 for v in Luogo.values}
-            for v in macchine.values_list('luogo', flat=True):
-                conti[v] += 1
-            gruppo = next((x for x in GRUPPI if x[0] == request.GET.get('gruppo')), None)
+            gruppo = next((x for x in GRUPPI if x[0] == g), None)
             if gruppo:
                 contesto['gruppo'] = gruppo
-                contesto['luoghi'] = [(v, Luogo(v).label, ICONE_LUOGHI[v], conti[v]) for v in gruppo[3]]
+                luoghi = [(v, Luogo(v).label, ICONE_LUOGHI[v], macchine.filter(cond_gruppo(g, v)).count()) for v in gruppo[3]]
+                contesto['luoghi'] = [x for x in luoghi if x[3] or g != 'segnaletica']
             else:
-                contesto['gruppi'] = [(g, nome, icona, sum(conti[v] for v in luoghi)) for g, nome, icona, luoghi in GRUPPI]
+                contesto['gruppi'] = [(x, nome, icona, macchine.filter(cond_gruppo(x)).count()) for x, nome, icona, _ in GRUPPI]
     return render(request, 'turni/mn_segnala.html', contesto)
 
 
@@ -215,6 +234,7 @@ def intervento(request, intervento_id):
                 messages.error(request, 'Scegli il manutentore.')
             elif azione == 'approva':
                 p = request.POST.get('priorita')
+                _quando_e_dove(request, i)
                 mn.approva(request.user, i, dip, int(p) if p in ('1', '2', '3', '4') else None)
                 messages.success(request, f'Inviato a {dip.nome_breve}.')
             else:
@@ -222,6 +242,11 @@ def intervento(request, intervento_id):
                 i.save(update_fields=['assegnata_a'])
                 mn.evento(i, request.user, f'Riassegnato a {dip.nome_breve}')
                 mn.avvisa([dip.utente_id], request.user, f'Intervento assegnato · {i.macchina.nome}', i.descrizione, mn.url_intervento(i))
+        elif azione == 'pianifica' and i.aperto and (permessi['approvatore'] or lavora):
+            _quando_e_dove(request, i)
+            i.save(update_fields=['da_fare_il', 'officina_esterna'])
+            mn.evento(i, request.user, 'Pianificato' + (f' per il {i.da_fare_il:%d/%m}' if i.da_fare_il else '')
+                      + (f' · riparazione esterna: {i.officina_esterna}' if i.officina_esterna else ''))
         elif azione == 'rifiuta' and i.stato == Intervento.Stato.SEGNALATA and permessi['approvatore']:
             mn.rifiuta(request.user, i, (request.POST.get('motivo') or '').strip()[:300])
         elif azione == 'inizia' and i.stato == Intervento.Stato.ASSEGNATA and lavora:
@@ -240,9 +265,11 @@ def intervento(request, intervento_id):
                 messages.error(request, 'Scrivi cosa hai fatto e fai la foto della macchina riparata.')
             else:
                 try:
+                    video = mn.controlla_video(request.FILES.get('video'))
                     mn.completa(request.user, i, lavoro, foto, ore, pezzi)
+                    mn.dopo_il_lavoro(request.user, i, _collaboratori(request), (request.POST.get('resta') or '').strip()[:1000], video)
                 except (ValueError, OSError):
-                    messages.error(request, 'La foto non è valida: riprova.')
+                    messages.error(request, 'La foto o il video non sono validi (video: massimo 50 MB).')
                 else:
                     messages.success(request, 'Intervento chiuso. Grazie!')
         elif azione == 'nota':
@@ -256,11 +283,36 @@ def intervento(request, intervento_id):
     return render(request, 'turni/mn_intervento.html', {
         **permessi, 'i': i, 'lavora': lavora, 'in_turno': in_turno, 'altri_manutentori': altri,
         'priorita': Intervento.Priorita.choices,
+        'oggi': timezone.localdate(), 'domani': timezone.localdate() + timedelta(days=1),
         'ricambi': compatibili + [r for r in Ricambio.objects.all() if r not in compatibili],
         'righe_pezzi': range(3),
+        **_scelta_colleghi(request.user),
         'eventi': i.eventi.select_related('autore', 'autore__dipendente'),
         'ordini': i.ordini.select_related('ricambio'),
     })
+
+
+def _scelta_colleghi(utente):
+    """Colleghi con cui si è lavorato: prima i manutentori (pulsanti), poi tutti gli altri (menu)."""
+    io = mn.dipendente_di(utente)
+    manut = [d for d in mn.manutentori() if d != io]
+    altri = [d for d in Dipendente.objects.filter(attivo=True).order_by('nome') if d != io and d not in manut]
+    return {'colleghi_manut': manut, 'colleghi_altri': altri}
+
+
+def _collaboratori(request):
+    ids = [x for x in request.POST.getlist('collaboratori') if x.isdigit()]
+    return list(Dipendente.objects.filter(pk__in=ids, attivo=True))
+
+
+def _quando_e_dove(request, i):
+    from datetime import date
+
+    try:
+        i.da_fare_il = date.fromisoformat(request.POST.get('da_fare_il') or '')
+    except ValueError:
+        i.da_fare_il = None
+    i.officina_esterna = (request.POST.get('officina_esterna') or '').strip()[:80]
 
 
 def _pezzi_usati(request):
@@ -283,6 +335,8 @@ def foto(request, tipo, oggetto_id):
         f = get_object_or_404(OrdineRicambio, pk=oggetto_id).foto
     elif tipo == 'altra':
         f = get_object_or_404(FotoIntervento, pk=oggetto_id).foto
+    elif tipo == 'comunicazione':
+        f = get_object_or_404(FotoComunicazione, pk=oggetto_id).foto
     elif tipo in ('guasto', 'riparazione'):
         f = getattr(get_object_or_404(Intervento, pk=oggetto_id), f'foto_{tipo}')
     else:
@@ -306,11 +360,9 @@ def macchine(request):
             return redirect('turni:macchina', m.pk)
     else:
         form = MacchinaForm()
-    filtro, ammessi = _filtro(request)
+    filtro, cond = _filtro(request)
     q = (request.GET.get('q') or '').strip()
-    elenco = Macchina.objects.filter(attiva=True)
-    if ammessi:
-        elenco = elenco.filter(luogo__in=ammessi)
+    elenco = Macchina.objects.filter(attiva=True).filter(cond())
     if q:
         elenco = elenco.filter(Q(nome__icontains=q) | Q(codice__icontains=q) | Q(categoria__icontains=q) | Q(marca__icontains=q))
     elenco = mn.stato_macchine(list(elenco))
@@ -387,7 +439,7 @@ def ordini(request):
     permessi = _permessi(request.user)
     if request.method == 'POST':
         o = get_object_or_404(OrdineRicambio, pk=request.POST.get('ordine'))
-        if mn.avanza_ordine(request.user, o, request.POST.get('azione'), request.POST.get('fornitore') or ''):
+        if mn.avanza_ordine(request.user, o, request.POST.get('azione'), request.POST.get('fornitore') or '', request.POST.get('dove') or ''):
             messages.success(request, f'{o.nome}: {o.get_stato_display().lower()}.')
         return redirect('turni:ordini')
     tutti = OrdineRicambio.objects.select_related('ricambio', 'macchina', 'intervento', 'richiesto_da', 'richiesto_da__dipendente', 'approvato_da__dipendente')
@@ -465,8 +517,8 @@ def etichette(request):
     if not (mn.e_resp(request.user) or request.user.is_staff):
         raise PermissionDenied
     base = request.build_absolute_uri(reverse('turni:segnala'))
-    filtro, ammessi = _filtro(request)
-    elenco = list(Macchina.objects.filter(attiva=True, **({'luogo__in': ammessi} if ammessi else {})))
+    filtro, cond = _filtro(request)
+    elenco = list(Macchina.objects.filter(attiva=True).filter(cond()))
     for m in elenco:
         m.qr = qr_svg(f'{base}?macchina={m.pk}')
     return render(request, 'turni/mn_etichette.html', {'elenco': elenco, **filtro, 'mostra_gruppi': True})
@@ -561,3 +613,127 @@ def foto_fermo(request, fermo_id, quale):
     if not file:
         raise Http404
     return FileResponse(file.open('rb'), content_type='image/jpeg')
+
+
+@login_required
+def comunicazioni(request):
+    tutte = Comunicazione.objects.select_related('macchina', 'autore__dipendente')
+    aperte = list(tutte.exclude(stato=Comunicazione.Stato.RISOLTA))
+    risolte = list(tutte.filter(stato=Comunicazione.Stato.RISOLTA)[:20])
+    return render(request, 'turni/mn_comunicazioni.html', {
+        'aperte': aperte, 'risolte': risolte, 'puo_scrivere': mn.puo_comunicare(request.user),
+    })
+
+
+@login_required
+def nuova_comunicazione(request):
+    if not mn.puo_comunicare(request.user):
+        raise PermissionDenied
+    tipo = request.POST.get('tipo') or request.GET.get('tipo') or ''
+    if tipo not in Comunicazione.Tipo.values:
+        return render(request, 'turni/mn_comunicazione_nuova.html', {
+            'tipi': [(v, n, Comunicazione.ICONE[v]) for v, n in Comunicazione.Tipo.choices],
+        })
+    macchine = Macchina.objects.filter(attiva=True)
+    if request.method == 'POST':
+        testo = (request.POST.get('testo') or '').strip()[:2000]
+        scelta = request.POST.get('macchina') or ''
+        macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
+        luogo = request.POST.get('luogo') if request.POST.get('luogo') in Luogo.values else ''
+        fascia = request.POST.get('fascia') if request.POST.get('fascia') in ('1T', '2T', 'N') else ''
+        a = request.POST.get('destinatari') if request.POST.get('destinatari') in Comunicazione.A.values else Comunicazione.A.TUTTI
+        dal = _data_ora(request.POST.get('dal'))
+        al = _data_ora(request.POST.get('al'))
+        motivo = request.POST.get('motivo') if request.POST.get('motivo') in Comunicazione.Motivo.values else ''
+        if tipo == Comunicazione.Tipo.FERMO:
+            from datetime import date
+
+            try:
+                giorno = date.fromisoformat(request.POST.get('giorno') or '')
+            except ValueError:
+                giorno = None
+            if giorno:
+                dal, al = mn.periodo_fermo(giorno, fascia)
+            testo = testo or (Comunicazione.Motivo(motivo).label if motivo else '')
+        if tipo == Comunicazione.Tipo.FERMO and not (luogo in dict(FermoImpianto.IMPIANTI) and motivo and dal):
+            messages.error(request, "Scegli l'impianto, il motivo e il giorno del fermo.")
+        elif not testo:
+            messages.error(request, 'Scrivi la comunicazione.')
+        elif tipo == Comunicazione.Tipo.INDISPONIBILE and not (macchina and dal and al and al > dal):
+            messages.error(request, 'Indica il mezzo o la macchina e da quando a quando non è disponibile.')
+        else:
+            try:
+                c = mn.crea_comunicazione(request.user, tipo, testo, luogo or (macchina.luogo if macchina else ''), fascia,
+                                          macchina, dal, al, a, request.FILES.getlist('foto'), motivo,
+                                          request.POST.get('urgente') == '1', (request.POST.get('valore') or '').strip()[:60],
+                                          mn.controlla_video(request.FILES.get('video')))
+            except (ValueError, OSError):
+                messages.error(request, 'Una delle foto o il video non sono validi (video: massimo 50 MB).')
+            else:
+                messages.success(request, 'Comunicazione inviata.')
+                return redirect('turni:comunicazione', c.pk)
+    gruppi = [(nome, [m for m in macchine if m.luogo == v]) for v, nome in Luogo.choices]
+    return render(request, 'turni/mn_comunicazione_nuova.html', {
+        'tipo': tipo, 'nome_tipo': Comunicazione.Tipo(tipo).label, 'icona': Comunicazione.ICONE[tipo],
+        'gruppi': [g for g in gruppi if g[1]], 'luoghi': Luogo.choices,
+        'destinatari': Comunicazione.A.choices,
+        'predefinito': Comunicazione.A.PALISTI if tipo == Comunicazione.Tipo.INDISPONIBILE else Comunicazione.A.TUTTI,
+        'impianti': [(v, n, ICONE_LUOGHI[v]) for v, n in FermoImpianto.IMPIANTI], 'motivi': Comunicazione.Motivo.choices,
+        'domani': (timezone.localdate() + timedelta(days=1)).isoformat(),
+    })
+
+
+def _data_ora(valore):
+    from datetime import datetime
+
+    try:
+        return timezone.make_aware(datetime.fromisoformat(valore)) if valore else None
+    except (ValueError, TypeError):
+        return None
+
+
+@login_required
+def comunicazione(request, comunicazione_id):
+    c = get_object_or_404(Comunicazione.objects.select_related('macchina', 'autore__dipendente', 'in_gestione_da__dipendente', 'risolta_da__dipendente'), pk=comunicazione_id)
+    if request.method == 'POST':
+        mn.rispondi(request.user, c, (request.POST.get('testo') or '').strip(), request.POST.get('azione'))
+        return redirect('turni:comunicazione', c.pk)
+    return render(request, 'turni/mn_comunicazione.html', {
+        'c': c, 'risposte': c.risposte.select_related('autore__dipendente'), 'puo_chiudere': mn.puo_chiudere(request.user, c),
+        'in_gestione_nome': Intervento._nome(c.in_gestione_da), 'risolta_nome': Intervento._nome(c.risolta_da),
+    })
+
+
+@login_required
+def video(request, tipo, oggetto_id):
+    import mimetypes
+    import re
+
+    from django.http import HttpResponse
+
+    if tipo == 'intervento':
+        f = get_object_or_404(Intervento, pk=oggetto_id).video
+    elif tipo == 'comunicazione':
+        f = get_object_or_404(Comunicazione, pk=oggetto_id).video
+    else:
+        raise Http404
+    if not f:
+        raise Http404
+    tipo_mime = mimetypes.guess_type(f.name)[0] or 'video/mp4'
+    dimensione = f.size
+    intervallo = re.match(r'bytes=(\d+)-(\d*)', request.headers.get('Range', ''))
+    if not intervallo:
+        r = FileResponse(f.open('rb'), content_type=tipo_mime)
+        r['Accept-Ranges'] = 'bytes'
+        return r
+    inizio = int(intervallo.group(1))
+    fine = min(int(intervallo.group(2)) if intervallo.group(2) else dimensione - 1, dimensione - 1)
+    if inizio > fine:
+        return HttpResponse(status=416, headers={'Content-Range': f'bytes */{dimensione}'})
+    with f.open('rb') as file:
+        file.seek(inizio)
+        dati = file.read(fine - inizio + 1)
+    r = HttpResponse(dati, status=206, content_type=tipo_mime)
+    r['Content-Range'] = f'bytes {inizio}-{fine}/{dimensione}'
+    r['Accept-Ranges'] = 'bytes'
+    return r

@@ -698,10 +698,11 @@ class Macchina(models.Model):
     class Tipo(models.TextChoices):
         IMPIANTO = 'IMPIANTO', 'Macchinario / attrezzatura'
         MEZZO = 'MEZZO', 'Mezzo'
+        SEGNALETICA = 'SEGNALETICA', 'Segnaletica e specchi'
 
     codice = models.CharField(max_length=20, unique=True)
     nome = models.CharField(max_length=80)
-    tipo = models.CharField(max_length=10, choices=Tipo.choices, default=Tipo.IMPIANTO)
+    tipo = models.CharField(max_length=12, choices=Tipo.choices, default=Tipo.IMPIANTO)
     categoria = models.CharField(max_length=40, blank=True, help_text='Es. pala gommata, muletto, nastro, vaglio')
     luogo = models.CharField(max_length=10, choices=Luogo.choices)
     marca = models.CharField(max_length=40, blank=True)
@@ -723,7 +724,7 @@ class Macchina(models.Model):
     @property
     def icona(self):
         c = self.categoria.lower()
-        for parola, emoji in (('pala', '🚜'), ('escavat', '🚜'), ('muletto', '🏗️'), ('camion', '🚛'),
+        for parola, emoji in (('specchi', '🪞'), ('cartell', '🪧'), ('segnal', '🪧'), ('carbur', '⛽'), ('gasolio', '⛽'), ('pala', '🚜'), ('escavat', '🚜'), ('muletto', '🏗️'), ('camion', '🚛'),
                               ('nastro', '➰'), ('vaglio', '🔩'), ('tritur', '⚙️'), ('pressa', '🗜️'),
                               ('compress', '💨'), ('separat', '🧲'), ('pesa', '⚖️')):
             if parola in c:
@@ -774,6 +775,11 @@ class Intervento(models.Model):
     foto_riparazione = models.ImageField(upload_to='manutenzione/%Y/%m/', blank=True)
     ore_lavoro = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
     motivo_rifiuto = models.CharField(max_length=300, blank=True)
+    # quando farlo (es. "domani mattina") e se va portato fuori (officina o fornitore esterno)
+    da_fare_il = models.DateField('da fare il', null=True, blank=True)
+    collaboratori = models.ManyToManyField('Dipendente', blank=True, related_name='interventi_in_squadra')
+    video = models.FileField(upload_to='manutenzione/video/%Y/%m/', blank=True)
+    officina_esterna = models.CharField('riparazione esterna presso', max_length=80, blank=True)
     piano = models.ForeignKey('ManutenzioneProgrammata', null=True, blank=True, on_delete=models.SET_NULL, related_name='interventi')
 
     class Meta:
@@ -824,6 +830,13 @@ class Intervento(models.Model):
         if self.completata_da_id:
             return self._nome(self.completata_da)
         return self.assegnata_a.nome_breve if self.assegnata_a_id and self.stato == self.Stato.COMPLETATA else ''
+
+    @property
+    def squadra(self):
+        """Chi ha sistemato, con i colleghi che hanno aiutato: "Gentile Fabrizio con Di Girolamo Francesco"."""
+        nomi = [d.nome_breve for d in self.collaboratori.all()]
+        chi = self.chi_ha_sistemato
+        return f"{chi} con {', '.join(nomi)}" if chi and nomi else chi
 
     @property
     def ore_fermo(self):
@@ -916,6 +929,7 @@ class OrdineRicambio(models.Model):
     fornitore = models.CharField(max_length=80, blank=True)
     ordinato_il = models.DateTimeField(null=True, blank=True)
     arrivato_il = models.DateTimeField(null=True, blank=True)
+    dove = models.CharField('dove si trova', max_length=80, blank=True)
 
     class Meta:
         verbose_name = 'ordine ricambio'
@@ -1017,3 +1031,106 @@ class FermoImpianto(models.Model):
     @property
     def chi_ha_fatto_ripartire(self):
         return Intervento._nome(self.ripartenza_da)
+
+
+class Comunicazione(models.Model):
+    """Comunicazione del responsabile (o di capi turno e manutentori): qualità, procedure, controlli,
+    mezzi non disponibili. Si segue fino a "risolta", con le risposte di chi se ne occupa."""
+
+    class Tipo(models.TextChoices):
+        QUALITA = 'QUALITA', 'Qualità e produzione'
+        PROCEDURA = 'PROCEDURA', 'Procedura da rivedere'
+        CONTROLLO = 'CONTROLLO', 'Controllo / stato di usura'
+        INDISPONIBILE = 'INDISPONIBILE', 'Mezzo o macchina non disponibile'
+        FERMO = 'FERMO', 'Fermo impianto programmato'
+
+    class Motivo(models.TextChoices):
+        PULIZIA = 'PULIZIA', 'Pulizia'
+        MANUTENZIONE = 'MANUTENZIONE', 'Manutenzione'
+        PEZZI = 'PEZZI', 'Sostituzione pezzi'
+        MACCHINE = 'MACCHINE', 'Sostituzione macchine'
+
+    class A(models.TextChoices):
+        TUTTI = 'TUTTI', 'Tutti'
+        CAPITURNO = 'CAPITURNO', 'Capi turno'
+        MANUTENTORI = 'MANUTENTORI', 'Manutentori'
+        PALISTI = 'PALISTI', 'Utilizzatori delle pale'
+
+    class Stato(models.TextChoices):
+        APERTA = 'APERTA', 'Aperta'
+        IN_GESTIONE = 'IN_GESTIONE', 'In gestione'
+        RISOLTA = 'RISOLTA', 'Risolta'
+
+    tipo = models.CharField(max_length=14, choices=Tipo.choices)
+    testo = models.TextField()
+    luogo = models.CharField(max_length=10, choices=Luogo.choices, blank=True)
+    fascia = models.CharField('turno', max_length=5, blank=True, choices=[('1T', '1° turno'), ('2T', '2° turno'), ('N', 'Notturno')])
+    macchina = models.ForeignKey(Macchina, null=True, blank=True, on_delete=models.SET_NULL, related_name='comunicazioni')
+    dal = models.DateTimeField(null=True, blank=True)
+    al = models.DateTimeField(null=True, blank=True)
+    destinatari = models.CharField(max_length=12, choices=A.choices, default=A.TUTTI)
+    motivo = models.CharField(max_length=12, choices=Motivo.choices, blank=True)
+    urgente = models.BooleanField(default=False)
+    valore = models.CharField('valore misurato', max_length=60, blank=True)
+    video = models.FileField(upload_to='manutenzione/video/%Y/%m/', blank=True)
+    stato = models.CharField(max_length=12, choices=Stato.choices, default=Stato.APERTA)
+    autore = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    creata_il = models.DateTimeField(default=timezone.now)
+    in_gestione_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    risolta_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    risolta_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = 'comunicazioni'
+        ordering = ['-creata_il']
+
+    ICONE = {'QUALITA': '🔬', 'PROCEDURA': '📋', 'CONTROLLO': '🔎', 'INDISPONIBILE': '🚫', 'FERMO': '🛑'}
+
+    @property
+    def periodo(self):
+        """Per il fermo programmato: "Mer 21 ott, giornata intera" oppure "Mer 21 ott, 2° turno (14–22)"."""
+        if not self.dal:
+            return ''
+        from django.utils.formats import date_format
+
+        giorno = date_format(timezone.localtime(self.dal), 'D j M')
+        return f'{giorno}, {self.get_fascia_display()} ({ORARI.get(self.fascia, "")})' if self.fascia else f'{giorno}, giornata intera'
+
+    @property
+    def icona(self):
+        return self.ICONE.get(self.tipo, '📋')
+
+    @property
+    def classe_stato(self):
+        return {'APERTA': 'attesa', 'IN_GESTIONE': 'blu', 'RISOLTA': 'ok'}[self.stato]
+
+    @property
+    def chi_ha_scritto(self):
+        return Intervento._nome(self.autore)
+
+    @property
+    def attiva_ora(self):
+        adesso = timezone.now()
+        return self.tipo in (self.Tipo.INDISPONIBILE, self.Tipo.FERMO) and self.dal and self.al and self.dal <= adesso <= self.al
+
+
+class FotoComunicazione(models.Model):
+    comunicazione = models.ForeignKey(Comunicazione, on_delete=models.CASCADE, related_name='foto')
+    foto = models.ImageField(upload_to='manutenzione/%Y/%m/')
+
+    class Meta:
+        ordering = ['pk']
+
+
+class RispostaComunicazione(models.Model):
+    comunicazione = models.ForeignKey(Comunicazione, on_delete=models.CASCADE, related_name='risposte')
+    autore = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    testo = models.CharField(max_length=500)
+    creata_il = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['creata_il', 'pk']
+
+    @property
+    def chi(self):
+        return Intervento._nome(self.autore)

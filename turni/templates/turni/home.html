@@ -15,6 +15,10 @@
 </a>
 
 {% include 'turni/_capi_da_completare.html' %}
+{% for c in mezzi_non_disponibili %}
+<a class="cm-avviso" href="{% url 'turni:comunicazione' c.pk %}">{{ c.icona }} <span>{% if c.tipo == 'FERMO' %}<b>{{ c.get_luogo_display }} fermo · {{ c.get_motivo_display|lower }}</b><small>{{ c.periodo }}</small></span></a>
+{% else %}<b>{{ c.macchina.nome }}{% if c.macchina.modello %} {{ c.macchina.modello }}{% endif %} non disponibile</b><small>{% if c.attiva_ora %}Fino a {{ c.al|date:'D j M H:i' }}{% else %}Dal {{ c.dal|date:'D j M H:i' }} al {{ c.al|date:'D j M H:i' }}{% endif %}</small></span></a>
+{% endif %}{% endfor %}
 
 {% for e in extra %}
 <a class="home-extra" href="{% url 'turni:miei_turni' %}">

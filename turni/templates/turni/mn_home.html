@@ -31,6 +31,19 @@
   </a>
   {% endif %}
 
+  {% if puo_comunicare %}
+  <a class="home-tasto tasto-fermo" href="{% url 'turni:nuova_comunicazione' %}?tipo=FERMO">
+    <span class="home-icona">🛑</span>
+    <b>Fermo programmato</b><small>Un turno o una giornata: pulizia, manutenzione, sostituzioni</small>
+  </a>
+  {% endif %}
+
+  <a class="home-tasto" href="{% url 'turni:comunicazioni' %}">
+    {% if comunicazioni_aperte %}<i class="home-badge">{{ comunicazioni_aperte }}</i>{% endif %}
+    <span class="home-icona">📋</span>
+    <b>Comunicazioni</b><small>Qualità, procedure, controlli, mezzi non disponibili</small>
+  </a>
+
   <a class="home-tasto" href="{% url 'turni:interventi' %}">
     {% if badge_interventi %}<i class="home-badge">{{ badge_interventi }}</i>{% endif %}
     <span class="home-icona">🛠️</span>
@@ -46,6 +59,11 @@
   <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=mezzi">
     <span class="home-icona">🚚</span>
     <b>Mezzi</b><small>Interni ed esterni</small>
+  </a>
+
+  <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=segnaletica">
+    <span class="home-icona">🪧</span>
+    <b>Segnaletica e specchi</b><small>Cartelli, specchi, cartelli dei cumuli</small>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:ricambi' %}">

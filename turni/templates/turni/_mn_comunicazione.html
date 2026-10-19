@@ -1,0 +1,9 @@
+<a class="mn-riga" href="{% url 'turni:comunicazione' c.pk %}">
+  <span class="home-icona">{{ c.icona }}</span>
+  <span class="rq-testo">
+    <b>{{ c.get_tipo_display }}{% if c.macchina %} · {{ c.macchina.nome }}{% elif c.luogo %} · {{ c.get_luogo_display }}{% endif %}</b>
+    <small>{{ c.testo|truncatechars:90 }}</small>
+    <small class="mn-chi"><span>✍️ {{ c.chi_ha_scritto }}</span><span>{{ c.creata_il|date:'D j M, H:i' }}</span></small>
+  </span>
+  <span class="stato-chip {% if c.urgente and c.stato != 'RISOLTA' %}no{% else %}{{ c.classe_stato }}{% endif %}">{% if c.urgente and c.stato != 'RISOLTA' %}Urgente{% else %}{{ c.get_stato_display }}{% endif %}</span>
+</a>

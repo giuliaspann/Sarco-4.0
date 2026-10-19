@@ -19,7 +19,7 @@ async function riduci(file) {
 
 document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
   input.addEventListener('change', async () => {
-    const files = [...input.files].slice(0, 6);
+    const files = [...input.files].slice(0, 12);
     const etichetta = input.closest('label');
     if (!files.length) return;
     etichetta.querySelector('span').textContent = files.length > 1 ? files.length + ' foto pronte' : 'Foto pronta';
@@ -220,3 +220,19 @@ document.querySelectorAll('[data-stampa]').forEach(b => b.addEventListener('clic
   if (!nome || !pin) return;
   (nome.value ? pin : nome).focus();
 })();
+
+// "Oggi" / "Domani mattina": compila la data con un tocco
+document.querySelectorAll('.mn-quando-rapido button').forEach(b => b.addEventListener('click', () => {
+  const campo = b.closest('form').querySelector('input[name=da_fare_il]');
+  if (campo) campo.value = b.dataset.data;
+}));
+
+// video scelto: lo dico sul pulsante (non lo riduco: va inviato così)
+document.querySelectorAll('input[type=file][name=video]').forEach(input => input.addEventListener('change', () => {
+  const f = input.files[0];
+  const etichetta = input.closest('label');
+  if (!f) return;
+  const mb = (f.size / 1048576).toFixed(0);
+  etichetta.querySelector('span').textContent = f.size > 50 * 1048576 ? '⚠️ Video troppo grande (' + mb + ' MB): massimo 50' : '🎥 Video pronto (' + mb + ' MB)';
+  etichetta.classList.add('pronta');
+}));

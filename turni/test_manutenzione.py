@@ -154,7 +154,7 @@ class ManutenzioneTest(TestCase):
     def test_segnala_a_passi(self):
         self.entra('operaio')
         r = self.client.get(reverse('turni:segnala'))
-        self.assertEqual([g for g, _, _, _ in r.context['gruppi']], ['macchinari', 'mezzi'])
+        self.assertEqual([g for g, _, _, _ in r.context['gruppi']], ['macchinari', 'mezzi', 'segnaletica'])
         r = self.client.get(reverse('turni:segnala'), {'gruppo': 'mezzi'})
         self.assertEqual([nome for _, nome, _, _ in r.context['luoghi']], ['Mezzi interni', 'Mezzi esterni'])
         r = self.client.get(reverse('turni:segnala'), {'luogo': 'MEZZI'})
@@ -241,7 +241,7 @@ class ManutenzioneTest(TestCase):
         self.assertEqual(self.client.get(reverse('turni:segnala'), {'lavoro': '1'}).status_code, 403)
         self.entra('vito')
         r = self.client.get(reverse('turni:segnala'), {'lavoro': '1', 'gruppo': 'macchinari'})
-        self.assertContains(r, 'lavoro=1&amp;luogo=IMP1')
+        self.assertContains(r, 'lavoro=1&gruppo=macchinari&luogo=IMP1')
         vaglio = Macchina.objects.get(codice='IMP1-VAG')
         cinghia = Ricambio.objects.get(nome='Cinghia trapezoidale B68')
         scorta = cinghia.scorta
@@ -257,6 +257,41 @@ class ManutenzioneTest(TestCase):
         f = i.altre_foto.get()
         self.assertEqual(self.client.get(reverse('turni:foto_mn', args=['altra', f.pk])).status_code, 200)
         self.assertContains(self.client.get(reverse('turni:macchina', args=[vaglio.pk])), 'Sostituzione griglie vaglio')
+
+    def test_lavoro_in_squadra_con_video_e_resta_da_fare(self):
+        self.entra('vito')
+        ciclone = Macchina.objects.get(codice='IMP2-PRE')
+        video = SimpleUploadedFile('giro.mp4', b'0123456789' * 100, content_type='video/mp4')
+        self.client.post(reverse('turni:segnala'), {
+            'lavoro': '1', 'macchina': ciclone.pk, 'descrizione': 'Piastra supporto motore saldata', 'foto': foto(),
+            'collaboratori': [self.altro.pk], 'video': video, 'resta': 'Ripristino dei vecchi tamburi',
+        })
+        i = Intervento.objects.get(macchina=ciclone, tipo='LAVORO')
+        self.assertEqual(i.squadra, 'Torre Vito con Nizza Mirco')
+        self.assertTrue(i.video)
+        prossimo = Intervento.objects.get(macchina=ciclone, descrizione='Ripristino dei vecchi tamburi')
+        self.assertEqual(prossimo.stato, 'SEGNALATA')
+        # il video si scarica anche a pezzi (iPhone)
+        r = self.client.get(reverse('turni:video_mn', args=['intervento', i.pk]), HTTP_RANGE='bytes=0-9')
+        self.assertEqual((r.status_code, r.content, r['Content-Range']), (206, b'0123456789', 'bytes 0-9/1000'))
+
+    def test_video_finto_rifiutato(self):
+        self.entra('vito')
+        n = Intervento.objects.count()
+        finto = SimpleUploadedFile('virus.exe', b'MZ', content_type='application/octet-stream')
+        self.client.post(reverse('turni:segnala'), {
+            'lavoro': '1', 'macchina': self.pala.pk, 'descrizione': 'x', 'foto': foto(), 'video': finto,
+        })
+        self.assertEqual(Intervento.objects.count(), n)
+
+    def test_pezzo_arrivato_dove_si_trova(self):
+        self.entra('marchese')
+        self.client.post(reverse('turni:nuovo_ordine'), {'descrizione': 'Specchietto Stralis', 'quantita': 1, 'foto': foto()})
+        o = OrdineRicambio.objects.get()
+        self.client.post(reverse('turni:ordini'), {'ordine': o.pk, 'azione': 'ordinato'})
+        self.client.post(reverse('turni:ordini'), {'ordine': o.pk, 'azione': 'arrivato', 'dove': 'in ufficio'})
+        o.refresh_from_db()
+        self.assertEqual((o.stato, o.dove), ('ARRIVATO', 'in ufficio'))
 
     def test_togli_esempi(self):
         self.assertGreater(togli(), 0)
@@ -318,3 +353,89 @@ class FermoImpiantoTest(TestCase):
         f = FermoImpianto.objects.get()
         self.assertLessEqual(f.fermo_dal, timezone.now())
         self.assertIsNone(f.intervento)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class ComunicazioniTest(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.u = {}
+        for username, nome, mansione in (('operaio', 'ROSSI MARCO', 'OPERAIO'), ('palista', 'BIANCHI LUCA', 'PALISTA'),
+                                         ('vito', 'TORRE VITO', 'MANUTENTORE')):
+            self.u[username] = User.objects.create_user(username, password='123456')
+            d, _ = Dipendente.objects.get_or_create(nome=nome)
+            d.utente, d.mansione = self.u[username], mansione
+            d.save()
+        self.u['marchese'] = User.objects.create_user('marchese', password='123456')
+        d = Dipendente.objects.get(nome='MARCHESE LEONARDO')
+        d.utente = self.u['marchese']
+        d.save()
+        for u in self.u.values():
+            IscrizionePush.objects.create(utente=u, endpoint=f'https://fcm.googleapis.com/fcm/send/{u.username}', p256dh='k', auth='a')
+        patcher = mock.patch('pywebpush.webpush')
+        self.webpush = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def avvisati(self):
+        a = sorted({c.args[0]['endpoint'].rsplit('/', 1)[1] for c in self.webpush.call_args_list})
+        self.webpush.reset_mock()
+        return a
+
+    def test_qualita_con_risposte_e_chiusura(self):
+        from .models import Comunicazione
+
+        self.client.login(username='operaio', password='123456')
+        self.assertEqual(self.client.get(reverse('turni:nuova_comunicazione')).status_code, 403)
+        self.client.login(username='marchese', password='123456')
+        self.client.post(reverse('turni:nuova_comunicazione'), {
+            'tipo': 'QUALITA', 'testo': 'Scarto barrotti al 14% nel 2T', 'luogo': 'IMP1', 'fascia': '2T',
+            'destinatari': 'TUTTI', 'foto': [foto(), foto()],
+        })
+        c = Comunicazione.objects.get()
+        self.assertEqual((c.foto.count(), c.chi_ha_scritto, c.stato), (2, 'Marchese Leonardo', 'APERTA'))
+        self.assertEqual(self.avvisati(), ['operaio', 'palista', 'vito'])
+        self.client.login(username='vito', password='123456')
+        self.client.post(reverse('turni:comunicazione', args=[c.pk]), {'azione': 'gestione', 'testo': 'Già comunicato al capo turno'})
+        c.refresh_from_db()
+        self.assertEqual((c.stato, c.in_gestione_da), ('IN_GESTIONE', self.u['vito']))
+        self.assertEqual(self.avvisati(), ['marchese'])
+        # chi non se ne occupa non può chiuderla
+        self.client.login(username='operaio', password='123456')
+        self.client.post(reverse('turni:comunicazione', args=[c.pk]), {'azione': 'risolta'})
+        c.refresh_from_db()
+        self.assertEqual(c.stato, 'IN_GESTIONE')
+        self.client.login(username='vito', password='123456')
+        self.client.post(reverse('turni:comunicazione', args=[c.pk]), {'azione': 'risolta'})
+        c.refresh_from_db()
+        self.assertEqual(c.stato, 'RISOLTA')
+        self.assertEqual(list(c.risposte.values_list('testo', flat=True)), ['Già comunicato al capo turno', 'Risolta'])
+
+    def test_pala_non_disponibile_per_i_palisti(self):
+        pala = Macchina.objects.get(codice='PZ-PALA1')
+        adesso = timezone.localtime()
+        self.client.login(username='marchese', password='123456')
+        self.client.post(reverse('turni:nuova_comunicazione'), {
+            'tipo': 'INDISPONIBILE', 'testo': 'Intervento Volvo sui freni', 'macchina': pala.pk, 'destinatari': 'PALISTI',
+            'dal': (adesso - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M'), 'al': (adesso + timedelta(days=1)).strftime('%Y-%m-%dT%H:%M'),
+        })
+        self.assertEqual(self.avvisati(), ['palista'])  # il responsabile scrive, non riceve
+        self.assertEqual(mn.stato_macchine([pala])[0].stato, 'ferma')
+        self.client.login(username='palista', password='123456')
+        self.assertContains(self.client.get(reverse('turni:home')), 'non disponibile')
+        self.client.login(username='operaio', password='123456')
+        self.assertNotContains(self.client.get(reverse('turni:home')), 'non disponibile')
+
+    def test_fermo_programmato_di_un_turno(self):
+        from .models import Comunicazione
+
+        domani = timezone.localdate() + timedelta(days=1)
+        self.client.login(username='marchese', password='123456')
+        self.client.post(reverse('turni:nuova_comunicazione'), {
+            'tipo': 'FERMO', 'luogo': 'IMP2', 'motivo': 'PULIZIA', 'giorno': domani.isoformat(), 'fascia': '2T', 'destinatari': 'TUTTI',
+        })
+        c = Comunicazione.objects.get()
+        self.assertEqual((timezone.localtime(c.dal).hour, (c.al - c.dal).total_seconds() / 3600, c.testo), (14, 8, 'Pulizia'))
+        self.assertIn('2° turno', c.periodo)
+        self.assertEqual(self.avvisati(), ['operaio', 'palista', 'vito'])
+        self.client.login(username='operaio', password='123456')
+        self.assertContains(self.client.get(reverse('turni:home')), 'Impianto 2 fermo')

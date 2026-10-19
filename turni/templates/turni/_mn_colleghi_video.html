@@ -1,0 +1,15 @@
+<p class="mn-sottotitolo">Con chi hai lavorato (facoltativo)</p>
+<div class="mn-colleghi">
+  {% for d in colleghi_manut %}<label><input type="checkbox" name="collaboratori" value="{{ d.pk }}"><span>{{ d.nome_breve }}</span></label>{% endfor %}
+</div>
+{% if colleghi_altri %}
+<label>Altro collega
+  <select name="collaboratori"><option value="">—</option>{% for d in colleghi_altri %}<option value="{{ d.pk }}">{{ d.nome_breve }}</option>{% endfor %}</select>
+</label>
+{% endif %}
+<label class="bottone foto-btn mn-foto mn-video">
+  <input type="file" name="video" accept="video/*">
+  <span>🎥 Video (facoltativo, massimo 50 MB)</span>
+</label>
+<label>Cosa resta da fare (facoltativo)<textarea name="resta" rows="2" maxlength="1000" placeholder="Es. si può procedere al ripristino dei vecchi tamburi"></textarea></label>
+<p class="tenue piccolo">Se scrivi cosa resta da fare, diventa un nuovo intervento da approvare.</p>

@@ -1,0 +1,8 @@
+<div class="cm-date">
+  <label>Per quando<input type="date" name="da_fare_il" value="{% if i.da_fare_il %}{{ i.da_fare_il|date:'Y-m-d' }}{% endif %}" min="{{ oggi|date:'Y-m-d' }}"></label>
+  <label>Riparazione esterna<input type="text" name="officina_esterna" maxlength="80" value="{{ i.officina_esterna }}" placeholder="Es. officina Enzo"></label>
+</div>
+<div class="mn-quando-rapido">
+  <button type="button" data-data="{{ oggi|date:'Y-m-d' }}">Oggi</button>
+  <button type="button" data-data="{{ domani|date:'Y-m-d' }}">Domani mattina</button>
+</div>

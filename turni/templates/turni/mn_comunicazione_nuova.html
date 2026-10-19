@@ -1,0 +1,74 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Nuova comunicazione{% endblock %}
+{% block contenuto %}
+{% if not tipo %}
+<a class="tasto-indietro" href="{% url 'turni:comunicazioni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Comunicazioni</a>
+<div class="intestazione"><h1>Nuova comunicazione</h1></div>
+<h2 class="rq-sezione">Di cosa si tratta?</h2>
+<div class="sg-gruppi">
+  {% for v, nome, icona in tipi %}<a href="?tipo={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{% if v == 'QUALITA' %}Scarti, contaminazioni, dati del turno{% elif v == 'PROCEDURA' %}Come si deve lavorare d'ora in poi{% elif v == 'CONTROLLO' %}Situazione di un pezzo o di una macchina{% elif v == 'FERMO' %}Un turno o una giornata: pulizia, manutenzione, sostituzioni{% else %}Ferma per un intervento programmato{% endif %}</small></a>{% endfor %}
+</div>
+{% else %}
+<a class="tasto-indietro" href="{% url 'turni:nuova_comunicazione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro tipo</a>
+<div class="intestazione"><h1>{{ icona }} {{ nome_tipo }}</h1></div>
+<form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
+  <input type="hidden" name="tipo" value="{{ tipo }}">
+  {% if tipo == 'FERMO' %}
+  <fieldset class="cm-a cm-a3">
+    <legend>Quale impianto</legend>
+    {% for v, n, icona in impianti %}<label><input type="radio" name="luogo" value="{{ v }}" required><span>{{ icona }} {{ n }}</span></label>{% endfor %}
+  </fieldset>
+  <fieldset class="cm-a">
+    <legend>Perché</legend>
+    {% for v, n in motivi %}<label><input type="radio" name="motivo" value="{{ v }}" required><span>{{ n }}</span></label>{% endfor %}
+  </fieldset>
+  <label>Giorno<input type="date" name="giorno" value="{{ domani }}" required></label>
+  <fieldset class="cm-a">
+    <legend>Per quanto</legend>
+    <label><input type="radio" name="fascia" value="" checked><span>Giornata intera</span></label>
+    <label><input type="radio" name="fascia" value="1T"><span>1° turno (6–14)</span></label>
+    <label><input type="radio" name="fascia" value="2T"><span>2° turno (14–22)</span></label>
+    <label><input type="radio" name="fascia" value="N"><span>Notte (22–6)</span></label>
+  </fieldset>
+  <label>Dettagli (facoltativi)<textarea name="testo" rows="3" maxlength="2000" placeholder="Es. pulizia completa vagli e nastri: tutti in impianto con i DPI"></textarea></label>
+  <input type="hidden" name="destinatari" value="TUTTI">
+  {% else %}
+  <label>Comunicazione<textarea name="testo" rows="4" maxlength="2000" required placeholder="{% if tipo == 'INDISPONIBILE' %}Es. intervento Volvo sui freni: la pala resta ferma tutto il giorno{% elif tipo == 'QUALITA' %}Es. forte aumento dello scarto barrotti: 14% nel 2° turno (media 6%){% elif tipo == 'PROCEDURA' %}Es. pulizia vaglio a barrotti: cestinare il materiale estratto nei mastelli{% else %}Es. situazione attuale rulli frantoio{% endif %}">{{ request.POST.testo }}</textarea></label>
+  <label>{% if tipo == 'INDISPONIBILE' %}Mezzo o macchina{% else %}Macchina (facoltativa){% endif %}
+    <select name="macchina" {% if tipo == 'INDISPONIBILE' %}required{% endif %}>
+      <option value="">{% if tipo == 'INDISPONIBILE' %}Scegli…{% else %}Nessuna in particolare{% endif %}</option>
+      {% for nome, macchine in gruppi %}<optgroup label="{{ nome }}">{% for m in macchine %}<option value="{{ m.pk }}">{{ m.nome }}{% if m.modello %} · {{ m.modello }}{% endif %}</option>{% endfor %}</optgroup>{% endfor %}
+    </select>
+  </label>
+  {% if tipo == 'QUALITA' or tipo == 'CONTROLLO' %}
+  <label>Valore misurato (facoltativo)<input type="text" name="valore" maxlength="60" placeholder="Es. 8,9 g di ceramica · scarto 14%"></label>
+  {% endif %}
+  {% if tipo == 'INDISPONIBILE' %}
+  <div class="cm-date">
+    <label>Non disponibile dal<input type="datetime-local" name="dal" required></label>
+    <label>fino al<input type="datetime-local" name="al" required></label>
+  </div>
+  {% else %}
+  <div class="cm-date">
+    <label>Impianto / zona<select name="luogo"><option value="">—</option>{% for v, n in luoghi %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+    <label>Turno<select name="fascia"><option value="">—</option><option value="1T">1° turno</option><option value="2T">2° turno</option><option value="N">Notturno</option></select></label>
+  </div>
+  {% endif %}
+  <label class="mn-check cm-urgente"><input type="checkbox" name="urgente" value="1"> ⚠️ Urgente</label>
+  <fieldset class="cm-a">
+    <legend>A chi arriva la notifica</legend>
+    {% for v, n in destinatari %}<label><input type="radio" name="destinatari" value="{{ v }}" {% if v == predefinito %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}
+  </fieldset>
+  {% endif %}
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" multiple data-riduci>
+    <span>📷 Foto (facoltative, anche più di una)</span>
+  </label>
+  <label class="bottone foto-btn mn-foto mn-video">
+    <input type="file" name="video" accept="video/*">
+    <span>🎥 Video (facoltativo, massimo 50 MB)</span>
+  </label>
+  <button class="bottone pieno piena-larghezza cb-invia">Invia la comunicazione</button>
+</form>
+{% endif %}
+{% endblock %}

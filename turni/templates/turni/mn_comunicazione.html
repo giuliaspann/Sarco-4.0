@@ -1,0 +1,44 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ c.get_tipo_display }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:comunicazioni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Comunicazioni</a>
+<div class="intestazione">
+  <p class="occhiello">{{ c.icona }} {{ c.get_tipo_display }}</p>
+  <h1>{% if c.macchina %}{{ c.macchina.nome }}{% elif c.luogo %}{{ c.get_luogo_display }}{% else %}Comunicazione{% endif %}</h1>
+  <div class="mn-etichette">
+    {% if c.urgente and c.stato != 'RISOLTA' %}<span class="stato-chip no">⚠️ Urgente</span>{% endif %}
+    <span class="stato-chip {{ c.classe_stato }}">{{ c.get_stato_display }}</span>
+    {% if c.fascia %}<span class="stato-chip spento">{{ c.get_fascia_display }}</span>{% endif %}
+    <span class="stato-chip spento">Per: {{ c.get_destinatari_display|lower }}</span>
+  </div>
+</div>
+<section class="scheda">
+  {% if c.tipo == 'FERMO' %}<p class="cm-periodo">🛑 <b>{{ c.get_luogo_display }} fermo</b> · {{ c.periodo }}{% if c.motivo %}<br>Motivo: <b>{{ c.get_motivo_display }}</b>{% endif %}</p>{% endif %}
+  {% if c.tipo == 'INDISPONIBILE' %}<p class="cm-periodo">🚫 Non disponibile dal <b>{{ c.dal|date:'D j M H:i' }}</b> al <b>{{ c.al|date:'D j M H:i' }}</b></p>{% endif %}
+  <p class="mn-descrizione">{{ c.testo|linebreaksbr }}</p>
+  {% if c.valore %}<p class="cm-valore">📏 Valore misurato: <b>{{ c.valore }}</b></p>{% endif %}
+  {% if c.video %}<video class="mn-video-player" src="{% url 'turni:video_mn' 'comunicazione' c.pk %}" controls playsinline preload="metadata"></video>{% endif %}
+  {% if c.foto.all %}<div class="mn-foto-coppia">{% for f in c.foto.all %}<figure><img src="{% url 'turni:foto_mn' 'comunicazione' f.pk %}" alt="Foto" loading="lazy"></figure>{% endfor %}</div>{% endif %}
+  <dl class="mn-chi-scheda">
+    <div><dt>✍️ Scritta da</dt><dd>{{ c.chi_ha_scritto|default:'—' }} <small>{{ c.creata_il|date:'D j M, H:i' }}</small></dd></div>
+    {% if c.in_gestione_da %}<div><dt>🔧 Se ne occupa</dt><dd>{{ in_gestione_nome }}</dd></div>{% endif %}
+    {% if c.risolta_da %}<div><dt>✅ Risolta da</dt><dd>{{ risolta_nome }} <small>{{ c.risolta_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
+  </dl>
+</section>
+
+{% if risposte %}
+<h2 class="rq-sezione">Risposte</h2>
+<ol class="mn-diario">{% for r in risposte %}<li class="nota"><b>{{ r.chi }}: {{ r.testo }}</b><small>{{ r.creata_il|date:'D j M, H:i' }}</small></li>{% endfor %}</ol>
+{% endif %}
+
+{% if c.stato != 'RISOLTA' %}
+<form method="post" class="scheda mn-form">{% csrf_token %}
+  <label>Rispondi<input type="text" name="testo" maxlength="500" placeholder="Es. già comunicato al capo turno e al manutentore"></label>
+  <div class="cm-azioni">
+    <button class="bottone" name="azione" value="">💬 Invia</button>
+    {% if c.stato == 'APERTA' %}<button class="bottone pieno" name="azione" value="gestione">🔧 Me ne occupo</button>{% endif %}
+    {% if puo_chiudere %}<button class="bottone pieno" name="azione" value="risolta">✅ Risolta</button>{% endif %}
+  </div>
+</form>
+{% endif %}
+{% endblock %}
