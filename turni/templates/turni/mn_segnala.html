@@ -1,12 +1,12 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}{% if lavoro %}Manutenzione fatta{% else %}Segnala guasto{% endif %}{% endblock %}
+{% block titolo %}{% if lavoro %}Completamento manutenzione{% else %}Segnala guasto{% endif %}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
   {% if macchina %}<a class="tasto-indietro" href="?{{ pre }}luogo={{ macchina.luogo }}{% if macchina.tipo == 'SEGNALETICA' %}&gruppo=segnaletica{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia macchina</a>
   {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}{% if gruppo_luogo %}gruppo={{ gruppo_luogo }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia luogo</a>
   {% elif gruppo %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Indietro</a>
   {% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
-  <h1>{% if lavoro %}Manutenzione fatta{% else %}Segnala guasto o necessità di manutenzione{% endif %}</h1>
+  <h1>{% if lavoro %}Segnala completamento manutenzione{% else %}Segnala guasto o necessità di manutenzione{% endif %}</h1>
   <ol class="sg-passi">
     <li class="{% if not macchina and not luogo and not q and not gruppo %}ora{% else %}fatto{% endif %}">Cosa</li>
     <li class="{% if gruppo %}ora{% elif macchina or luogo or q %}fatto{% endif %}">Dove</li>

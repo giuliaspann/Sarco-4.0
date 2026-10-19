@@ -133,12 +133,12 @@ def interventi(request):
     miei = [i for i in aperti if dip and i.assegnata_a_id == dip.pk and i not in da_approvare]
     altri = [i for i in aperti if i not in da_approvare and i not in miei]
     recenti = Intervento.objects.filter(
-        stato=Intervento.Stato.COMPLETATA, completata_il__gte=timezone.now() - timedelta(days=7)
+        stato=Intervento.Stato.COMPLETATA, completata_il__gte=timezone.now() - timedelta(days=30)
     ).select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente', 'completata_da__dipendente').order_by('-completata_il')
     recenti = recenti.filter(cond('macchina__'))
     return render(request, 'turni/mn_interventi.html', {
         **permessi, **filtro, 'mostra_gruppi': True,
-        'da_approvare': da_approvare, 'miei': miei, 'altri': altri, 'recenti': recenti[:5],
+        'da_approvare': da_approvare, 'miei': miei, 'altri': altri, 'recenti': recenti[:30],
         'aperti_totale': len(aperti),
         'ferme': sum(1 for i in aperti if i.macchina_ferma),
         'sotto_scorta': sum(1 for r in Ricambio.objects.all() if r.sotto_scorta) if permessi['chiede_pezzi'] else 0,

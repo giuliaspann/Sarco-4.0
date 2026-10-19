@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Interventi{% endblock %}
 {% block contenuto %}
-{% include 'turni/_mn_menu.html' with titolo_pagina='Interventi' %}
+{% include 'turni/_mn_menu.html' with titolo_pagina='Interventi aperti e chiusi' %}
 {% include 'turni/_mn_luoghi.html' %}
 
 {% if da_approvare %}
@@ -18,7 +18,7 @@
 {% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}. 👍</p>{% endfor %}
 
 {% if recenti %}
-<h2 class="rq-sezione">Riparati negli ultimi 7 giorni</h2>
+<h2 class="rq-sezione">Chiusi negli ultimi 30 giorni</h2>
 {% for i in recenti %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
 {% endif %}
 {% endblock %}

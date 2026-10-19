@@ -27,7 +27,7 @@
   {% if registra_lavoro %}
   <a class="home-tasto tasto-lavoro" href="{% url 'turni:segnala' %}?lavoro=1">
     <span class="home-icona">✅</span>
-    <b>Manutenzione fatta</b><small>Ripristino o sostituzione, con le foto</small>
+    <b>Segnala completamento manutenzione</b><small>Ripristino o sostituzione, con le foto</small>
   </a>
   {% endif %}
 
@@ -42,7 +42,7 @@
   <a class="home-tasto" href="{% url 'turni:interventi' %}">
     {% if badge_interventi %}<i class="home-badge">{{ badge_interventi }}</i>{% endif %}
     <span class="home-icona">🛠️</span>
-    <b>Interventi</b>
+    <b>Lista interventi aperti e chiusi</b>
     <small>{% if aperti %}{{ aperti }} apert{{ aperti|pluralize:'o,i' }}{% if ferme %} · {{ ferme }} macchin{{ ferme|pluralize:'a ferma,e ferme' }}{% endif %}{% else %}Nessun guasto aperto 👍{% endif %}</small>
   </a>
 
