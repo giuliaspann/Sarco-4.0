@@ -333,7 +333,7 @@ class HomeTest(TestCase):
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
         # Home snella: solo le cose da fare al volo (il resto è nella barra in basso)
-        for testo in ('Segnala guasto', 'Fermo impianto', 'Avviso assenza', 'Turni di tutti', 'Bacheca'):
+        for testo in ('Segnala guasto o programma manutenzione', 'Segnala fermo impianto', 'Avviso assenza', 'Turni di tutti', 'Con chi lavoro oggi', 'Bacheca'):
             self.assertContains(r, testo)
         self.assertNotContains(r, 'Cambio turno')
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))  # martedì: 2T Imp. 2
