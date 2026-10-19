@@ -26,6 +26,14 @@ MAX_PASSI = 6
 MAX_MESSAGGI = 80  # oltre, si riparte da una chat nuova
 
 
+GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica']
+
+
+def giorno_it(d):
+    """Es. "mar 20/10": il giorno in italiano (il server non ha la lingua italiana)."""
+    return f'{GIORNI[d.weekday()][:3]} {d:%d/%m}'
+
+
 def attivo():
     return bool(os.environ.get('ANTHROPIC_API_KEY'))
 
@@ -123,10 +131,10 @@ def istruzioni(utente):
                                       ('ufficio', r['ufficio'])) if si) or 'utente'
     return (
         f"Sei l'assistente dell'app Sarco 4.0 di Sarco srl (impianto di recupero del vetro). Parli con {chi} ({ruolo}). "
-        f"Oggi è {oggi:%A %d/%m/%Y} ({oggi.isoformat()}). Orari: 1T 06-14, 2T 14-22, N 22-06, G giornaliero 8-13 e 14:30-17:30.\n"
+        f"Oggi è {GIORNI[oggi.weekday()]} {oggi:%d/%m/%Y} ({oggi.isoformat()}). Orari: 1T 06-14, 2T 14-22, N 22-06, G giornaliero 8-13 e 14:30-17:30.\n"
         "Chi scrive spesso è un operaio con poco tempo, a volte detta a voce: rispondi in italiano semplice, "
-        "frasi brevi, niente elenchi lunghi, niente markdown. Trasforma \"domani\", \"sabato\", \"la settimana prossima\" "
-        "in date precise e ripetile nella risposta.\n"
+        "frasi brevi, niente elenchi lunghi, niente markdown, non spiegare come funziona l'app. Trasforma \"domani\", \"sabato\", \"la settimana prossima\" "
+        "in date precise e ripetile nella risposta. Il turno di notte appartiene al giorno in cui inizia (alle 22).\n"
         "Usa gli strumenti per leggere i dati: non inventare turni né nomi. Se un nome corrisponde a più persone, chiedi quale.\n"
         "Per fare qualcosa usa gli strumenti che iniziano con proponi_: preparano l'azione e l'utente la conferma con un tasto "
         "sotto il tuo messaggio. Non dire mai che è fatto: di' che basta premere Conferma. Se manca un dato importante "
@@ -179,7 +187,7 @@ def trova_persona(nome, utente):
 
 
 def _descrivi(t):
-    testo = f'{t.data:%a %d/%m}: {t.descrizione}'
+    testo = f'{giorno_it(t.data)}: {t.descrizione}'
     if t.lavora and ORARI.get(t.fascia):
         testo += f' ({ORARI[t.fascia]})'
     if t.nota_modifica:
@@ -232,7 +240,7 @@ def prepara(nome, dati, utente):
         if tipo == AvvisoAssenza.Tipo.RITARDO and not alle:
             raise Errore('Serve l\'ora in cui entra.')
         a = AvvisoAssenza(tipo=tipo, data=g, dalle=dalle if tipo != 'RITARDO' else None, alle=alle if tipo != 'USCITA' else None)
-        return f'Avviso {tipo.label.lower()} · {g:%a %d/%m}' + (f' · {a.orario}' if a.orario else '')
+        return f'Avviso {tipo.label.lower()} · {giorno_it(g)}' + (f' · {a.orario}' if a.orario else '')
     if nome == 'proponi_ferie':
         tipo = RichiestaFerie.Tipo(dati['tipo'])
         dal, al = _data(dati['dal']), _data(dati['al'])
@@ -242,16 +250,16 @@ def prepara(nome, dati, utente):
         if tipo == RichiestaFerie.Tipo.PERMESSO and dalle and alle:
             if alle <= dalle:
                 raise Errore('L\'ora di fine deve essere dopo quella di inizio.')
-            return f'Permesso {dal:%a %d/%m} dalle {dalle:%H:%M} alle {alle:%H:%M}'
+            return f'Permesso {giorno_it(dal)} dalle {dalle:%H:%M} alle {alle:%H:%M}'
         if al < dal:
             raise Errore('La data di fine è prima di quella di inizio.')
-        return f'{tipo.label} dal {dal:%a %d/%m} al {al:%a %d/%m} ({(al - dal).days + 1} giorni)'
+        return f'{tipo.label} dal {giorno_it(dal)} al {giorno_it(al)} ({(al - dal).days + 1} giorni)'
     if nome == 'proponi_cambio':
         collega = trova_persona(dati['collega'], utente)
         g = _data(dati['giorno'])
         righe, _ = svc.anteprima(r['dipendente'], collega, [g])
         x = righe[0]
-        return (f'Cambio turno con {collega.nome_breve} · {g:%a %d/%m}: tu passi da {x["io_prima"].descrizione} '
+        return (f'Cambio turno con {collega.nome_breve} · {giorno_it(g)}: tu passi da {x["io_prima"].descrizione} '
                 f'a {x["collega_prima"].descrizione}')
     if nome == 'proponi_decisione':
         verbo = 'Approva' if dati['approva'] else 'Rifiuta'
@@ -271,7 +279,7 @@ def prepara(nome, dati, utente):
         if not t:
             raise Errore(f'Il turno di {dip.nome_breve} del {g:%d/%m} non è caricato.')
         nuovo = Turno(fascia=dati['fascia'], postazione=dati['postazione'], capoturno=dati['capoturno'], codice=t.codice)
-        return f'Turno di {dip.nome_breve} {g:%a %d/%m}: da {t.descrizione} a {nuovo.descrizione}'
+        return f'Turno di {dip.nome_breve} {giorno_it(g)}: da {t.descrizione} a {nuovo.descrizione}'
     raise Errore('Strumento sconosciuto.')
 
 
