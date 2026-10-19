@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views, views_manutenzione, views_messaggi, views_produzione, views_richieste
+from . import views, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche
 
 app_name = 'turni'
 
@@ -27,6 +27,12 @@ urlpatterns = [
     path('messaggi/', views_messaggi.messaggi, name='messaggi'),
     path('messaggi/chat/nuovi/', views_messaggi.chat_nuovi, name='chat_nuovi'),
     path('notifiche/iscrivi/', views_messaggi.iscrivi_notifiche, name='iscrivi_notifiche'),
+    path('statistiche/', views_statistiche.statistiche, name='statistiche'),
+    path('statistiche/analisi/nuova/', views_statistiche.analisi_nuova, name='analisi_nuova'),
+    path('statistiche/analisi/<int:analisi_id>/', views_statistiche.analisi, name='analisi'),
+    path('statistiche/analisi/<int:analisi_id>/foto/', views_statistiche.foto_analisi, name='foto_analisi'),
+    path('statistiche/leggi-foto/', views_statistiche.leggi_foto, name='leggi_foto'),
+    path('statistiche/report/', views_statistiche.report, name='report'),
     path('produzione/', views_produzione.produzione, name='produzione'),
     path('produzione/nuova/', views_produzione.produzione_turno, name='produzione_nuova'),
     path('produzione/<int:produzione_id>/', views_produzione.produzione_turno, name='produzione_turno'),

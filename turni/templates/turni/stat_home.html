@@ -1,0 +1,31 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Statistiche{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Statistiche</h1></div>
+
+<div class="home-griglia">
+  <a class="home-tasto tasto-produzione" href="{% url 'turni:produzione_nuova' %}">
+    <span class="home-icona">⚖️</span><b>Inserisci produzione del turno</b>
+  </a>
+  <a class="home-tasto tasto-analisi" href="{% url 'turni:analisi_nuova' %}">
+    <span class="home-icona">🧪</span><b>Inserisci analisi prodotto</b>
+  </a>
+  <a class="home-tasto tasto-report" href="{% url 'turni:report' %}">
+    <span class="home-icona">📄</span><b>Report</b>
+  </a>
+  <a class="home-tasto" href="{% url 'turni:produzione' %}">
+    <span class="home-icona">📊</span><b>Storico produzione e scarti</b>
+  </a>
+</div>
+
+<h2 class="rq-sezione">Ultime analisi</h2>
+{% for a in analisi %}{% include 'turni/_analisi_riga.html' %}{% empty %}<p class="tenue piccolo">Nessuna analisi negli ultimi 7 giorni.</p>{% endfor %}
+
+<h2 class="rq-sezione">Ultima produzione</h2>
+{% for t in produzioni %}
+<a class="mn-riga" href="{% url 'turni:produzione_turno' t.pk %}">
+  <span class="home-icona">⚖️</span>
+  <span class="rq-testo"><b>{{ t.data|date:'D j M'|capfirst }} · {{ t.get_fascia_display }}</b><small>{{ t.totale|floatformat:1 }} t in tutto</small></span>
+</a>
+{% empty %}<p class="tenue piccolo">Nessuna produzione negli ultimi 7 giorni.</p>{% endfor %}
+{% endblock %}

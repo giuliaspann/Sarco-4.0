@@ -8,7 +8,7 @@
     "preDeployCommand": [
       "python manage.py prepara_deploy"
     ],
-    "startCommand": "gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --log-file -",
+    "startCommand": "gunicorn config.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 90 --log-file -",
     "healthcheckPath": "/health/",
     "restartPolicyType": "ON_FAILURE"
   }

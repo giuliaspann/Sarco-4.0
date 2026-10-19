@@ -23,9 +23,8 @@ SOGLIA = Decimal('1.5')
 
 
 def puo_vedere(utente):
-    from .views_messaggi import e_direzione
-
-    return mn.e_resp(utente) or e_direzione(utente) or utente.is_staff or mn.e_capoturno_oggi(utente)
+    """Per ora tutti i dipendenti (prima questi dati giravano nei gruppi WhatsApp) e l'ufficio."""
+    return utente.is_authenticated and (utente.is_staff or getattr(utente, 'dipendente', None) is not None)
 
 
 def percentuali(produzione):
@@ -143,6 +142,7 @@ def produzione_turno(request, produzione_id=None):
         p.valore = valori.get(p.pk, '')
     return render(request, 'turni/produzione_nuova.html', {
         'prodotti': prodotti, 'giorno': giorno, 'fascia': fascia, 'fasce': ProduzioneTurno.FASCE, 'esistente': esistente,
+        'leggi_foto': __import__('turni.lettura', fromlist=['attiva']).attiva(),
     })
 
 

@@ -1,0 +1,5 @@
+<a class="mn-riga{% if a.fuori_limite %} ferma{% endif %}" href="{% url 'turni:analisi' a.pk %}">
+  <span class="home-icona">🧪</span>
+  <span class="rq-testo"><b>{{ a.get_campione_display }}</b><small>{{ a.data|date:'D j M'|capfirst }}{% if a.fascia %} · {{ a.get_fascia_display }}{% endif %}{% if a.numero %} · #{{ a.numero }}{% endif %}</small></span>
+  {% if a.fuori_limite %}<span class="stato-chip no">Fuori limite</span>{% else %}<span class="stato-chip ok">OK</span>{% endif %}
+</a>

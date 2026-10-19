@@ -236,3 +236,40 @@ document.querySelectorAll('input[type=file][name=video]').forEach(input => input
   etichetta.querySelector('span').textContent = f.size > 50 * 1048576 ? '⚠️ Video troppo grande (' + mb + ' MB): massimo 50' : '🎥 Video pronto (' + mb + ' MB)';
   etichetta.classList.add('pronta');
 }));
+
+// Statistiche: "Leggi i numeri dalla foto" riempie il modulo (si controlla prima di salvare)
+document.querySelectorAll('form[data-lettura] [data-leggi]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const form = btn.form, esito = form.querySelector('.st-esito'), foto = form.querySelector('input[type=file]');
+    const scrivi = (t, ok) => { esito.hidden = false; esito.textContent = t; esito.classList.toggle('ok', !!ok); };
+    if (!foto.files.length) { foto.click(); return; }
+    const dati = new FormData();
+    dati.append('foto', foto.files[0]);
+    dati.append('tipo', form.dataset.lettura);
+    dati.append('csrfmiddlewaretoken', form.querySelector('[name=csrfmiddlewaretoken]').value);
+    btn.disabled = true; const testo = btn.textContent; btn.textContent = '⏳ Sto leggendo…';
+    try {
+      const r = await fetch('/turni/statistiche/leggi-foto/', { method: 'POST', body: dati });
+      const j = await r.json();
+      if (!r.ok) { scrivi(j.errore || 'Non riesco a leggere la foto.'); return; }
+      let n = 0;
+      for (const [nome, valore] of Object.entries(j.campi)) {
+        const radio = form.querySelector(`input[type=radio][name="${nome}"][value="${valore}"]`);
+        const campo = form.querySelector(`input[type=text][name="${nome}"]`);
+        if (radio) { radio.checked = true; n++; }
+        else if (campo) { campo.value = valore; campo.classList.add('letto'); n++; }
+      }
+      scrivi(`✓ Letti ${n} valori: controllali prima di salvare.`, true);
+    } catch (e) {
+      scrivi('Senza rete: scrivi i numeri a mano.');
+    } finally { btn.disabled = false; btn.textContent = testo; }
+  });
+});
+
+document.querySelectorAll('[data-condividi]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const testo = document.getElementById(btn.dataset.condividi).value;
+    if (navigator.share) { try { await navigator.share({ text: testo }); return; } catch (e) { return; } }
+    location.href = 'https://wa.me/?text=' + encodeURIComponent(testo);
+  });
+});

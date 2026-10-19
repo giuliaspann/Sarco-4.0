@@ -1,0 +1,42 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Report{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Statistiche</a>
+<div class="intestazione"><h1>Report</h1></div>
+<div class="scegli tre st-periodi">
+  {% for v, n in periodi %}<a class="{% if v == giorni %}scelto{% endif %}" href="?giorni={{ v }}">{{ n }}</a>{% endfor %}
+</div>
+<p class="centrato tenue">Dal {{ dal|date:'j F' }} al {{ al|date:'j F' }}</p>
+
+<section class="scheda">
+  <h2>Produzione · {{ turni }} turn{{ turni|pluralize:'o,i' }}</h2>
+  {% if prodotti %}
+  <div class="mn-numeri">{% for imp, t in impianti.items %}<div><b>{{ t|floatformat:0 }} t</b><small>{{ imp }}</small></div>{% endfor %}</div>
+  <table class="pr-tabella">
+    <tr><th>Prodotto</th><th>t</th><th>% media</th></tr>
+    {% for x in prodotti %}{% ifchanged x.p.impianto %}<tr class="pr-impianto"><td colspan="3">{{ x.p.get_impianto_display }}</td></tr>{% endifchanged %}
+    <tr class="{% if x.p.categoria == 'SCARTO' %}pr-scarto{% endif %}"><td>{{ x.p.codice }} {{ x.p.nome }}</td><td>{{ x.tonnellate|floatformat:1 }}</td><td>{% if x.perc is not None %}{{ x.perc|floatformat:1 }}%{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="tenue piccolo">Nessuna produzione inserita.</p>{% endif %}
+</section>
+
+<section class="scheda">
+  <h2>Analisi · {{ n_analisi }}</h2>
+  {% for c in campioni %}
+  <h3 class="st-campione">{{ c.nome }} <small class="tenue">· {{ c.n }}</small></h3>
+  <table class="pr-tabella">
+    <tr><th>Inquinante</th><th>media g/t</th><th>max</th><th>fuori</th></tr>
+    {% for m in c.medie %}<tr class="{% if m.fuori %}pr-alto{% endif %}"><td>{{ m.nome }}</td><td>{{ m.media|floatformat:0 }}</td><td>{{ m.limite }}</td><td>{{ m.volte_fuori }}/{{ m.n }}</td></tr>{% endfor %}
+  </table>
+  {% empty %}<p class="tenue piccolo">Nessuna analisi inserita.</p>{% endfor %}
+</section>
+
+{% if fuori %}
+<h2 class="rq-sezione">Analisi fuori limite</h2>
+{% for a in fuori %}{% include 'turni/_analisi_riga.html' %}{% endfor %}
+{% endif %}
+
+<textarea class="st-testo" id="testo-report" readonly rows="6">{{ testo }}</textarea>
+<button type="button" class="bottone pieno piena-larghezza" data-condividi="testo-report">📤 Manda su WhatsApp</button>
+{% endblock %}

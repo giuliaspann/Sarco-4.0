@@ -1259,3 +1259,71 @@ class RigaProduzione(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['produzione', 'prodotto'], name='una_riga_per_prodotto')]
+
+
+# ---------------------------------------------------------------- Statistiche: analisi del prodotto
+
+# inquinanti misurati dalla macchina "Analisi peso inquinanti": (campo, nome, limite in g/t)
+INQUINANTI = [
+    ('csp', 'CSP', 25),
+    ('vetro_ceramico', 'Vetro ceramico', 0),
+    ('metallo', 'Metallo', 15),
+    ('organico', 'Organico', 250),
+    ('plastica', 'Plastica', 250),
+    ('cristallo', 'Cristallo', 200),
+]
+
+
+class AnalisiProdotto(models.Model):
+    """Un'analisi di laboratorio su un campione (prima finiva come foto nel gruppo WhatsApp)."""
+
+    class Campione(models.TextChoices):
+        MISTO_IMP1 = 'MISTO_IMP1', 'Misto Imp. 1'
+        MEZZOBIANCO = 'MEZZOBIANCO', 'Mezzobianco'
+        BIANCO = 'BIANCO', 'Bianco'
+        PICVISA = 'PICVISA', 'Picvisa'
+        PIOMBO_BIANCO = 'PIOMBO_BIANCO', 'Piombo bianco'
+        PIOMBO_MEZZO = 'PIOMBO_MEZZO', 'Piombo mezzobianco'
+        RW = 'RW', 'RW'
+        PCV_IMP1 = 'PCV_IMP1', 'PCV impianto 1'
+        PCV_IMP2 = 'PCV_IMP2', 'PCV impianto 2'
+        MANUALE = 'MANUALE', 'Analisi manuale'
+
+    data = models.DateField()
+    fascia = models.CharField(max_length=2, choices=[('1T', '1° turno'), ('2T', '2° turno'), ('N', 'Notturno')], blank=True)
+    campione = models.CharField(max_length=14, choices=Campione.choices)
+    peso_kg = models.DecimalField('peso del campione (kg)', max_digits=8, decimal_places=3, null=True, blank=True)
+    numero = models.PositiveIntegerField('numero campione', null=True, blank=True)
+    csp = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    vetro_ceramico = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    metallo = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    organico = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    plastica = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    cristallo = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
+    foto = models.ImageField(upload_to='analisi/%Y/%m/', blank=True)
+    note = models.CharField(max_length=500, blank=True)
+    inserita_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    inserita_il = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'analisi del prodotto'
+        verbose_name_plural = 'analisi del prodotto'
+        ordering = ['-data', '-inserita_il']
+
+    def __str__(self):
+        return f'{self.data:%d/%m} {self.get_campione_display()}'
+
+    def valori(self):
+        """[(nome, grammi, g/t, limite, fuori limite)] — g/t = grammi sul peso del campione in tonnellate."""
+        righe = []
+        for campo, nome, limite in INQUINANTI:
+            g = getattr(self, campo)
+            if g is None:
+                continue
+            gt = (g * 1000 / self.peso_kg) if self.peso_kg else None
+            righe.append({'campo': campo, 'nome': nome, 'g': g, 'gt': gt, 'limite': limite, 'fuori': gt is not None and gt > limite})
+        return righe
+
+    @property
+    def fuori_limite(self):
+        return [v for v in self.valori() if v['fuori']]

@@ -1,9 +1,14 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Produzione del turno{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:produzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Produzione</a>
-<div class="intestazione"><h1>Produzione del turno</h1></div>
-<form method="post" enctype="multipart/form-data" class="mn-form">{% csrf_token %}
+<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Statistiche</a>
+<div class="intestazione"><h1>Inserisci produzione del turno</h1></div>
+<form method="post" enctype="multipart/form-data" class="mn-form" data-lettura="produzione">{% csrf_token %}
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+    <span>📷 Foto del display</span>
+  </label>
+  {% if leggi_foto %}<button type="button" class="bottone piena-larghezza st-leggi" data-leggi>🔎 Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
   <label>Giorno<input type="date" name="data" value="{{ giorno|date:'Y-m-d' }}" required></label>
   <div class="scegli tre">{% for v, n in fasce %}<label><input type="radio" name="fascia" value="{{ v }}" {% if v == fascia %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}</div>
   {% regroup prodotti by get_impianto_display as gruppi %}
@@ -16,10 +21,6 @@
     {% endfor %}
   </section>
   {% endfor %}
-  <label class="bottone foto-btn mn-foto">
-    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-    <span>📷 Foto del display (facoltativa)</span>
-  </label>
   <label>Note (facoltative)<input type="text" name="note" maxlength="500" placeholder="Es. fermo di 20 minuti per alimentazione esterna"></label>
   <button class="bottone pieno piena-larghezza cb-invia">Salva la produzione</button>
 </form>

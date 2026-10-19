@@ -1,0 +1,24 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Analisi {{ a }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Statistiche</a>
+<div class="intestazione">
+  <p class="occhiello">Analisi prodotto</p>
+  <h1>{{ a.get_campione_display }}</h1>
+  <p class="tenue piccolo">{{ a.data|date:'D j M'|capfirst }}{% if a.fascia %} · {{ a.get_fascia_display }}{% endif %}{% if a.numero %} · #{{ a.numero }}{% endif %}{% if a.peso_kg %} · {{ a.peso_kg|floatformat:"-3" }} kg{% endif %} · {{ a.inserita_da.dipendente.nome_breve|default:'Ufficio' }}</p>
+</div>
+<section class="scheda">
+  <table class="pr-tabella">
+    <tr><th>Inquinante</th><th>g</th><th>g/t</th><th>max</th></tr>
+    {% for v in a.valori %}
+    <tr class="{% if v.fuori %}pr-alto{% endif %}"><td>{{ v.nome }}</td><td>{{ v.g|floatformat:"-2" }}</td><td>{% if v.gt is not None %}{{ v.gt|floatformat:0 }}{% else %}–{% endif %}</td><td>{{ v.limite }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if not a.peso_kg %}<p class="tenue piccolo">Senza il peso del campione non si calcolano i g/t.</p>{% endif %}
+  {% if a.note %}<p>{{ a.note }}</p>{% endif %}
+  {% if a.foto %}<img class="pl-foto" src="{% url 'turni:foto_analisi' a.pk %}" alt="Foto dell'analisi" loading="lazy">{% endif %}
+</section>
+{% if a.inserita_da_id == user.pk or user.is_superuser %}
+<form method="post">{% csrf_token %}<button class="bottone piena-larghezza" name="azione" value="elimina" data-conferma="Eliminare questa analisi?">🗑️ Elimina</button></form>
+{% endif %}
+{% endblock %}

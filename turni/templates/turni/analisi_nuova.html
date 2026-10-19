@@ -1,0 +1,34 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Analisi prodotto{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Statistiche</a>
+<div class="intestazione"><h1>Inserisci analisi prodotto</h1></div>
+<form method="post" enctype="multipart/form-data" class="mn-form" data-lettura="analisi">{% csrf_token %}
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+    <span>📷 Foto dell'analisi</span>
+  </label>
+  {% if leggi_foto %}<button type="button" class="bottone piena-larghezza st-leggi" data-leggi>🔎 Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
+
+  <p class="mn-sottotitolo">Campione</p>
+  <div class="scegli">
+    {% for v, n in campioni %}<label><input type="radio" name="campione" value="{{ v }}" required {% if dati.campione == v %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}
+  </div>
+  <label>Giorno<input type="date" name="data" value="{% if dati.data %}{{ dati.data }}{% else %}{{ giorno|date:'Y-m-d' }}{% endif %}" required></label>
+  <div class="scegli tre">{% for v, n in fasce %}<label><input type="radio" name="fascia" value="{{ v }}" {% if v == fascia %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}</div>
+
+  <section class="scheda pr-gruppo">
+    <h2>Campione</h2>
+    <label class="pr-riga"><span>Peso</span><input type="text" name="peso_kg" value="{{ dati.peso_kg }}" inputmode="decimal" placeholder="0,000" autocomplete="off"><i>kg</i></label>
+    <label class="pr-riga"><span>Numero</span><input type="text" name="numero" value="{{ dati.numero }}" inputmode="numeric" placeholder="#" autocomplete="off"><i>#</i></label>
+  </section>
+  <section class="scheda pr-gruppo">
+    <h2>Inquinanti trovati</h2>
+    {% for campo, nome, limite, valore in inquinanti %}
+    <label class="pr-riga"><span>{{ nome }}</span><input type="text" name="{{ campo }}" value="{{ valore }}" inputmode="decimal" placeholder="0,00" autocomplete="off"><i>g</i></label>
+    {% endfor %}
+  </section>
+  <label>Note (facoltative)<input type="text" name="note" maxlength="500" value="{{ dati.note }}"></label>
+  <button class="bottone pieno piena-larghezza cb-invia">Salva l'analisi</button>
+</form>
+{% endblock %}

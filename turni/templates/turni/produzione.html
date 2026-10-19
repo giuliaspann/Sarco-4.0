@@ -1,8 +1,8 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Produzione{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Home</a>
-<div class="intestazione"><h1>Produzione</h1><p class="tenue piccolo">Tonnellate di fine turno e scarti rispetto alla media degli ultimi 30 giorni.</p></div>
+<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Statistiche</a>
+<div class="intestazione"><h1>Storico produzione e scarti</h1></div>
 <a class="bottone pieno piena-larghezza cb-invia" href="{% url 'turni:produzione_nuova' %}">📊 Inserisci la produzione del turno</a>
 
 {% if media %}

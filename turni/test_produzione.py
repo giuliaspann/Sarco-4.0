@@ -30,9 +30,12 @@ class ProduzioneTest(TestCase):
         RigaProduzione.objects.create(produzione=t, prodotto=self.p['Barrotti'], tonnellate=barrotti)
         return t
 
-    def test_solo_responsabili_e_capi(self):
+    def test_tutti_i_dipendenti_ma_non_gli_estranei(self):
         self.client.login(username='operaio', password='123456')
-        self.assertEqual(self.client.get(reverse('turni:produzione')).status_code, 403)
+        self.assertEqual(self.client.get(reverse('turni:produzione')).status_code, 200)
+        get_user_model().objects.create_user('estraneo', password='x')
+        self.client.login(username='estraneo', password='x')
+        self.assertEqual(self.client.get(reverse('turni:statistiche')).status_code, 403)
 
     def test_scarto_alto_segnalato(self):
         oggi = timezone.localdate()
