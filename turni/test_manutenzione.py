@@ -293,6 +293,22 @@ class ManutenzioneTest(TestCase):
         o.refresh_from_db()
         self.assertEqual((o.stato, o.dove), ('ARRIVATO', 'in ufficio'))
 
+    def test_pezzo_sistemato_e_bravo(self):
+        self.entra('vito')
+        lab = Macchina.objects.get(codice='LAB-VAG')
+        self.client.post(reverse('turni:segnala'), {
+            'lavoro': '1', 'macchina': lab.pk, 'tipo_lavoro': 'PEZZO', 'pezzo': 'Rete vaglio', 'foto': foto(),
+        })
+        i = Intervento.objects.get(macchina=lab)
+        self.assertEqual((i.titolo_lavoro, i.descrizione), ('Pezzo sistemato · Rete vaglio', 'Pezzo sistemato · Rete vaglio'))
+        self.assertContains(self.client.get(reverse('turni:home')), 'Lavoro fatto')
+        self.entra('marchese')
+        self.webpush.reset_mock()
+        for _ in range(2):  # un solo 👍 a testa
+            self.client.post(reverse('turni:intervento', args=[i.pk]), {'azione': 'bravo'})
+        self.assertEqual(i.eventi.filter(testo='👍').count(), 1)
+        self.assertEqual(self.avvisati(), ['vito'])
+
     def test_togli_esempi(self):
         self.assertGreater(togli(), 0)
         self.assertFalse(Macchina.objects.exists())

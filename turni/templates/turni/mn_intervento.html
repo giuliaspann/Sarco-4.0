@@ -3,7 +3,7 @@
 {% block contenuto %}
 <div class="intestazione">
   <a class="tasto-indietro" href="{% url 'turni:interventi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Interventi</a>
-  <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% elif i.tipo == 'LAVORO' %}Lavoro fatto{% else %}Guasto{% endif %} #{{ i.pk }}</p>
+  <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% elif i.tipo == 'LAVORO' %}{{ i.get_tipo_lavoro_display|default:'Lavoro fatto' }}{% else %}Guasto{% endif %} #{{ i.pk }}</p>
   <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona }} {{ i.macchina.nome }}</a></h1>
   <div class="mn-etichette">
     <span class="stato-chip {{ i.classe_stato }}">{{ i.etichetta_stato }}</span>
@@ -33,7 +33,7 @@
   {% endif %}
   {% if i.stato == 'COMPLETATA' %}
   <div class="mn-fatto">
-    <b>Lavoro fatto</b>
+    <b>{% if i.titolo_lavoro %}{{ i.titolo_lavoro }}{% else %}Lavoro fatto{% endif %}</b>
     <p>{{ i.lavoro_svolto|linebreaksbr }}</p>
     <small>Sistemato da {{ i.squadra }} · {{ i.completata_il|date:'D j M, H:i' }}{% if i.ore_lavoro %} · {{ i.ore_lavoro }} ore di lavoro{% endif %}</small>
     {% if i.ricambi_usati.all %}<ul>{% for p in i.ricambi_usati.all %}<li>🔩 {{ p.nome }} × {{ p.quantita }}</li>{% endfor %}</ul>{% endif %}
@@ -103,6 +103,13 @@
     <button class="bottone piena-larghezza" name="azione" value="riassegna">Riassegna</button>
   </form>
 </details>
+{% endif %}
+
+{% if i.stato == 'COMPLETATA' %}
+<form method="post" class="mn-bravo">{% csrf_token %}
+  <button name="azione" value="bravo" class="{% if user in bravi %}fatto{% endif %}">👍 {% if bravi %}{{ bravi|length }}{% else %}Bravo{% endif %}</button>
+  {% if bravi %}<small>{% for u in bravi %}{{ u.dipendente.nome_breve|default:'Ufficio' }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>{% endif %}
+</form>
 {% endif %}
 
 {% if ordini %}

@@ -87,6 +87,7 @@ def home(request):
             'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
             'pulizie_da_fare': pulizie_da_fare,
             'capi_da_completare': capi_da_completare(request.user).filter(dipendente=dip)[:7],
+            'registra_lavoro': __import__('turni.manutenzione', fromlist=['puo_registrare_lavoro']).puo_registrare_lavoro(request.user),
             'vede_produzione': __import__('turni.views_produzione', fromlist=['puo_vedere']).puo_vedere(request.user),
             'mezzi_non_disponibili': __import__('turni.manutenzione', fromlist=['avvisi_per']).avvisi_per(request.user),
             'fasce_capo': FASCE_CAPO,

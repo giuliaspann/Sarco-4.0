@@ -20,7 +20,7 @@ from .models import Comunicazione, Dipendente, FermoImpianto, FotoComunicazione,
 
 # prima si sceglie il gruppo, poi il luogo
 GRUPPI = [
-    ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA']),
+    ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA', 'ANALISI']),
     ('mezzi', 'Mezzi', '🚚', ['MEZZI', 'ESTERNI']),
     ('segnaletica', 'Segnaletica e specchi', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA']),
 ]
@@ -39,7 +39,7 @@ def cond_gruppo(gruppo, luogo='', prefisso=''):
     elif gruppo:
         q &= ~Q(**{prefisso + 'tipo': Macchina.Tipo.SEGNALETICA})
     return q
-ICONE_LUOGHI = {'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜', 'ESTERNI': '🚛'}
+ICONE_LUOGHI = {'ANALISI': '🧪', 'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜', 'ESTERNI': '🚛'}
 
 
 class MacchinaForm(forms.ModelForm):
@@ -166,12 +166,16 @@ def segnala(request):
                 raise InvalidOperation
         except InvalidOperation:
             ore = None
+        tipo_lavoro = request.POST.get('tipo_lavoro') or ''
+        tipo_lavoro = tipo_lavoro if tipo_lavoro in dict(Intervento._meta.get_field('tipo_lavoro').choices) else ''
+        pezzo = (request.POST.get('pezzo') or '').strip()[:100]
+        testo = testo or ' · '.join(x for x in (dict(Intervento._meta.get_field('tipo_lavoro').choices).get(tipo_lavoro, ''), pezzo) if x)
         if not (macchina and testo and foto):
-            messages.error(request, 'Scrivi cosa hai fatto e aggiungi almeno una foto.')
+            messages.error(request, 'Scegli cosa hai fatto e aggiungi almeno una foto.')
         else:
             try:
                 video = mn.controlla_video(request.FILES.get('video'))
-                i = mn.registra_lavoro(request.user, macchina, testo, foto, ore, _pezzi_usati(request))
+                i = mn.registra_lavoro(request.user, macchina, testo, foto, ore, _pezzi_usati(request), tipo_lavoro, pezzo)
                 mn.dopo_il_lavoro(request.user, i, _collaboratori(request), (request.POST.get('resta') or '').strip()[:1000], video)
             except (ValueError, OSError):
                 messages.error(request, 'Una delle foto o il video non sono validi (video: massimo 50 MB).')
@@ -194,6 +198,7 @@ def segnala(request):
     contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', ''),
                 'lavoro': lavoro, 'pre': 'lavoro=1&' if lavoro else ''}
     if macchina and lavoro:
+        contesto['tipi_lavoro'] = Intervento._meta.get_field('tipo_lavoro').choices
         compatibili = list(macchina.ricambi.all())
         contesto.update(ricambi=compatibili + [r for r in Ricambio.objects.all() if r not in compatibili], righe_pezzi=range(3),
                         **_scelta_colleghi(request.user))
@@ -272,6 +277,11 @@ def intervento(request, intervento_id):
                     messages.error(request, 'La foto o il video non sono validi (video: massimo 50 MB).')
                 else:
                     messages.success(request, 'Intervento chiuso. Grazie!')
+        elif azione == 'bravo' and i.stato == Intervento.Stato.COMPLETATA:
+            if not i.eventi.filter(autore=request.user, testo='👍').exists():
+                mn.evento(i, request.user, '👍', nota=True)
+                chi = [i.completata_da_id] + [d.utente_id for d in i.collaboratori.all()]
+                mn.avvisa(chi, request.user, f'👍 {mn.Intervento._nome(request.user)}', f'{i.macchina.nome}: bel lavoro!', mn.url_intervento(i))
         elif azione == 'nota':
             testo = (request.POST.get('testo') or '').strip()
             if testo:
@@ -288,6 +298,7 @@ def intervento(request, intervento_id):
         'righe_pezzi': range(3),
         **_scelta_colleghi(request.user),
         'eventi': i.eventi.select_related('autore', 'autore__dipendente'),
+        'bravi': [e.autore for e in i.eventi.filter(testo='👍').select_related('autore__dipendente')],
         'ordini': i.ordini.select_related('ricambio'),
     })
 

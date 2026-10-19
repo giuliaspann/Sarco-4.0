@@ -24,9 +24,12 @@
   {% if lavoro %}
   <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
     <input type="hidden" name="macchina" value="{{ macchina.pk }}"><input type="hidden" name="lavoro" value="1">
-    <label>Cosa hai fatto
-      <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="Es. sostituzione griglie vaglio zig zag n3 1240 f8">{{ descrizione }}</textarea>
-    </label>
+    <p class="mn-sottotitolo">Cosa hai fatto</p>
+    <div class="scegli">
+      {% for v, n in tipi_lavoro %}<label><input type="radio" name="tipo_lavoro" value="{{ v }}" {% if forloop.first %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}
+    </div>
+    <input type="text" name="pezzo" maxlength="100" placeholder="Quale pezzo (es. rete vaglio)" class="mn-campo">
+    <textarea name="descrizione" rows="2" maxlength="1000" placeholder="Note (es. griglie zig zag n3 1240 f8)" class="mn-campo">{{ descrizione }}</textarea>
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" multiple data-riduci required>
       <span>📷 Foto</span>

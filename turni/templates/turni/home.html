@@ -56,6 +56,13 @@
     <b>Le mie richieste</b><small>{% if nav_da_rispondere %}Un collega aspetta risposta{% else %}Stato di cambi e ferie{% endif %}</small>
   </a>
 
+  {% if registra_lavoro %}
+  <a class="home-tasto tasto-lavoro" href="{% url 'turni:segnala' %}?lavoro=1">
+    <span class="home-icona">✅</span>
+    <b>Lavoro fatto</b>
+  </a>
+  {% endif %}
+
   <a class="home-tasto" href="{% url 'turni:manutenzione' %}">
     {% if nav_manutenzione %}<i class="home-badge">{{ nav_manutenzione }}</i>{% endif %}
     <span class="home-icona">🛠️</span>

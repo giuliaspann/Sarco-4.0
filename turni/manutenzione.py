@@ -399,7 +399,7 @@ def puo_registrare_lavoro(utente):
     return e_resp(utente) or e_manutentore(utente) or e_capoturno_oggi(utente)
 
 
-def registra_lavoro(utente, macchina, testo, foto, ore, pezzi):
+def registra_lavoro(utente, macchina, testo, foto, ore, pezzi, tipo_lavoro='', pezzo=''):
     """Ripristino o sostituzione già fatti: si registrano direttamente come intervento chiuso, con le foto."""
     adesso = timezone.now()
     dip = dipendente_di(utente)
@@ -407,6 +407,7 @@ def registra_lavoro(utente, macchina, testo, foto, ore, pezzi):
         macchina=macchina, tipo=Intervento.Tipo.LAVORO, descrizione=testo, lavoro_svolto=testo,
         stato=Intervento.Stato.COMPLETATA, segnalata_da=utente, segnalata_il=adesso, iniziata_il=adesso,
         completata_il=adesso, completata_da=utente, assegnata_a=dip, ore_lavoro=ore,
+        tipo_lavoro=tipo_lavoro, pezzo=pezzo,
     )
     compresse = [comprimi_foto(f) for f in foto[:MAX_FOTO_LAVORO]]
     i.foto_riparazione.save('lavoro.jpg', compresse[0], save=False)

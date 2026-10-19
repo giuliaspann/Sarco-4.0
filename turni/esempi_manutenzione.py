@@ -31,6 +31,7 @@ MACCHINE = [
     ('SEG-SPEC', 'Specchi parabolici', 'SEGNALETICA', 'Specchi', 'PIAZZALE', '', ''),
     ('SEG-CUM', 'Cartelli dei cumuli', 'SEGNALETICA', 'Cartelli', 'PIAZZALE', '', ''),
     ('SEG-IMP1', 'Segnaletica Impianto 1', 'SEGNALETICA', 'Cartelli', 'IMP1', '', ''),
+    ('LAB-VAG', 'Vaglio da laboratorio', 'IMPIANTO', 'Vaglio', 'ANALISI', '', ''),
     ('SAB-IDR', 'Idrociclone lavaggio sabbia', 'IMPIANTO', 'Lavaggio', 'SABBIA', 'CDE', ''),
     ('SAB-VAG', 'Vaglio vibrante sabbia', 'IMPIANTO', 'Vaglio', 'SABBIA', '', ''),
     ('SAB-NAS', 'Nastro stoccaggio sabbia', 'IMPIANTO', 'Nastro', 'SABBIA', '', '650 mm'),

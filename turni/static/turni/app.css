@@ -1312,3 +1312,9 @@ tr.pr-alto { background: #fee2e2; }
 .mn-form input[type=text][name=altro_0], .mn-form input[name=descrizione] { width: 100%; box-sizing: border-box; margin-bottom: 12px; }
 .menu { z-index: 50; }
 .mn-form input[type=datetime-local], .mn-form input[type=date] { min-height: 48px; padding: 10px 12px; border-radius: 12px; font-size: 1rem; }
+
+.mn-campo { width: 100%; box-sizing: border-box; margin: 0 0 12px; }
+.mn-bravo { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.mn-bravo button { min-height: 44px; padding: 0 16px; border-radius: 99px; border: 1px solid var(--bordo); background: var(--carta); font: inherit; font-weight: 700; color: var(--testo); }
+.mn-bravo button.fatto { background: var(--primario-chiaro); border-color: var(--primario); }
+.mn-bravo small { color: var(--tenue); font-size: .8rem; }

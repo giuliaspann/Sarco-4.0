@@ -691,6 +691,7 @@ class Luogo(models.TextChoices):
     METALLI = 'METALLI', 'Metalli'
     SABBIA = 'SABBIA', 'Sabbia'
     MEZZI = 'MEZZI', 'Mezzi interni'
+    ANALISI = 'ANALISI', 'Laboratorio analisi'
     ESTERNI = 'ESTERNI', 'Mezzi esterni'
 
 
@@ -778,6 +779,11 @@ class Intervento(models.Model):
     # quando farlo (es. "domani mattina") e se va portato fuori (officina o fornitore esterno)
     da_fare_il = models.DateField('da fare il', null=True, blank=True)
     collaboratori = models.ManyToManyField('Dipendente', blank=True, related_name='interventi_in_squadra')
+    tipo_lavoro = models.CharField(max_length=12, blank=True, choices=[
+        ('RIPARAZIONE', 'Riparazione'), ('SOSTITUZIONE', 'Sostituzione'), ('PEZZO', 'Pezzo sistemato'),
+        ('MONTAGGIO', 'Montaggio'), ('CONTROLLO', 'Controllo'),
+    ])
+    pezzo = models.CharField('quale pezzo', max_length=100, blank=True)
     video = models.FileField(upload_to='manutenzione/video/%Y/%m/', blank=True)
     officina_esterna = models.CharField('riparazione esterna presso', max_length=80, blank=True)
     piano = models.ForeignKey('ManutenzioneProgrammata', null=True, blank=True, on_delete=models.SET_NULL, related_name='interventi')
@@ -830,6 +836,14 @@ class Intervento(models.Model):
         if self.completata_da_id:
             return self._nome(self.completata_da)
         return self.assegnata_a.nome_breve if self.assegnata_a_id and self.stato == self.Stato.COMPLETATA else ''
+
+    @property
+    def titolo_lavoro(self):
+        """Per i lavori registrati: "Pezzo sistemato · Rete vaglio"."""
+        parti = [self.get_tipo_lavoro_display()] if self.tipo_lavoro else []
+        if self.pezzo:
+            parti.append(self.pezzo)
+        return ' · '.join(parti)
 
     @property
     def squadra(self):
