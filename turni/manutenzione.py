@@ -396,7 +396,8 @@ MAX_FOTO_LAVORO = 12
 
 
 def puo_registrare_lavoro(utente):
-    return e_resp(utente) or e_manutentore(utente) or e_capoturno_oggi(utente)
+    # per ora tutti i dipendenti (resta scritto chi l'ha registrata)
+    return utente.is_authenticated and (dipendente_di(utente) is not None or utente.is_staff)
 
 
 def registra_lavoro(utente, macchina, testo, foto, ore, pezzi, tipo_lavoro='', pezzo=''):

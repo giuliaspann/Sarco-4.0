@@ -238,7 +238,7 @@ class ManutenzioneTest(TestCase):
 
     def test_lavoro_fatto_senza_segnalazione(self):
         self.entra('operaio')
-        self.assertEqual(self.client.get(reverse('turni:segnala'), {'lavoro': '1'}).status_code, 403)
+        self.assertEqual(self.client.get(reverse('turni:segnala'), {'lavoro': '1'}).status_code, 200)  # per ora tutti
         self.entra('vito')
         r = self.client.get(reverse('turni:segnala'), {'lavoro': '1', 'gruppo': 'macchinari'})
         self.assertContains(r, 'lavoro=1&amp;gruppo=macchinari&luogo=IMP1')

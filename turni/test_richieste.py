@@ -48,10 +48,10 @@ class RichiesteTest(TestCase):
         return CambioTurno.objects.get()
 
     def test_percorso_completo(self):
-        # la pagina di scelta propone mercoledì come recupero
+        # il giorno di recupero non si propone più (chiesto di toglierlo)
         self.client.login(username='spano', password='123456')
         r = self.client.get(reverse('turni:nuovo_cambio'), {'giorno': self.MAR, 'collega': self.drame.pk})
-        self.assertContains(r, f'value="{self.MER:%Y-%m-%d}"')
+        self.assertNotContains(r, 'Giorno di recupero')
 
         cambio = self.chiedi()
         self.assertEqual(cambio.stato, CambioTurno.Stato.ATTESA_COLLEGA)

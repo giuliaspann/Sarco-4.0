@@ -1318,3 +1318,14 @@ tr.pr-alto { background: #fee2e2; }
 .mn-bravo button { min-height: 44px; padding: 0 16px; border-radius: 99px; border: 1px solid var(--bordo); background: var(--carta); font: inherit; font-weight: 700; color: var(--testo); }
 .mn-bravo button.fatto { background: var(--primario-chiaro); border-color: var(--primario); }
 .mn-bravo small { color: var(--tenue); font-size: .8rem; }
+.home-griglia:not(.home-due) .home-tasto .home-icona { grid-row: 1; }
+.home-griglia:not(.home-due) .home-tasto .home-icona { grid-row: 1 / 2 !important; }
+/* turni di tutti: caselle e scritte più grandi */
+.griglia-tutti { margin-left: -8px; margin-right: -8px; padding: 12px 6px; }
+.gt-riga { grid-template-columns: 76px repeat(7, minmax(0, 1fr)); gap: 3px; padding: 3px 2px; }
+.gt-nome { font-size: .84rem; }
+.gt-giorno { font-size: .72rem; }
+.gt-giorno b { font-size: .92rem; }
+.gt-cella { height: 38px; border-radius: 8px; font-size: .9rem; }
+.gt-cella.f-capo { font-size: .78rem; }
+@media (max-width: 360px) { .gt-riga { grid-template-columns: 68px repeat(7, minmax(0, 1fr)); } .gt-cella { font-size: .8rem; } }

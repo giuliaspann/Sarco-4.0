@@ -64,19 +64,6 @@
       </div>
     </div>
 
-    {% if recuperi %}
-    <section class="scheda">
-      <h3>Giorno di recupero (facoltativo)</h3>
-      <p class="tenue piccolo">Un altro giorno in cui vi scambiate al contrario.</p>
-      <ul class="scelte">
-        <li><label><input type="radio" name="giorno2" value="" checked> Nessuno, solo il {{ giorno|date:'j M' }}</label></li>
-        {% for r in recuperi %}
-          <li><label><input type="radio" name="giorno2" value="{{ r.giorno|date:'Y-m-d' }}">
-            <span>{{ r.giorno|date:'D j M' }}: tu {% include 'turni/_pillola.html' with t=r.mio %} → {% include 'turni/_pillola.html' with t=r.suo %}</span></label></li>
-        {% endfor %}
-      </ul>
-    </section>
-    {% endif %}
 
     <label class="cb-motivo">Motivo (facoltativo)<textarea name="motivo" rows="2" maxlength="300" placeholder="Es. visita medica"></textarea></label>
     {% if senza_account %}
