@@ -190,6 +190,7 @@ def miei_turni(request):
             'prec': inizio - timedelta(days=7),
             'succ': inizio + timedelta(days=7),
             'extra': extra_per(dip),
+            **__import__('turni.views_richieste', fromlist=['contesto_richieste']).contesto_richieste(dip),
         },
     )
 

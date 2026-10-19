@@ -82,7 +82,7 @@ class PermessiTest(TestCase):
         self.assertEqual(self.client.get(reverse('turni:pulizie_turno', args=[self.turno_a.pk])).status_code, 404)
         self.assertEqual(self.client.get(reverse('turni:foto', args=[self.pulizia_a.pk])).status_code, 403)
         self.assertEqual(self.client.get(reverse('turni:capoturno')).status_code, 403)
-        self.assertNotContains(self.client.get(reverse('turni:richieste')), 'riservato')
+        self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'riservato')
 
     def test_senza_accesso_si_va_al_login(self):
         for nome in ('home', 'miei_turni', 'squadra', 'settimana_tutti', 'pulizie', 'richieste', 'messaggi', 'chat_nuovi'):

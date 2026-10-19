@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -32,6 +33,7 @@ def _serve_dipendente(request):
 
 @login_required
 def richieste(request):
+    """Le richieste stanno nell'Area personale (sotto i turni): qui arrivano solo le risposte e gli annullamenti."""
     dip = _serve_dipendente(request)
     if request.method == 'POST':
         azione = request.POST.get('azione')
@@ -57,8 +59,11 @@ def richieste(request):
                 f.save()
         except svc.RichiestaNonValida as e:
             messages.error(request, str(e))
-        return redirect('turni:richieste')
+    return redirect(reverse('turni:miei_turni') + '#richieste')
 
+
+def contesto_richieste(dip):
+    """Cambi, ferie e avvisi della persona, per la parte "Richieste" dell'Area personale."""
     da_rispondere = [
         c
         for c in CambioTurno.objects.filter(collega=dip, stato=CambioTurno.Stato.ATTESA_COLLEGA).select_related(
@@ -76,16 +81,12 @@ def richieste(request):
     for c in cambi:
         c.altro = c.collega if c.richiedente_id == dip.pk else c.richiedente
         c.mio = c.richiedente_id == dip.pk
-    return render(
-        request,
-        'turni/richieste.html',
-        {
-            'da_rispondere': da_rispondere,
-            'cambi': cambi,
-            'ferie': dip.richieste_ferie.all()[:20],
-            'avvisi': dip.avvisi.all()[:10],
-        },
-    )
+    return {
+        'da_rispondere': da_rispondere,
+        'cambi': cambi,
+        'ferie': dip.richieste_ferie.all()[:20],
+        'avvisi': dip.avvisi.all()[:10],
+    }
 
 
 def _righe_cambio(cambio, punto_di_vista):

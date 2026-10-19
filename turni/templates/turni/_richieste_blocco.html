@@ -1,11 +1,3 @@
-{% extends 'turni/base.html' %}
-{% block titolo %}Richieste{% endblock %}
-{% block contenuto %}
-<div class="intestazione">
-  <p class="occhiello">Richieste</p>
-  <h1>Cosa ti serve?</h1>
-</div>
-
 <div class="home-griglia">
   <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}">
     <span class="home-icona">🔁</span><b>Cambio turno</b><small>Tocca il turno di un collega</small>
@@ -31,7 +23,7 @@
   </div>
   {% endfor %}
   {% if c.motivo %}<p class="rq-motivo">“{{ c.motivo }}”</p>{% endif %}
-  <form method="post" class="rq-bottoni">{% csrf_token %}
+  <form method="post" action="{% url 'turni:richieste' %}" class="rq-bottoni">{% csrf_token %}
     <input type="hidden" name="cambio" value="{{ c.pk }}">
     <button class="bottone pieno" name="azione" value="accetta">Accetto</button>
     <button class="bottone avviso-btn" name="azione" value="rifiuta">Rifiuto</button>
@@ -49,7 +41,7 @@
     <b>Cambio {% if c.mio %}con{% else %}da{% endif %} {{ c.altro.nome_breve }}</b>
     <small>{{ c.giorno1|date:'D j M'|capfirst }}{% if c.giorno2 %} e {{ c.giorno2|date:'D j M' }}{% endif %}{% if c.nota_ufficio %} · Ufficio: {{ c.nota_ufficio }}{% endif %}</small>
     {% if c.mio and c.in_corso and not c.scaduto %}
-    <form method="post">{% csrf_token %}<input type="hidden" name="cambio" value="{{ c.pk }}">
+    <form method="post" action="{% url 'turni:richieste' %}">{% csrf_token %}<input type="hidden" name="cambio" value="{{ c.pk }}">
       <button class="link-piccolo" name="azione" value="annulla_cambio" data-conferma="Annullare la richiesta di cambio?">Annulla richiesta</button></form>
     {% endif %}
   </span>
@@ -64,7 +56,7 @@
     <b>{{ f.get_tipo_display }} · {{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}</b>
     <small>Dal {{ f.dal|date:'j M' }} al {{ f.al|date:'j M Y' }}{% if f.nota_ufficio %} · Ufficio: {{ f.nota_ufficio }}{% endif %}</small>
     {% if f.stato == 'ATTESA' %}
-    <form method="post">{% csrf_token %}<input type="hidden" name="ferie" value="{{ f.pk }}">
+    <form method="post" action="{% url 'turni:richieste' %}">{% csrf_token %}<input type="hidden" name="ferie" value="{{ f.pk }}">
       <button class="link-piccolo" name="azione" value="annulla_ferie" data-conferma="Annullare la richiesta di ferie?">Annulla richiesta</button></form>
     {% endif %}
   </span>
@@ -86,4 +78,3 @@
 {% if not cambi and not ferie and not avvisi %}
   <div class="vuoto"><p>Non hai ancora fatto richieste.</p></div>
 {% endif %}
-{% endblock %}

@@ -115,7 +115,7 @@ class AvvisoTest(BaseTest):
         # un collega che non è capo turno quel giorno no
         self.client.login(username='spano', password='123456')
         self.assertEqual(self.client.get(reverse('turni:capoturno'), {'giorno': LUNEDI + timedelta(days=5)}).status_code, 403)
-        self.assertNotContains(self.client.get(reverse('turni:richieste')), 'febbre')
+        self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'febbre')
 
         # l'ufficio lo vede e lo segna come visto
         self.client.login(username='resp', password='x')

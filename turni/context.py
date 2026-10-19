@@ -29,6 +29,7 @@ def navigazione(request):
             collega=dip, stato=CambioTurno.Stato.ATTESA_COLLEGA, giorno1__gt=timezone.localdate()
         ).count()
         contesto['nav_extra'] = sum(1 for e in extra_per(dip) if not e.mia)
+        contesto['nav_area'] = contesto['nav_extra'] + contesto['nav_da_rispondere']
     if responsabile:
         contesto['nav_da_approvare'] = (
             CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_UFFICIO).count()

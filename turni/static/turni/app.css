@@ -1351,3 +1351,6 @@ tr.pr-alto { background: #fee2e2; }
 /* oggi e domani racchiusi in una cornice, staccati dai pulsanti */
 .home-due-turni { padding: 10px; margin-bottom: 22px; border: 2px solid #9db8d9; border-radius: 22px; background: #eef4fb; }
 @media (prefers-color-scheme: dark) { .home-due-turni { background: #10202b; border-color: #2c4a63; } }
+
+/* area personale: turni sopra, richieste sotto */
+.ap-sezione { margin: 26px 2px 10px; padding-top: 16px; border-top: 2px solid var(--bordo); font-size: 1.25rem; }

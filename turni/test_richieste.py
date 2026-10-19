@@ -68,7 +68,7 @@ class RichiesteTest(TestCase):
         self.assertEqual(r.status_code, 404)
 
         self.client.login(username='drame', password='123456')
-        self.assertContains(self.client.get(reverse('turni:richieste')), 'ti chiede un cambio')
+        self.assertContains(self.client.get(reverse('turni:miei_turni')), 'ti chiede un cambio')
         self.client.post(reverse('turni:richieste'), {'cambio': cambio.pk, 'azione': 'accetta'})
         cambio.refresh_from_db()
         self.assertEqual(cambio.stato, CambioTurno.Stato.ATTESA_UFFICIO)

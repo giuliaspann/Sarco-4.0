@@ -1,6 +1,7 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Turni{% endblock %}
+{% block titolo %}Area personale{% endblock %}
 {% block contenuto %}
+<p class="occhiello centrato">Area personale</p>
 <div class="naviga mese">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
   <h1 class="mt-titolo">Settimana {{ inizio|date:'W' }}<small>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</small></h1>
@@ -65,7 +66,6 @@
     {% if turno.orario %}<p class="orario">{{ turno.orario }}</p>{% endif %}
     {% if colleghi %}<p>Con: {% for c in colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
     <div class="azioni-giorno">
-      {% if scelto == oggi and turno.lavora %}<a class="bottone pieno" href="{% url 'turni:pulizie' %}">Pulizie di fine turno</a>{% endif %}
       {% if scelto > oggi %}<a class="bottone" href="{% url 'turni:nuovo_cambio' %}?giorno={{ scelto|date:'Y-m-d' }}">Chiedi cambio</a>{% endif %}
     </div>
   {% else %}
@@ -79,4 +79,7 @@
   <ul class="note">{% for n in note %}<li>{{ n.testo }}</li>{% endfor %}</ul>
 </section>
 {% endif %}
+
+<h2 class="ap-sezione" id="richieste">Richieste</h2>
+{% include 'turni/_richieste_blocco.html' %}
 {% endblock %}
