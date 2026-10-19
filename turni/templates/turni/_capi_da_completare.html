@@ -1,0 +1,7 @@
+{% for t in capi_da_completare %}
+<form method="post" action="{% url 'turni:fascia_capo' %}" class="ct-chiedi">{% csrf_token %}
+  <input type="hidden" name="turno" value="{{ t.pk }}"><input type="hidden" name="dopo" value="{{ request.get_full_path }}">
+  <p>{% if mostra_nome %}<b>{{ t.dipendente.nome_breve }}</b> · {% endif %}{{ t.data|date:'l j F'|capfirst }}{% if not mostra_nome %}: sei capo turno{% endif %}{% if t.nome_postazione %} · {{ t.nome_postazione }}{% endif %}<br><small>In quale turno?</small></p>
+  <div class="ct-scelte">{% for v, nome in fasce_capo %}<button name="fascia" value="{{ v }}">{{ nome }}</button>{% endfor %}</div>
+</form>
+{% endfor %}

@@ -14,6 +14,8 @@
   {% if domani %}<span class="home-domani">Domani: {% include 'turni/_pillola.html' with t=domani %}{% if domani.orario %} <span class="orario">{{ domani.orario }}</span>{% endif %}</span>{% endif %}
 </a>
 
+{% include 'turni/_capi_da_completare.html' %}
+
 {% for e in extra %}
 <a class="home-extra" href="{% url 'turni:miei_turni' %}">
   <b>{% if e.ruolo %}Cercasi {{ e.get_ruolo_display|lower }}{% else %}Cercasi volontari{% endif %}</b> · {{ e.data|date:'l j'|capfirst }} {% include 'turni/_pillola.html' with t=e %} <span>Rispondi ›</span>
@@ -21,7 +23,7 @@
 {% endfor %}
 
 {# Il pallino rosso in alto a destra = c'è qualcosa da fare o da leggere, come sulle app dell'iPhone #}
-<div class="home-griglia">
+<div class="home-griglia home-due">
   <a class="home-tasto" href="{% url 'turni:miei_turni' %}">
     {% if extra %}<i class="home-badge">{{ extra|length }}</i>{% endif %}
     <span class="home-icona">📅</span>

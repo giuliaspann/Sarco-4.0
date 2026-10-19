@@ -15,6 +15,7 @@ urlpatterns = [
     path('pulizie/', views.pulizie, name='pulizie'),
     path('pulizie/<int:turno_id>/', views.pulizie, name='pulizie_turno'),
     path('capoturno/', views.capoturno, name='capoturno'),
+    path('capoturno/fascia/', views.fascia_capo, name='fascia_capo'),
     path('foto/<int:pulizia_id>/', views.foto, name='foto'),
     path('richieste/', views_richieste.richieste, name='richieste'),
     path('richieste/cambio/', views_richieste.nuovo_cambio, name='nuovo_cambio'),

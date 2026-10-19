@@ -2,8 +2,8 @@
 {% block titolo %}Cambio turno{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  {% if collega %}<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro collega</a>
-  {% elif mio %}<a class="tasto-indietro" href="?"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro giorno</a>
+  {% if collega %}<a class="tasto-indietro" href="{% url 'turni:settimana_tutti' %}?settimana={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Turni di tutti</a>
+  {% elif mio %}<a class="tasto-indietro" href="{% url 'turni:settimana_tutti' %}?settimana={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Turni di tutti</a>
   {% else %}<a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Richieste</a>{% endif %}
   <h1>Cambio turno</h1>
   <ol class="sg-passi tre">

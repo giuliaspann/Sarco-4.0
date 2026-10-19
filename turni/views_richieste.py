@@ -124,6 +124,9 @@ def nuovo_cambio(request):
 
     contesto = {'giorno': giorno, 'collega': collega}
 
+    if giorno is None and collega is None:
+        # si parte sempre dalla griglia "Turni di tutti": si tocca il turno del collega
+        return redirect('turni:settimana_tutti')
     if giorno is None or giorno <= oggi:
         # 1. scelta del giorno
         contesto['miei'] = dip.turni.filter(data__gt=oggi, settimana__pubblicata=True).order_by('data')[:21]
@@ -195,6 +198,8 @@ def nuove_ferie(request):
 
 @login_required
 def ufficio_richieste(request):
+    from .views import FASCE_CAPO, capi_da_completare
+
     if not svc.e_responsabile(request.user):
         raise PermissionDenied
     if request.method == 'POST':
@@ -242,6 +247,7 @@ def ufficio_richieste(request):
         request,
         'turni/ufficio_richieste.html',
         {
+            'capi_da_completare': capi_da_completare(request.user), 'fasce_capo': FASCE_CAPO, 'mostra_nome': True,
             'avvisi': avvisi,
             'cambi': cambi,
             'ferie': ferie,

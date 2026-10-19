@@ -3,7 +3,7 @@
 {% block contenuto %}
 <div class="intestazione">
   <a class="tasto-indietro" href="{% url 'turni:interventi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Interventi</a>
-  <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% else %}Guasto{% endif %} #{{ i.pk }}</p>
+  <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% elif i.tipo == 'LAVORO' %}Lavoro fatto{% else %}Guasto{% endif %} #{{ i.pk }}</p>
   <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona }} {{ i.macchina.nome }}</a></h1>
   <div class="mn-etichette">
     <span class="stato-chip {{ i.classe_stato }}">{{ i.etichetta_stato }}</span>
@@ -14,9 +14,9 @@
 </div>
 
 <section class="scheda">
-  <p class="mn-descrizione">{{ i.descrizione|linebreaksbr }}</p>
+  {% if i.tipo != 'LAVORO' %}<p class="mn-descrizione">{{ i.descrizione|linebreaksbr }}</p>{% endif %}
   <dl class="mn-chi-scheda">
-    <div><dt>📣 Segnalato da</dt><dd>{{ i.chi_ha_segnalato|default:'—' }} <small>{{ i.segnalata_il|date:'D j M, H:i' }}</small></dd></div>
+    {% if i.tipo != 'LAVORO' %}<div><dt>📣 Segnalato da</dt><dd>{{ i.chi_ha_segnalato|default:'—' }} <small>{{ i.segnalata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
     {% if i.approvata_da %}<div><dt>👍 Approvato da</dt><dd>{{ i.chi_ha_approvato }} <small>{{ i.approvata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
     {% if i.assegnata_a and i.stato != 'COMPLETATA' %}<div><dt>🔧 Se ne occupa</dt><dd>{{ i.assegnata_a.nome_breve }}</dd></div>{% endif %}
     {% if i.stato == 'COMPLETATA' %}<div><dt>✅ Sistemato da</dt><dd>{{ i.chi_ha_sistemato }} <small>{{ i.completata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
@@ -24,7 +24,8 @@
   {% if i.foto_guasto or i.foto_riparazione %}
   <div class="mn-foto-coppia">
     {% if i.foto_guasto %}<figure><img src="{% url 'turni:foto_mn' 'guasto' i.pk %}" alt="Foto del guasto" loading="lazy"><figcaption>Prima</figcaption></figure>{% endif %}
-    {% if i.foto_riparazione %}<figure><img src="{% url 'turni:foto_mn' 'riparazione' i.pk %}" alt="Foto dopo la riparazione" loading="lazy"><figcaption>Dopo</figcaption></figure>{% endif %}
+    {% if i.foto_riparazione %}<figure><img src="{% url 'turni:foto_mn' 'riparazione' i.pk %}" alt="Foto dopo la riparazione" loading="lazy"><figcaption>{% if i.tipo == 'LAVORO' %}Foto{% else %}Dopo{% endif %}</figcaption></figure>{% endif %}
+    {% for f in i.altre_foto.all %}<figure><img src="{% url 'turni:foto_mn' 'altra' f.pk %}" alt="Foto del lavoro" loading="lazy"></figure>{% endfor %}
   </div>
   {% endif %}
   {% if i.stato == 'COMPLETATA' %}

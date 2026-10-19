@@ -18,7 +18,7 @@ from PIL import Image, ImageOps
 
 from . import push
 from .models import (
-    Dipendente, EventoIntervento, FermoImpianto, Intervento, ManutenzioneProgrammata, Mansione, OrdineRicambio, Turno,
+    Dipendente, EventoIntervento, FermoImpianto, FotoIntervento, Intervento, ManutenzioneProgrammata, Mansione, OrdineRicambio, Turno,
 )
 from .pulizie import MAX_FOTO
 
@@ -357,3 +357,36 @@ def fai_ripartire(utente, f, quando, sistemazione, foto=None):
         evento(f.intervento, utente, f'{f.get_impianto_display()} ripartito dopo {f.durata}' + (f': {sistemazione}' if sistemazione else ''))
     avvisa(chi_avvisare_fermo() + [f.segnalato_da_id], utente, f'✅ {f.get_impianto_display()} ripartito',
            f'Fermo durato {f.durata}' + (f' · {sistemazione}' if sistemazione else ''), reverse('turni:fermo', args=[f.pk]))
+
+
+# ---------------------------------------------------------------- lavoro fatto senza segnalazione
+
+MAX_FOTO_LAVORO = 6
+
+
+def puo_registrare_lavoro(utente):
+    return e_resp(utente) or e_manutentore(utente) or e_capoturno_oggi(utente)
+
+
+def registra_lavoro(utente, macchina, testo, foto, ore, pezzi):
+    """Ripristino o sostituzione già fatti: si registrano direttamente come intervento chiuso, con le foto."""
+    adesso = timezone.now()
+    dip = dipendente_di(utente)
+    i = Intervento(
+        macchina=macchina, tipo=Intervento.Tipo.LAVORO, descrizione=testo, lavoro_svolto=testo,
+        stato=Intervento.Stato.COMPLETATA, segnalata_da=utente, segnalata_il=adesso, iniziata_il=adesso,
+        completata_il=adesso, completata_da=utente, assegnata_a=dip, ore_lavoro=ore,
+    )
+    compresse = [comprimi_foto(f) for f in foto[:MAX_FOTO_LAVORO]]
+    i.foto_riparazione.save('lavoro.jpg', compresse[0], save=False)
+    i.save()
+    for c in compresse[1:]:
+        FotoIntervento.objects.create(intervento=i, foto=c)
+    for ricambio, descrizione, quantita in pezzi:
+        i.ricambi_usati.create(ricambio=ricambio, descrizione=descrizione, quantita=quantita)
+        if ricambio:
+            ricambio.scorta -= quantita
+            ricambio.save(update_fields=['scorta'])
+    evento(i, utente, 'Lavoro registrato')
+    avvisa(responsabili(), utente, f'✅ {macchina.nome}', testo, url_intervento(i))
+    return i

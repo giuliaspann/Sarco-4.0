@@ -19,16 +19,15 @@ async function riduci(file) {
 
 document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
   input.addEventListener('change', async () => {
-    const file = input.files[0];
+    const files = [...input.files].slice(0, 6);
     const etichetta = input.closest('label');
-    if (!file) return;
-    etichetta.querySelector('span').textContent = 'Foto pronta';
+    if (!files.length) return;
+    etichetta.querySelector('span').textContent = files.length > 1 ? files.length + ' foto pronte' : 'Foto pronta';
     etichetta.classList.add('pronta');
     if (!window.DataTransfer || !window.createImageBitmap) return;
     try {
-      const ridotta = await riduci(file);
       const dt = new DataTransfer();
-      dt.items.add(ridotta);
+      for (const f of files) dt.items.add(await riduci(f));
       input.files = dt.files;
     } catch (e) {
       // se il browser non ci riesce, mando l'originale: lo riduce il server

@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from . import importa
-from .models import Dipendente, ElementoPulizia, Fascia, Postazione, Pulizia, RegolaPulizia, Turno
+from .models import Dipendente, ElementoPulizia, Fascia, Postazione, Pulizia, RegolaPulizia, Settimana, Turno
 
 LUNEDI = date(2026, 10, 12)
 
@@ -297,7 +297,7 @@ class CalendarioTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI, LUNEDI + timedelta(days=7)])
         sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
-        self.assertEqual(sigle, ['N', 'N', 'N', 'N', 'G', 'G', '1T'])
+        self.assertEqual(sigle, ['N', 'CTN', 'N', 'N', 'G', 'G', '1T'])  # il capo turno di notte è CTN
         posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
         self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2', '', 'ANAL.', 'MUL.', 'PALA'])
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
@@ -389,7 +389,7 @@ class TurniProvaTest(TestCase):
         self.assertEqual(len(turni), 14)
         lunedi = timezone.localdate() - timedelta(days=timezone.localdate().weekday())
         self.assertEqual(turni[0].data, lunedi)
-        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT', 'N', 'G', 'R', 'F'})
+        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT1', 'N', 'G', 'R', 'F'})
         # una seconda volta non fa nulla
         self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
         self.assertEqual(dip.turni.count(), 14)
@@ -473,3 +473,41 @@ class MansioniTest(TestCase):
         self.assertEqual(d.mansioni_display, 'Autista e Manutentore')
         self.assertTrue(svc.ha_mansione(d, 'MANUTENTORE'))
         self.assertFalse(svc.ha_mansione(d, 'PALISTA'))
+
+
+class CapoTurnoSenzaFasciaTest(TestCase):
+    """Il file scrive solo «CAPO T. - Imp. 1»: la fascia la indica il capo turno o l'ufficio, e resta anche ricaricando."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.u = User.objects.create_user('capo', password='123456')
+        self.dip = Dipendente.objects.create(nome='VALENTI MARIO', utente=self.u)
+        oggi = timezone.localdate()
+        self.lunedi = oggi - timedelta(days=oggi.weekday())
+        s = Settimana.objects.create(lunedi=self.lunedi)
+        self.t = Turno.objects.create(settimana=s, dipendente=self.dip, data=oggi + timedelta(days=1), codice='CAPO T. - Imp. 1',
+                                      fascia=Fascia.ALTRO, postazione='IMP1', capoturno=True)
+
+    def test_capo_indica_la_fascia_e_l_import_la_mantiene(self):
+        self.assertEqual(self.t.sigla, 'CT?')
+        self.client.login(username='capo', password='123456')
+        self.assertContains(self.client.get(reverse('turni:home')), 'In quale turno?')
+        self.client.post(reverse('turni:fascia_capo'), {'turno': self.t.pk, 'fascia': Fascia.MATTINA, 'dopo': 'https://evil.example/'})
+        self.t.refresh_from_db()
+        self.assertEqual((self.t.fascia, self.t.sigla, self.t.classe_fascia), (Fascia.MATTINA, 'CT1', 'f-capo'))
+        # un collega qualsiasi non può cambiarlo
+        altro = get_user_model().objects.create_user('altro', password='123456')
+        Dipendente.objects.create(nome='ROSSI MARCO', utente=altro)
+        self.client.login(username='altro', password='123456')
+        r = self.client.post(reverse('turni:fascia_capo'), {'turno': self.t.pk, 'fascia': Fascia.NOTTE})
+        self.assertEqual(r.status_code, 404)
+        # ricaricando il file senza fascia, resta il 1° turno
+        giorni = ['RIP'] * 7
+        giorni[self.t.data.weekday()] = 'CAPO T. - Imp. 1'
+        importa.salva_settimana(importa.leggi_file(file_turni([('VALENTI MARIO', *giorni)]), self.lunedi))
+        self.t.refresh_from_db()
+        self.assertEqual(self.t.fascia, Fascia.MATTINA)
+
+    def test_cambio_turno_parte_dalla_griglia(self):
+        self.client.login(username='capo', password='123456')
+        self.assertRedirects(self.client.get(reverse('turni:nuovo_cambio')), reverse('turni:settimana_tutti'))

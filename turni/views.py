@@ -13,6 +13,7 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
@@ -84,6 +85,8 @@ def home(request):
             'turno': turno,
             'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
             'pulizie_da_fare': pulizie_da_fare,
+            'capi_da_completare': capi_da_completare(request.user).filter(dipendente=dip)[:7],
+            'fasce_capo': FASCE_CAPO,
             'extra': [e for e in extra_per(dip) if not e.mia],
             'bacheca_nuovi': non_letti_bacheca(request.user),
             'chat_nuovi': non_letti_chat(request.user),
@@ -93,6 +96,36 @@ def home(request):
             else 0,
         },
     )
+
+
+FASCE_CAPO = [(Fascia.MATTINA, '1° turno'), (Fascia.POMERIGGIO, '2° turno'), (Fascia.NOTTE, 'Notte')]
+
+
+def capi_da_completare(utente):
+    """Turni da capo turno senza fascia che questa persona può completare (i suoi, o tutti per l'ufficio)."""
+    from .richieste import e_responsabile
+
+    qs = Turno.objects.filter(capoturno=True, fascia=Fascia.ALTRO, data__gte=timezone.localdate() - timedelta(days=1),
+                              settimana__pubblicata=True).select_related('dipendente').order_by('data', 'dipendente__nome')
+    if utente.is_staff or e_responsabile(utente):
+        return qs
+    dip = getattr(utente, 'dipendente', None)
+    return qs.filter(dipendente=dip) if dip else qs.none()
+
+
+@login_required
+@require_POST
+def fascia_capo(request):
+    turno = get_object_or_404(capi_da_completare(request.user), pk=request.POST.get('turno'))
+    fascia = request.POST.get('fascia')
+    if fascia in dict(FASCE_CAPO):
+        turno.fascia = fascia
+        turno.save(update_fields=['fascia'])
+        messages.success(request, f'{turno.dipendente.nome_breve} {turno.data:%d/%m}: capo turno {dict(FASCE_CAPO)[fascia]}.')
+    dopo = request.POST.get('dopo') or ''
+    if not url_has_allowed_host_and_scheme(dopo, allowed_hosts={request.get_host()}):
+        dopo = reverse('turni:home')
+    return redirect(dopo)
 
 
 @login_required
@@ -476,7 +509,7 @@ def anteprima(request):
 # Calendario inventato per far vedere l'app a chi non ha turni (es. un dipendente fittizio):
 # due settimane con tutti i tipi di turno, così compaiono tutti i colori.
 TURNI_PROVA = [
-    ('1T- Imp. 1', '1T- Imp. 1', 'RIP', '2T-Imp. 2', '2T-Imp. 2', 'CAPO T. - Imp. 1', 'RIP'),
+    ('1T- Imp. 1', '1T- Imp. 1', 'RIP', '2T-Imp. 2', '2T-Imp. 2', 'CAPO T. 1T - Imp. 1', 'RIP'),
     ('N/palista', 'N/palista', 'RIP', 'G-Analisi', 'FERIE', 'FERIE', 'RIP'),
 ]
 

@@ -39,5 +39,7 @@ def navigazione(request):
         contesto['nav_volontari'] = Disponibilita.objects.filter(
             confermata=False, extra__chiusa=False, extra__data__gte=timezone.localdate()
         ).count()
-        contesto['nav_ufficio_badge'] = contesto['nav_da_approvare'] + contesto['nav_volontari']
+        from .views import capi_da_completare
+
+        contesto['nav_ufficio_badge'] = contesto['nav_da_approvare'] + contesto['nav_volontari'] + capi_da_completare(user).count()
     return contesto

@@ -3,6 +3,14 @@
 {% block contenuto %}
 <div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
 
+{% if capi_da_completare %}
+<section class="scheda">
+  <h2>Capi turno da completare</h2>
+  <p class="tenue piccolo">Nel file c'è scritto solo «CAPO T.»: indica in quale turno. Basta un tocco, resta anche se ricarichi il file.</p>
+  {% include 'turni/_capi_da_completare.html' %}
+</section>
+{% endif %}
+
 {% if avvisi %}
 <section class="scheda avvisi">
   <h2>Avvisi di assenza</h2>

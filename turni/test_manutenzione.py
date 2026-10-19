@@ -236,6 +236,28 @@ class ManutenzioneTest(TestCase):
         self.entra('capo')
         self.assertEqual(self.client.get(reverse('turni:home')).context['nav_manutenzione'], prima + 1)
 
+    def test_lavoro_fatto_senza_segnalazione(self):
+        self.entra('operaio')
+        self.assertEqual(self.client.get(reverse('turni:segnala'), {'lavoro': '1'}).status_code, 403)
+        self.entra('vito')
+        r = self.client.get(reverse('turni:segnala'), {'lavoro': '1', 'gruppo': 'macchinari'})
+        self.assertContains(r, 'lavoro=1&amp;luogo=IMP1')
+        vaglio = Macchina.objects.get(codice='IMP1-VAG')
+        cinghia = Ricambio.objects.get(nome='Cinghia trapezoidale B68')
+        scorta = cinghia.scorta
+        self.client.post(reverse('turni:segnala'), {
+            'lavoro': '1', 'macchina': vaglio.pk, 'descrizione': 'Sostituzione griglie vaglio', 'foto': [foto(), foto()],
+            'pezzo_0': cinghia.pk, 'quantita_0': '1',
+        })
+        i = Intervento.objects.get(macchina=vaglio, tipo='LAVORO')
+        cinghia.refresh_from_db()
+        self.assertEqual((i.stato, i.chi_ha_sistemato, i.etichetta_stato, cinghia.scorta), ('COMPLETATA', 'Torre Vito', 'Fatto', scorta - 1))
+        self.assertTrue(i.foto_riparazione)
+        self.assertEqual(i.altre_foto.count(), 1)
+        f = i.altre_foto.get()
+        self.assertEqual(self.client.get(reverse('turni:foto_mn', args=['altra', f.pk])).status_code, 200)
+        self.assertContains(self.client.get(reverse('turni:macchina', args=[vaglio.pk])), 'Sostituzione griglie vaglio')
+
     def test_togli_esempi(self):
         self.assertGreater(togli(), 0)
         self.assertFalse(Macchina.objects.exists())

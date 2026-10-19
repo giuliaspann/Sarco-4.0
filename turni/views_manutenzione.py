@@ -16,7 +16,7 @@ from django.utils import timezone
 from . import manutenzione as mn
 from .accessi import qr_svg
 from .esempi_manutenzione import togli
-from .models import FermoImpianto, Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
+from .models import FermoImpianto, FotoIntervento, Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
 
 # prima si sceglie il gruppo, poi il luogo
 GRUPPI = [
@@ -91,6 +91,7 @@ def manutenzione(request):
         badge_ordini += OrdineRicambio.objects.filter(stato=S.APPROVATO).count()
     entro = timezone.localdate() + timedelta(days=3)
     return render(request, 'turni/mn_home.html', {
+        'registra_lavoro': mn.puo_registrare_lavoro(request.user),
         'fermi_in_corso': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
         'aperti': aperti.count(),
         'ferme': aperti.filter(macchina_ferma=True, tipo=Intervento.Tipo.GUASTO).count(),
@@ -137,7 +138,29 @@ def segnala(request):
     macchine = Macchina.objects.filter(attiva=True)
     scelta = request.POST.get('macchina') or request.GET.get('macchina') or ''
     macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
-    if request.method == 'POST':
+    lavoro = (request.POST.get('lavoro') or request.GET.get('lavoro')) == '1'
+    if lavoro and not mn.puo_registrare_lavoro(request.user):
+        raise PermissionDenied
+    if request.method == 'POST' and lavoro:
+        testo = (request.POST.get('descrizione') or '').strip()[:1000]
+        foto = request.FILES.getlist('foto')
+        try:
+            ore = Decimal(request.POST.get('ore') or '0').quantize(Decimal('0.1')) or None
+            if ore is not None and not (0 < ore < 1000):
+                raise InvalidOperation
+        except InvalidOperation:
+            ore = None
+        if not (macchina and testo and foto):
+            messages.error(request, 'Scrivi cosa hai fatto e aggiungi almeno una foto.')
+        else:
+            try:
+                i = mn.registra_lavoro(request.user, macchina, testo, foto, ore, _pezzi_usati(request))
+            except (ValueError, OSError):
+                messages.error(request, 'Una delle foto non è valida: riprova.')
+            else:
+                messages.success(request, 'Lavoro registrato nello storico della macchina.')
+                return redirect('turni:intervento', i.pk)
+    elif request.method == 'POST':
         descrizione = (request.POST.get('descrizione') or '').strip()[:1000]
         foto = request.FILES.get('foto')
         if not (macchina and descrizione and foto):
@@ -150,7 +173,11 @@ def segnala(request):
             else:
                 messages.success(request, 'Segnalazione inviata: il capo turno e il responsabile manutenzione la ricevono subito.')
                 return redirect('turni:intervento', i.pk)
-    contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', '')}
+    contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', ''),
+                'lavoro': lavoro, 'pre': 'lavoro=1&' if lavoro else ''}
+    if macchina and lavoro:
+        compatibili = list(macchina.ricambi.all())
+        contesto.update(ricambi=compatibili + [r for r in Ricambio.objects.all() if r not in compatibili], righe_pezzi=range(3))
     if macchina is None:
         luogo = _luogo(request)
         q = (request.GET.get('q') or '').strip()
@@ -254,6 +281,8 @@ def _pezzi_usati(request):
 def foto(request, tipo, oggetto_id):
     if tipo == 'ordine':
         f = get_object_or_404(OrdineRicambio, pk=oggetto_id).foto
+    elif tipo == 'altra':
+        f = get_object_or_404(FotoIntervento, pk=oggetto_id).foto
     elif tipo in ('guasto', 'riparazione'):
         f = getattr(get_object_or_404(Intervento, pk=oggetto_id), f'foto_{tipo}')
     else:

@@ -197,7 +197,16 @@ class Turno(models.Model):
             parti.append('Capo turno')
         if self.fascia != Fascia.ALTRO:
             parti.append(self.get_fascia_display())
+        elif self.capoturno:
+            parti.append('turno da indicare')
         return ' · '.join(parti) or self.codice
+
+    # il file a volte scrive solo "CAPO T. - Imp. 1": la fascia la indica poi il capo turno o l'ufficio
+    SIGLE_CAPO = {Fascia.MATTINA: 'CT1', Fascia.POMERIGGIO: 'CT2', Fascia.NOTTE: 'CTN', Fascia.GIORNALIERO: 'CTG'}
+
+    @property
+    def capo_da_completare(self):
+        return self.capoturno and self.fascia == Fascia.ALTRO
 
     @property
     def nome_postazione(self):
@@ -225,7 +234,9 @@ class Turno(models.Model):
 
     @property
     def sigla(self):
-        """Sigla corta per la casella del calendario."""
+        """Sigla corta per la casella del calendario. Capo turno: CT1, CT2, CTN (CT? se manca la fascia)."""
+        if self.capoturno and self.lavora:
+            return self.SIGLE_CAPO.get(self.fascia, 'CT?')
         return self.SIGLE.get(self.fascia, '?')
 
     SIGLE_POSTAZIONE = {
@@ -252,6 +263,8 @@ class Turno(models.Model):
     @property
     def classe_fascia(self):
         """Colore della casella del calendario: dipende solo dalla fascia, per leggerlo a colpo d'occhio."""
+        if self.capoturno and self.lavora:
+            return 'f-capo'
         return {
             Fascia.MATTINA: 'f-mattina',
             Fascia.POMERIGGIO: 'f-pomeriggio',
@@ -724,6 +737,7 @@ class Intervento(models.Model):
     class Tipo(models.TextChoices):
         GUASTO = 'GUASTO', 'Guasto'
         PROGRAMMATA = 'PROGRAMMATA', 'Programmata'
+        LAVORO = 'LAVORO', 'Lavoro fatto'  # ripristino o sostituzione registrato senza segnalazione
 
     class Priorita(models.IntegerChoices):
         BASSA = 1, 'Bassa'
@@ -782,6 +796,8 @@ class Intervento(models.Model):
 
     @property
     def etichetta_stato(self):
+        if self.tipo == self.Tipo.LAVORO:
+            return 'Fatto'
         if self.stato == self.Stato.SEGNALATA and self.tipo == self.Tipo.PROGRAMMATA:
             return 'Da assegnare'
         return self.get_stato_display()
@@ -816,6 +832,17 @@ class Intervento(models.Model):
             return 0
         fine = self.completata_il or timezone.now()
         return round((fine - self.segnalata_il).total_seconds() / 3600, 1)
+
+
+class FotoIntervento(models.Model):
+    """Foto in più di un intervento (es. prima, durante e dopo una sostituzione)."""
+
+    intervento = models.ForeignKey(Intervento, on_delete=models.CASCADE, related_name='altre_foto')
+    foto = models.ImageField(upload_to='manutenzione/%Y/%m/')
+    caricata_il = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['pk']
 
 
 class EventoIntervento(models.Model):

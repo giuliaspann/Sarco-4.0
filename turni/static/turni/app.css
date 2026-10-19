@@ -1163,3 +1163,49 @@ details.scheda summary { cursor: pointer; }
   .fermo-cause input:checked + span { background: #3a1414; color: #fecaca; }
 }
 .mn-foto span { white-space: normal; text-align: center; }
+
+/* Home: di nuovo due colonne */
+.home-griglia.home-due { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.home-due .home-tasto, .home-due > .home-tasto:last-child:nth-child(odd) {
+  display: flex; flex-direction: column; gap: 3px; min-height: 112px; padding: 14px 12px; border-radius: var(--raggio); box-shadow: none; }
+.home-due > .home-tasto:last-child:nth-child(odd) { grid-column: span 2; min-height: 0; }
+.home-due .home-tasto .home-icona { width: 44px; height: 44px; margin: 0 0 6px; border-radius: 12px; font-size: 1.45rem; background: var(--altro); }
+.home-due .home-tasto b { font-size: 1rem; }
+.home-due .home-tasto small { font-size: .78rem; }
+.home-due .home-tasto .home-badge { top: -7px; right: -7px; transform: none; border-color: var(--sfondo); }
+.home-due .home-tasto::after { content: none; }
+/* capo turno: in quale turno? */
+.ct-chiedi { margin: 0 0 10px; padding: 12px 14px; border-radius: 16px; background: #e0f2fe; border: 2px solid #38bdf8; }
+.ct-chiedi p { margin: 0 0 8px; font-weight: 700; }
+.ct-chiedi small { font-weight: 400; color: var(--tenue); }
+.ct-scelte { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ct-scelte button { min-height: 46px; border-radius: 12px; border: 1px solid #7dd3fc; background: #fff; color: var(--testo); font: inherit; font-weight: 700; font-size: .9rem; }
+.ct-scelte button:active { transform: scale(.97); }
+.scheda .ct-chiedi { background: var(--carta); border-width: 1px; }
+.gt-cella.f-capo { letter-spacing: -.04em; }
+@media (prefers-color-scheme: dark) { .ct-chiedi { background: #0c2a3a; } .ct-scelte button { background: var(--carta); } }
+/* fermo impianto: colori tenui */
+.tasto-fermo { background: #fff4e5; border-color: #fcd9a8; }
+.tasto-fermo .home-icona { background: #ffe4c2; }
+.tasto-fermo b { color: #9a3412; }
+.tasto-fermo small { color: #9a3412; opacity: .85; }
+.tasto-fermo::after { color: #d97706; }
+.fermo-banner { background: #fdecea; color: #8c1d18; border: 1px solid #f5c2bd; box-shadow: none; }
+.fermo-luce { background: #dc2626; }
+.fermo-banner em { background: #b3261e; color: #fff; }
+.bottone-fermo { background: #c2410c; border-color: #c2410c; }
+@media (prefers-color-scheme: dark) {
+  .tasto-fermo { background: #33240f; border-color: #7c2d12; }
+  .tasto-fermo .home-icona { background: #4a2e10; }
+  .tasto-fermo b, .tasto-fermo small { color: #fed7aa; }
+  .fermo-banner { background: #3a1414; color: #fecaca; border-color: #7f1d1d; }
+}
+
+.tasto-lavoro { background: #eefaf0; border-color: #cfeed6; }
+.tasto-lavoro .home-icona { background: #d9fdd3; }
+.tasto-lavoro b { color: #166534; }
+@media (prefers-color-scheme: dark) { .tasto-lavoro { background: #12301d; border-color: #166534; } .tasto-lavoro b { color: #bbf7d0; } .tasto-lavoro .home-icona { background: #14532d; } }
+.home-due .home-tasto b, .home-due .home-tasto small { align-self: stretch; text-align: left; }
+.home-due .home-tasto .home-icona { align-self: flex-start; }
+.legenda-due-righe { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.legenda-due-righe { justify-content: flex-start; }

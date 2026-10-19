@@ -259,13 +259,17 @@ def salva_settimana(letta, utente=None, nome_file=''):
                     if (vecchio.fascia, vecchio.postazione, vecchio.capoturno) != (t.fascia, t.postazione, t.capoturno):
                         mantenuti.append(f'{dip.nome_breve} {giorno:%d/%m}: {vecchio.descrizione} ({vecchio.nota_modifica})')
                     continue
+                fascia = t.fascia
+                if (vecchio and t.capoturno and fascia == Fascia.ALTRO and vecchio.capoturno
+                        and vecchio.postazione == t.postazione and vecchio.fascia != Fascia.ALTRO):
+                    fascia = vecchio.fascia  # capo turno: fascia già indicata nell'app
                 nuovo, _ = Turno.objects.update_or_create(
                     dipendente=dip,
                     data=giorno,
                     defaults={
                         'settimana': settimana,
                         'codice': t.codice,
-                        'fascia': t.fascia,
+                        'fascia': fascia,
                         'postazione': t.postazione,
                         'capoturno': t.capoturno,
                     },

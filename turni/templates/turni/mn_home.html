@@ -24,6 +24,13 @@
     <b>Segnala un guasto</b><small>Foto e due righe, arriva subito</small>
   </a>
 
+  {% if registra_lavoro %}
+  <a class="home-tasto tasto-lavoro" href="{% url 'turni:segnala' %}?lavoro=1">
+    <span class="home-icona">✅</span>
+    <b>Registra un lavoro fatto</b><small>Ripristino o sostituzione, con le foto</small>
+  </a>
+  {% endif %}
+
   <a class="home-tasto" href="{% url 'turni:interventi' %}">
     {% if badge_interventi %}<i class="home-badge">{{ badge_interventi }}</i>{% endif %}
     <span class="home-icona">🛠️</span>
