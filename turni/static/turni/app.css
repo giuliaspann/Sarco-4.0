@@ -1484,3 +1484,13 @@ a.pl-riga { color: inherit; text-decoration: none; }
 .mt-legenda { margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--bordo); border-radius: 14px; background: var(--carta); }
 .mt-legenda .legenda { margin: 0; justify-content: center; gap: 8px 14px; font-size: .88rem; }
 .mt-legenda .legenda i { font-size: .8rem; min-width: 26px; }
+
+/* oggi e pulizie di fine turno dello stesso colore; domani più neutro */
+.home-giorno.home-giorno-oggi { background: #fff6ec; border: 2px solid #ff7a00; border-top-width: 6px; }
+.home-due-turni .home-giorno:not(.home-giorno-oggi) { background: var(--carta); opacity: .85; }
+@media (prefers-color-scheme: dark) { .home-giorno.home-giorno-oggi { background: #33240f; } }
+/* legenda sotto il calendario, su due righe */
+.calendario + .mt-legenda { margin: 10px 0 12px; }
+.mt-legenda { display: grid; gap: 6px; padding: 10px 8px; }
+.mt-legenda .legenda { flex-wrap: nowrap; justify-content: center; gap: 10px; font-size: .8rem; white-space: nowrap; }
+.mt-legenda .legenda i { font-size: .72rem; min-width: 22px; }

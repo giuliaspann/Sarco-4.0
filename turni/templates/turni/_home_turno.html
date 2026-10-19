@@ -1,4 +1,4 @@
-<a class="home-giorno {% if t %}{{ t.classe_fascia }}-bordo{% endif %}" href="{% url 'turni:miei_turni' %}">
+<a class="home-giorno{% if evidenzia %} home-giorno-oggi{% endif %} {% if t %}{{ t.classe_fascia }}-bordo{% endif %}" href="{% url 'turni:miei_turni' %}">
   <span class="home-etichetta">{{ etichetta }}</span>
   {% if t %}
     <span class="pillola {{ t.classe_fascia }}">{{ t.descrizione_fascia }}</span>

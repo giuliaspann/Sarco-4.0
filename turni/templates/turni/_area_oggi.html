@@ -11,7 +11,7 @@
 {% endif %}
 
 <div class="home-due-turni">
-  {% include 'turni/_home_turno.html' with t=turno_oggi etichetta=turno_etichetta %}
+  {% include 'turni/_home_turno.html' with t=turno_oggi etichetta=turno_etichetta evidenzia=True %}
   {% include 'turni/_home_turno.html' with t=domani etichetta='Domani' %}
 </div>
 
