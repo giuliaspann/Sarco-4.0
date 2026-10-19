@@ -332,11 +332,11 @@ class HomeTest(TestCase):
         self.client.login(username='drame', password='123456')
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
-        # Home snella: solo le cose da fare al volo (il resto è nella barra in basso)
-        for testo in ('Segnala guasto o programma manutenzione', 'Segnala fermo impianto', 'Avviso assenza', 'Turni di tutti', 'Con chi lavoro oggi', 'Bacheca'):
+        # niente più Home: si apre l'Area personale con oggi/domani e i due tasti
+        for testo in ('Turni della settimana', 'Con chi lavoro oggi', 'home-due-turni', 'I miei turni', 'Richieste'):
             self.assertContains(r, testo)
-        self.assertNotContains(r, 'Cambio turno')
-        self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))  # martedì: 2T Imp. 2
+        self.assertNotContains(r, '>Home<')
+        self.assertEqual(r.context['turno_oggi'].data, LUNEDI + timedelta(days=1))  # martedì: 2T Imp. 2
         self.assertEqual(r.context['domani'].fascia, Fascia.RIPOSO)
         self.assertNotContains(r, 'Verifica pulizie')  # non è capo turno
 

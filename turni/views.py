@@ -70,37 +70,32 @@ def home(request):
             return redirect('turni:importa')
         return redirect('turni:miei_turni')
 
+    # la Home non c'è più: si apre direttamente l'Area personale
+    return miei_turni(request)
+
+
+def contesto_oggi(request, dip):
+    """Parte alta dell'Area personale: turno di oggi e domani, presa visione, avvisi del giorno."""
     turno = turno_attuale(dip)
     pulizie_da_fare = None
     if turno and turno.lavora:
         genera_pulizie(turno)
         pulizie_da_fare = turno.pulizie.exclude(stato__in=[Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA]).count()
     domani = timezone.localdate() + timedelta(days=1)
-    return render(
-        request,
-        'turni/home.html',
-        {
-            'dip': dip,
-            'oggi': timezone.localdate(),
-            'turno': turno,
-            'turno_etichetta': 'Stanotte' if turno and turno.data != timezone.localdate() else 'Oggi',
-            'da_vedere': dip.modifiche_turno.filter(vista_il__isnull=True),
-            'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
-            'pulizie_da_fare': pulizie_da_fare,
-            'capi_da_completare': capi_da_completare(request.user).filter(dipendente=dip)[:7],
-            'registra_lavoro': __import__('turni.manutenzione', fromlist=['puo_registrare_lavoro']).puo_registrare_lavoro(request.user),
-            'vede_produzione': __import__('turni.views_produzione', fromlist=['puo_vedere']).puo_vedere(request.user),
-            'mezzi_non_disponibili': __import__('turni.manutenzione', fromlist=['avvisi_per']).avvisi_per(request.user),
-            'fasce_capo': FASCE_CAPO,
-            'extra': [e for e in extra_per(dip) if not e.mia],
-            'bacheca_nuovi': non_letti_bacheca(request.user),
-            'chat_nuovi': non_letti_chat(request.user),
-            # pulizie segnate "fatte" che aspettano il controllo del capo turno
-            'da_verificare': Pulizia.objects.filter(turno__data=timezone.localdate(), stato=Pulizia.Stato.FATTA).count()
-            if e_capoturno(request.user, timezone.localdate())
-            else 0,
-        },
-    )
+    return {
+        'turno_oggi': turno,
+        'turno_etichetta': 'Stanotte' if turno and turno.data != timezone.localdate() else 'Oggi',
+        'da_vedere': dip.modifiche_turno.filter(vista_il__isnull=True),
+        'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
+        'pulizie_da_fare': pulizie_da_fare,
+        'capi_da_completare': capi_da_completare(request.user).filter(dipendente=dip)[:7],
+        'mezzi_non_disponibili': __import__('turni.manutenzione', fromlist=['avvisi_per']).avvisi_per(request.user),
+        'fasce_capo': FASCE_CAPO,
+        # pulizie segnate "fatte" che aspettano il controllo del capo turno
+        'da_verificare': Pulizia.objects.filter(turno__data=timezone.localdate(), stato=Pulizia.Stato.FATTA).count()
+        if e_capoturno(request.user, timezone.localdate())
+        else 0,
+    }
 
 
 FASCE_CAPO = [(Fascia.MATTINA, '1° turno'), (Fascia.POMERIGGIO, '2° turno'), (Fascia.NOTTE, 'Notte')]
@@ -191,6 +186,7 @@ def miei_turni(request):
             'prec': inizio - timedelta(days=7),
             'succ': inizio + timedelta(days=7),
             'extra': extra_per(dip),
+            **contesto_oggi(request, dip),
             **__import__('turni.views_richieste', fromlist=['contesto_richieste']).contesto_richieste(dip),
         },
     )

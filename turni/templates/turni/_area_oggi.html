@@ -1,6 +1,3 @@
-{% extends 'turni/base.html' %}
-{% block titolo %}Home{% endblock %}
-{% block contenuto %}
 <p class="home-saluto">Buongiorno, <b>{{ dip.nome_breve }}</b></p>
 
 {% if da_vedere %}
@@ -14,7 +11,7 @@
 {% endif %}
 
 <div class="home-due-turni">
-  {% include 'turni/_home_turno.html' with t=turno etichetta=turno_etichetta %}
+  {% include 'turni/_home_turno.html' with t=turno_oggi etichetta=turno_etichetta %}
   {% include 'turni/_home_turno.html' with t=domani etichetta='Domani' %}
 </div>
 
@@ -24,49 +21,20 @@
 {% else %}<b>{{ c.macchina.nome }}{% if c.macchina.modello %} {{ c.macchina.modello }}{% endif %} non disponibile</b><small>{% if c.attiva_ora %}Fino a {{ c.al|date:'D j M H:i' }}{% else %}Dal {{ c.dal|date:'D j M H:i' }} al {{ c.al|date:'D j M H:i' }}{% endif %}</small></span></a>
 {% endif %}{% endfor %}
 
-{% for e in extra %}
-<a class="home-extra" href="{% url 'turni:miei_turni' %}">
-  <b>{% if e.ruolo %}Cercasi {{ e.get_ruolo_display|lower }}{% else %}Cercasi volontari{% endif %}</b> · {{ e.data|date:'l j'|capfirst }} {% include 'turni/_pillola.html' with t=e %} <span>Rispondi ›</span>
-</a>
-{% endfor %}
-
 {# Il pallino rosso in alto a destra = c'è qualcosa da fare o da leggere, come sulle app dell'iPhone #}
 {% if pulizie_da_fare %}
 <a class="home-extra" href="{% url 'turni:pulizie' %}"><b>🧹 Pulizie di fine turno</b> · {{ pulizie_da_fare }} da fare <span>Apri ›</span></a>
 {% endif %}
 
 <div class="home-griglia home-due">
-  <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
-    <span class="home-icona">⚠️</span>
-    <b>Segnala guasto o programma manutenzione</b>
-  </a>
-
-  <a class="home-tasto tasto-fermo" href="{% url 'turni:nuovo_fermo' %}">
-    <span class="home-icona">⛔</span>
-    <b>Segnala fermo impianto</b>
-  </a>
-
-  <a class="home-tasto" href="{% url 'turni:nuovo_avviso' %}">
-    <span class="home-icona">📝</span>
-    <b>Avviso assenza</b>
-  </a>
-
   <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}">
     <span class="home-icona">🗂️</span>
-    <b>Turni di tutti</b>
+    <b>Turni della settimana</b>
   </a>
-
   <a class="home-tasto" href="{% url 'turni:squadra' %}">
     <span class="home-icona">👥</span>
     <b>Con chi lavoro oggi</b>
   </a>
-
-  <a class="home-tasto" href="{% url 'turni:messaggi' %}?vista=bacheca">
-    {% if bacheca_nuovi %}<i class="home-badge">{{ bacheca_nuovi }}</i>{% endif %}
-    <span class="home-icona">📢</span>
-    <b>Bacheca</b>
-  </a>
-
   {% if nav_capoturno %}
   <a class="home-tasto" href="{% url 'turni:capoturno' %}">
     {% if da_verificare %}<i class="home-badge">{{ da_verificare }}</i>{% endif %}
@@ -74,6 +42,4 @@
     <b>Verifica pulizie</b>
   </a>
   {% endif %}
-
 </div>
-{% endblock %}

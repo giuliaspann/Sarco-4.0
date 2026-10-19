@@ -42,9 +42,7 @@
   {% if user.is_authenticated %}
   <nav class="menu">
     {% if nav_dipendente %}
-      <a href="{% url 'turni:home' %}" class="{% if request.resolver_match.url_name == 'home' %}attivo{% endif %}">
-        <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Home</a>
-      <a href="{% url 'turni:miei_turni' %}" class="{% if request.resolver_match.url_name == 'miei_turni' or '/richieste/' in request.path and '/ufficio/' not in request.path %}attivo{% endif %}">
+      <a href="{% url 'turni:miei_turni' %}" class="{% if request.resolver_match.url_name == 'miei_turni' or request.resolver_match.url_name == 'home' or '/richieste/' in request.path and '/ufficio/' not in request.path %}attivo{% endif %}">
         <span class="icona-badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.5 4-7 8-7s7.2 2.5 8 7"/></svg>{% if nav_area %}<b class="badge">{{ nav_area }}</b>{% endif %}</span><span class="menu-lungo">Area personale</span></a>
     {% endif %}
     {% if not nav_dipendente %}

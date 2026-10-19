@@ -1,7 +1,8 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Area personale{% endblock %}
 {% block contenuto %}
-<p class="occhiello centrato">Area personale</p>
+{% include 'turni/_area_oggi.html' %}
+<h2 class="ap-sezione">I miei turni</h2>
 <div class="naviga mese">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
   <h1 class="mt-titolo">Settimana {{ inizio|date:'W' }}<small>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</small></h1>
