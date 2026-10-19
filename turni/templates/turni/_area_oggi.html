@@ -26,20 +26,3 @@
 <a class="home-extra" href="{% url 'turni:pulizie' %}"><b>🧹 Pulizie di fine turno</b> · {{ pulizie_da_fare }} da fare <span>Apri ›</span></a>
 {% endif %}
 
-<div class="home-griglia home-due">
-  <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}">
-    <span class="home-icona">🗂️</span>
-    <b>Turni della settimana</b>
-  </a>
-  <a class="home-tasto" href="{% url 'turni:squadra' %}">
-    <span class="home-icona">👥</span>
-    <b>Con chi lavoro oggi</b>
-  </a>
-  {% if nav_capoturno %}
-  <a class="home-tasto" href="{% url 'turni:capoturno' %}">
-    {% if da_verificare %}<i class="home-badge">{{ da_verificare }}</i>{% endif %}
-    <span class="home-icona">✅</span>
-    <b>Verifica pulizie</b>
-  </a>
-  {% endif %}
-</div>
