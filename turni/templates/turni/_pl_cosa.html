@@ -1,0 +1,10 @@
+<p class="mn-sottotitolo">Dove?</p>
+<div class="scegli pl-luoghi">
+  {% for v, nome, icona, voci in luoghi %}<label><input type="radio" name="luogo" value="{{ v }}" required><span>{{ icona }} {{ nome }}</span></label>{% endfor %}
+</div>
+<p class="mn-sottotitolo pl-cosa-titolo">{{ domanda }}</p>
+{% for v, nome, icona, voci in luoghi %}
+<div class="scegli lista pl-voci" data-luogo="{{ v }}">
+  {% for valore, n, i in voci %}<label><input type="radio" name="cosa" value="{{ valore }}" required><span>{{ i }} {{ n }}</span></label>{% endfor %}
+</div>
+{% endfor %}

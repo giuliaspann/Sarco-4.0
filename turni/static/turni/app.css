@@ -1499,3 +1499,34 @@ a.pl-riga { color: inherit; text-decoration: none; }
 .as-allegato { display: flex; align-items: center; justify-content: space-between; margin: 0 16px 8px; padding: 8px 12px; border-radius: 12px; background: #e8f5e3; font-weight: 700; color: #1d5c0c; }
 .as-allegato[hidden] { display: none; }
 .as-allegato button { border: 0; background: none; font-size: 1.1rem; color: inherit; }
+
+/* iPhone: i campi data/ora hanno una larghezza minima tutta loro e sbordano dai riquadri. Qui li si costringe dentro. */
+input[type=date], input[type=time], input[type=datetime-local] {
+  -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0;
+  box-sizing: border-box; min-height: 50px; text-align: left;
+}
+input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-and-time-value,
+input[type=datetime-local]::-webkit-date-and-time-value { text-align: left; min-height: 1.4em; }
+label:has(> input[type=date]), label:has(> input[type=time]), label:has(> input[type=datetime-local]) { display: block; min-width: 0; max-width: 100%; }
+.scheda, form, .riga-form > * , .orari > * { min-width: 0; }
+input, textarea, select { max-width: 100%; box-sizing: border-box; }
+
+/* "Con chi lavoro oggi": i capi turno nel loro impianto, in azzurro */
+.persone li.capo { background: #e0f2fe; border-radius: 10px; padding-left: 8px; padding-right: 8px; }
+@media (prefers-color-scheme: dark) { .persone li.capo { background: #0c3a52; } }
+/* pulizie: dove e cosa */
+.pl-voci { display: none; }
+.pl-cosa-titolo { display: none; }
+form:has(input[name=luogo]:checked) .pl-cosa-titolo { display: block; }
+.pl-gruppo-chi { margin: 12px 0 6px; font-weight: 800; color: var(--tenue); font-size: .9rem; text-transform: uppercase; letter-spacing: .03em; }
+.scegli label.pl-capo span { background: #e0f2fe; }
+
+/* (gli <style> nella pagina sono bloccati dalla sicurezza: le regole per luogo stanno qui) */
+form:has(input[name=luogo][value="IMP1"]:checked) .pl-voci[data-luogo="IMP1"] { display: grid; }
+form:has(input[name=luogo][value="IMP2"]:checked) .pl-voci[data-luogo="IMP2"] { display: grid; }
+form:has(input[name=luogo][value="PIAZZALE"]:checked) .pl-voci[data-luogo="PIAZZALE"] { display: grid; }
+form:has(input[name=luogo][value="METALLI"]:checked) .pl-voci[data-luogo="METALLI"] { display: grid; }
+form:has(input[name=luogo][value="SABBIA"]:checked) .pl-voci[data-luogo="SABBIA"] { display: grid; }
+form:has(input[name=luogo][value="MEZZI"]:checked) .pl-voci[data-luogo="MEZZI"] { display: grid; }
+form:has(input[name=luogo][value="ANALISI"]:checked) .pl-voci[data-luogo="ANALISI"] { display: grid; }
+form:has(input[name=luogo][value="ALTRO"]:checked) .pl-voci[data-luogo="ALTRO"] { display: grid; }

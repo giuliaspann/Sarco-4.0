@@ -48,6 +48,10 @@ class StatisticheTest(TestCase):
         csp = next(v for v in a.valori() if v['campo'] == 'csp')
         self.assertEqual(csp['gt'], Decimal('40'))  # 0,8 g su 20 kg = 40 g/t, oltre il limite di 25
         self.assertEqual([v['nome'] for v in a.fuori_limite], ['CSP'])
+        from .models import Annuncio
+        avviso = Annuncio.objects.get()  # fuori specifica: avviso importante in bacheca
+        self.assertTrue(avviso.importante)
+        self.assertIn('CSP 40 g/t (limite 25)', avviso.testo)
         self.assertTrue(a.foto)
         r = self.client.get(reverse('turni:report') + '?giorni=7')
         self.assertContains(r, 'Bianco')

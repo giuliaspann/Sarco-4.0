@@ -1,12 +1,12 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}{% if lavoro %}Completamento manutenzione{% elif programma %}Programma manutenzione{% else %}Segnala guasto o programma manutenzione{% endif %}{% endblock %}
+{% block titolo %}{% if lavoro %}Completamento manutenzione{% elif programma %}Programma manutenzione{% else %}Segnala guasto o richiedi manutenzione{% endif %}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
   {% if macchina %}<a class="tasto-indietro" href="?{{ pre }}luogo={{ macchina.luogo }}{% if macchina.tipo == 'SEGNALETICA' %}&gruppo=segnaletica{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia macchina</a>
   {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}{% if gruppo_luogo %}gruppo={{ gruppo_luogo }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia luogo</a>
   {% elif gruppo %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Indietro</a>
   {% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
-  <h1>{% if lavoro %}Segnala completamento manutenzione{% elif programma %}Programma manutenzione{% else %}Segnala guasto o programma manutenzione{% endif %}</h1>
+  <h1>{% if lavoro %}Segnala risoluzione guasto o completamento manutenzione{% elif programma %}Programma manutenzione{% else %}Segnala guasto o richiedi manutenzione{% endif %}</h1>
   <ol class="sg-passi">
     <li class="{% if not macchina and not luogo and not q and not gruppo %}ora{% else %}fatto{% endif %}">Cosa</li>
     <li class="{% if gruppo %}ora{% elif macchina or luogo or q %}fatto{% endif %}">Dove</li>
@@ -55,13 +55,15 @@
   <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
     <input type="hidden" name="macchina" value="{{ macchina.pk }}">
     <label>Cosa succede
-      <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="Es. perde olio dal cilindro del braccio">{{ descrizione }}</textarea>
+      <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="{% if macchina.tipo == 'SEGNALETICA' %}Es. cartello caduto, scritta illeggibile{% else %}Es. perde olio dal cilindro del braccio{% endif %}">{{ descrizione }}</textarea>
     </label>
+    {% if macchina.tipo != 'SEGNALETICA' %}
     <fieldset class="mn-sino">
       <legend>La macchina è ferma?</legend>
       <label><input type="radio" name="ferma" value="1"><span>🔴 Sì, è ferma</span></label>
       <label><input type="radio" name="ferma" value="0" checked><span>🟠 No, funziona ancora</span></label>
     </fieldset>
+    {% endif %}
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
       <span>📷 Foto</span>
@@ -102,7 +104,7 @@
     {% if lavoro %}<input type="hidden" name="lavoro" value="1">{% endif %}
     <input type="search" name="q" placeholder="Sai già il nome o il codice? Cerca qui">
   </form>
-  <h2 class="rq-sezione">{% if lavoro %}Su cosa hai lavorato?{% else %}Cosa si è rotto?{% endif %}</h2>
+  <h2 class="rq-sezione">{% if lavoro %}Su cosa hai lavorato?{% else %}Oggetto del guasto o della manutenzione{% endif %}</h2>
   <div class="sg-gruppi">
     {% for g, nome, icona, n in gruppi %}
     <a href="?{{ pre }}gruppo={{ g }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} in elenco</small></a>

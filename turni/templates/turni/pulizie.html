@@ -67,10 +67,7 @@
   <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
   <div class="intestazione"><h1>Segnala completamento pulizia aggiuntiva</h1></div>
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
-    <p class="mn-sottotitolo">Cosa hai pulito?</p>
-    <div class="scegli lista">
-      {% for m in aggiungibili %}<label><input type="radio" name="elemento" value="{{ m.pk }}" required><span>{% if m.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ m.nome }}</span></label>{% endfor %}
-    </div>
+    {% include 'turni/_pl_cosa.html' with domanda='Cosa hai pulito?' %}
     <div class="pl-due-foto">
       <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Foto prima</span></label>
       <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto dopo</span></label>

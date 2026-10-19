@@ -55,6 +55,24 @@ def statistiche(request):
     })
 
 
+def avvisa_fuori_limite(a, utente):
+    """Analisi fuori specifica: avviso al responsabile e, per tutti, un avviso importante in bacheca."""
+    from . import push
+    from .models import Annuncio
+    from .views_messaggi import destinatari
+
+    fuori = a.fuori_limite
+    if not fuori:
+        return
+    testo = ', '.join(f"{v['nome']} {v['gt']:.0f} g/t (limite {v['limite']})" for v in fuori)
+    mn.avvisa(mn.responsabili(), utente, f'🧪 Fuori limite · {a}', testo, reverse('turni:analisi', args=[a.pk]))
+    turno = f' · {a.get_fascia_display()}' if a.fascia else ''
+    avviso = Annuncio.objects.create(
+        testo=f'🧪 Analisi fuori specifica: {a.get_campione_display()} del {a.data:%d/%m}{turno}' + (f' (#{a.numero})' if a.numero else '')
+        + f'. {testo}.', importante=True, autore=utente)
+    push.invia(destinatari(utente), 'Avviso importante', avviso.testo, reverse('turni:messaggi') + '?vista=bacheca')
+
+
 @login_required
 def analisi_nuova(request):
     _serve(request)
@@ -85,10 +103,7 @@ def analisi_nuova(request):
                     except (ValueError, OSError):
                         messages.error(request, 'La foto non è valida: analisi salvata senza foto.')
                 a.save()
-                fuori = a.fuori_limite
-                if fuori:
-                    testo = ', '.join(f"{v['nome']} {v['gt']:.0f} g/t (limite {v['limite']})" for v in fuori)
-                    mn.avvisa(mn.responsabili(), request.user, f'🧪 Fuori limite · {a}', testo, reverse('turni:analisi', args=[a.pk]))
+                avvisa_fuori_limite(a, request.user)
                 messages.success(request, 'Analisi salvata.')
                 return redirect('turni:analisi', a.pk)
     giorno, fascia = turno_corrente()

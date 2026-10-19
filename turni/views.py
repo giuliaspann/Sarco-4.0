@@ -20,7 +20,8 @@ from django.views.decorators.http import require_POST
 from . import accessi, importa
 from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
-from .pulizie import aggiungibili, genera_pulizie, in_turno_oggi, mezzi_aggiungibili, richiedi_pulizia, salva_foto, turno_attuale
+from .pulizie import (aggiungibili, elemento_da_scelta, genera_pulizie, in_turno_oggi, mezzi_aggiungibili, richiedi_pulizia,
+                      salva_foto, scelte_pulizia, turno_attuale)
 from .richieste import extra_per
 from .views_messaggi import non_letti_bacheca, non_letti_chat
 
@@ -280,16 +281,20 @@ def squadra(request):
     )
     lavorano = [t for t in turni if t.lavora]
     gruppi = []
-    # i capi turno senza fascia scritta vanno in cima
-    for fascia in [Fascia.ALTRO] + ORDINE_FASCE[:-1]:
+    # i capi turno stanno nel riquadro dell'impianto in cui lavorano (in azzurro); se nel file manca il turno
+    # (es. "CAPO T. - Imp. 1") finiscono nel 1° turno finché non lo indicano
+    posto = {p: i for i, p in enumerate(ORDINE_GRUPPI)}
+    fascia_di = lambda t: Fascia.MATTINA if t.fascia == Fascia.ALTRO else t.fascia
+    for fascia in ORDINE_FASCE[:-1]:
         della_fascia = sorted(
-            (t for t in lavorano if t.fascia == fascia), key=lambda t: (t.postazione == '', t.postazione, not t.capoturno)
+            (t for t in lavorano if fascia_di(t) == fascia),
+            key=lambda t: (t.postazione == '', posto.get(t.postazione, 99), not t.capoturno, t.dipendente.nome),
         )
         if della_fascia:
             sottogruppi = [
                 (k, list(v)) for k, v in groupby(della_fascia, key=lambda t: t.get_postazione_display() or 'Senza postazione')
             ]
-            gruppi.append((Fascia(fascia).label if fascia != Fascia.ALTRO else 'Capi turno', sottogruppi))
+            gruppi.append((Fascia(fascia).label, sottogruppi))
     assenti = [t for t in turni if not t.lavora]
     return render(
         request,
@@ -326,7 +331,7 @@ def pulizie(request, turno_id=None):
         colleghi = in_turno_oggi(escluso=dip)
         if request.method == 'POST':
             t = next((c for c in colleghi if str(c.pk) == request.POST.get('turno')), None)
-            el = ElementoPulizia.objects.filter(attivo=True, pk=request.POST.get('elemento')).first()
+            el = elemento_da_scelta(request.POST.get('cosa') or request.POST.get('elemento'))
             if not t or not el:
                 messages.error(request, 'Scegli chi e cosa.')
             else:
@@ -337,9 +342,7 @@ def pulizie(request, turno_id=None):
                 else:
                     messages.success(request, f'Pulizia chiesta a {t.dipendente.nome_breve}: {el.nome}.')
                     return redirect('turni:pulizie')
-        return render(request, 'turni/pulizie_richiedi.html', {
-            'colleghi': colleghi, 'elementi': ElementoPulizia.objects.filter(attivo=True).order_by('tipo', 'nome'),
-        })
+        return render(request, 'turni/pulizie_richiedi.html', {'colleghi': colleghi, 'luoghi': scelte_pulizia()})
 
     if turno is None or not turno.lavora:
         return render(request, 'turni/pulizie.html', {'turno': turno, 'recenti': recenti})
@@ -357,7 +360,10 @@ def pulizie(request, turno_id=None):
             Pulizia.objects.get_or_create(turno=turno, elemento=elemento, defaults={'aggiunta_da_operaio': True})
         elif azione == 'aggiuntiva':
             # pulizia in più, fatta di propria iniziativa: entra già come fatta, con le foto
-            elemento = get_object_or_404(aggiungibili(turno), pk=request.POST.get('elemento'))
+            elemento = elemento_da_scelta(request.POST.get('cosa') or request.POST.get('elemento'))
+            if not elemento or turno.pulizie.filter(elemento=elemento).exists():
+                messages.error(request, 'Scegli dove e cosa hai pulito (non una pulizia già nella tua lista).')
+                return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + '?fai=aggiuntiva')
             p = Pulizia(turno=turno, elemento=elemento, aggiunta_da_operaio=True)
             if not _foto_pulizia(request, p):
                 return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + '?fai=aggiuntiva')
@@ -417,7 +423,7 @@ def pulizie(request, turno_id=None):
             scelta = da_fare[0]  # una sola pulizia assegnata: si va dritti al modulo
         contesto['voce'] = scelta
     elif contesto['fai'] == 'aggiuntiva':
-        contesto['aggiungibili'] = aggiungibili(turno)
+        contesto['luoghi'] = scelte_pulizia(escludi=turno.pulizie.values_list('elemento_id', flat=True))
     return render(request, 'turni/pulizie.html', contesto)
 
 

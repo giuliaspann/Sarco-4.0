@@ -261,6 +261,10 @@ class Turno(models.Model):
         return self.SIGLE_POSTAZIONE.get(self.postazione, '') if self.lavora else ''
 
     @property
+    def classe_solo_fascia(self):
+        return Turno(fascia=Fascia.MATTINA if self.fascia == Fascia.ALTRO else self.fascia).classe_fascia
+
+    @property
     def classe_fascia(self):
         """Colore della casella del calendario: dipende solo dalla fascia, per leggerlo a colpo d'occhio."""
         if self.capoturno and self.lavora:
@@ -301,6 +305,7 @@ class ElementoPulizia(models.Model):
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
     istruzioni = models.TextField(blank=True, help_text="Cosa pulire e come: lo vede l'operaio nella checklist")
     attivo = models.BooleanField(default=True)
+    luogo = models.CharField(max_length=10, blank=True, help_text='Impianto 1, piazzale, mezzi… (come in Manutenzione)')
 
     class Meta:
         verbose_name = 'mezzo / zona da pulire'
@@ -763,7 +768,7 @@ class Macchina(models.Model):
     class Tipo(models.TextChoices):
         IMPIANTO = 'IMPIANTO', 'Macchinario / attrezzatura'
         MEZZO = 'MEZZO', 'Mezzo'
-        SEGNALETICA = 'SEGNALETICA', 'Inventario piazzale'
+        SEGNALETICA = 'SEGNALETICA', 'Segnaletica e Cartelli'
 
     codice = models.CharField(max_length=20, unique=True)
     nome = models.CharField(max_length=80)

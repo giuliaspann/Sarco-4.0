@@ -27,13 +27,13 @@
 
   <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
     <span class="home-icona">⚠️</span>
-    <b>Segnala guasto o programma manutenzione</b><small>Foto e due righe, arriva subito</small>
+    <b>Segnala guasto o richiedi manutenzione</b><small>Foto e due righe, arriva subito</small>
   </a>
 
   {% if registra_lavoro %}
   <a class="home-tasto tasto-lavoro" href="{% url 'turni:segnala' %}?lavoro=1">
     <span class="home-icona">✅</span>
-    <b>Segnala completamento manutenzione</b><small>Ripristino o sostituzione, con le foto</small>
+    <b>Segnala risoluzione guasto o completamento manutenzione</b><small>Ripristino o sostituzione, con le foto</small>
   </a>
   {% endif %}
 
@@ -64,7 +64,7 @@
 
   <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=segnaletica">
     <span class="home-icona">🪧</span>
-    <b>Inventario piazzale</b><small>Cartelli, specchi, cartelli dei cumuli</small>
+    <b>Segnaletica e Cartelli</b><small>Cartelli, specchi, cartelli dei cumuli</small>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:ricambi' %}">

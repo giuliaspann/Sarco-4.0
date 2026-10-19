@@ -17,15 +17,15 @@
 
 {% for fascia, sottogruppi in gruppi %}
 {% with primo=sottogruppi.0.1.0 %}
-<section class="scheda fascia-squadra {{ primo.classe_fascia }}-bordo">
-  <h2><span class="pillola pillola-titolo {{ primo.classe_fascia }}">{{ fascia }}</span></h2>
+<section class="scheda fascia-squadra {{ primo.classe_solo_fascia }}-bordo">
+  <h2><span class="pillola pillola-titolo {{ primo.classe_solo_fascia }}">{{ fascia }}</span></h2>
   {% for postazione, turni in sottogruppi %}
     <h3 class="titolo-posto"><span class="posto">{{ postazione }}</span></h3>
     <ul class="persone">
       {% for t in turni %}
-        <li class="{% if mio and t.dipendente_id == mio.pk %}io{% endif %}">
+        <li class="{% if mio and t.dipendente_id == mio.pk %}io{% endif %}{% if t.capoturno %} capo{% endif %}">
           {{ t.dipendente.nome_breve }}
-          {% if t.capoturno and t.fascia != 'ALTRO' %}<span class="pillola f-capo">Capo turno</span>{% endif %}
+          {% if t.capoturno %}<span class="pillola f-capo">Capo turno</span>{% endif %}
         </li>
       {% endfor %}
     </ul>

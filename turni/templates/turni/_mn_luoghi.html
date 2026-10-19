@@ -1,7 +1,7 @@
 {% if mostra_gruppi %}
 <div class="mn-gruppi">
   <a href="?" class="{% if not gruppo %}attivo{% endif %}">Tutti</a>
-  {% for g, nome, icona, _ in gruppi_filtro %}<a href="?gruppo={{ g }}" class="{% if gruppo == g %}attivo{% endif %}">{% if g == 'macchinari' %}Macchinari{% elif g == 'mezzi' %}Mezzi{% else %}Inventario{% endif %}</a>{% endfor %}
+  {% for g, nome, icona, _ in gruppi_filtro %}<a href="?gruppo={{ g }}" class="{% if gruppo == g %}attivo{% endif %}">{% if g == 'macchinari' %}Macchinari{% elif g == 'mezzi' %}Mezzi{% else %}Segnaletica{% endif %}</a>{% endfor %}
 </div>
 {% endif %}
 {% if sotto %}

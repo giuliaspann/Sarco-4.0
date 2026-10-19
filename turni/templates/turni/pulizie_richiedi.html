@@ -7,13 +7,14 @@
 <form method="post" class="scheda pl-modulo">{% csrf_token %}
   <input type="hidden" name="azione" value="richiedi">
   <p class="mn-sottotitolo">A chi?</p>
+  {% regroup colleghi by get_postazione_display as gruppi %}
+  {% for g in gruppi %}
+  <p class="pl-gruppo-chi">{{ g.grouper|default:'Altri' }}</p>
   <div class="scegli lista">
-    {% for t in colleghi %}<label><input type="radio" name="turno" value="{{ t.pk }}" required><span>{{ t.dipendente.nome_breve }} · {{ t.descrizione }}</span></label>{% endfor %}
+    {% for t in g.list %}<label class="{% if t.capoturno %}pl-capo{% endif %}"><input type="radio" name="turno" value="{{ t.pk }}" required><span>{{ t.dipendente.nome_breve }} · {{ t.descrizione_fascia }}{% if t.capoturno %} · Capo turno{% endif %}</span></label>{% endfor %}
   </div>
-  <p class="mn-sottotitolo">Cosa?</p>
-  <div class="scegli lista">
-    {% for m in elementi %}<label><input type="radio" name="elemento" value="{{ m.pk }}" required><span>{% if m.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ m.nome }}</span></label>{% endfor %}
-  </div>
+  {% endfor %}
+  {% include 'turni/_pl_cosa.html' with domanda='Cosa è da pulire?' %}
   <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
   <button class="bottone pieno piena-larghezza pl-invia">📣 Invia richiesta</button>
 </form>

@@ -534,7 +534,7 @@ def programma(utente, macchina, attivita, quando, ogni_giorni=0, istruzioni=''):
 
 
 def calendario_manutenzioni():
-    """Sotto "Segnala guasto o programma manutenzione": cosa è in arrivo e cosa è stato fatto da poco."""
+    """Sotto "Segnala guasto o richiedi manutenzione": cosa è in arrivo e cosa è stato fatto da poco."""
     oggi = timezone.localdate()
     prossime = []
     for p in ManutenzioneProgrammata.objects.filter(attiva=True, macchina__attiva=True).select_related('macchina'):

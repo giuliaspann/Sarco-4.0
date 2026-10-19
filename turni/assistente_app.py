@@ -478,10 +478,10 @@ def _e_analisi(d, u, foto):
     if foto:
         a.foto.save('analisi.jpg', foto, save=False)
     a.save()
-    if a.fuori_limite:
-        testo = ', '.join(f"{v['nome']} {v['gt']:.0f} g/t (limite {v['limite']})" for v in a.fuori_limite)
-        mn.avvisa(mn.responsabili(), u, f'🧪 Fuori limite · {a}', testo, reverse('turni:analisi', args=[a.pk]))
-    return 'Analisi salvata.'
+    from .views_statistiche import avvisa_fuori_limite
+
+    avvisa_fuori_limite(a, u)
+    return 'Analisi salvata.' + (' Fuori specifica: avviso in bacheca.' if a.fuori_limite else '')
 
 
 def _chat(u, nome):

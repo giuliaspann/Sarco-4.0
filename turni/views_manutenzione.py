@@ -22,7 +22,7 @@ from .models import Comunicazione, Dipendente, FermoImpianto, FotoComunicazione,
 GRUPPI = [
     ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA', 'ANALISI']),
     ('mezzi', 'Mezzi', '🚚', ['MEZZI', 'ESTERNI']),
-    ('segnaletica', 'Inventario piazzale', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA']),
+    ('segnaletica', 'Segnaletica e Cartelli', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA', 'ANALISI']),
 ]
 
 
@@ -229,6 +229,11 @@ def segnala(request):
         q = (request.GET.get('q') or '').strip()
         g = request.GET.get('gruppo', '')
         g = g if g in [x for x, _, _, _ in GRUPPI] else ''
+        if luogo and g == 'segnaletica' and not q and not macchine.filter(cond_gruppo(g, luogo)).exists():
+            # nessun cartello in elenco per quel luogo: si segnala sulla "segnaletica" del luogo, basta commento e foto
+            m, _ = Macchina.objects.get_or_create(codice=f'SEG-{luogo}', defaults={
+                'nome': f'Segnaletica {Luogo(luogo).label}', 'tipo': Macchina.Tipo.SEGNALETICA, 'luogo': luogo})
+            return redirect(f"{reverse('turni:segnala')}?{contesto['pre']}macchina={m.pk}")
         if luogo or q:
             elenco = macchine.filter(cond_gruppo(g, luogo))
             if q:
@@ -241,7 +246,7 @@ def segnala(request):
             if gruppo:
                 contesto['gruppo'] = gruppo
                 luoghi = [(v, Luogo(v).label, ICONE_LUOGHI[v], macchine.filter(cond_gruppo(g, v)).count()) for v in gruppo[3]]
-                contesto['luoghi'] = [x for x in luoghi if x[3] or g != 'segnaletica']
+                contesto['luoghi'] = luoghi  # tutti i luoghi, anche dove l'elenco è ancora vuoto
             else:
                 contesto['gruppi'] = [(x, nome, icona, macchine.filter(cond_gruppo(x)).count()) for x, nome, icona, _ in GRUPPI]
                 if not lavoro and not programma:
@@ -406,7 +411,7 @@ def macchine(request):
     return render(request, 'turni/mn_macchine.html', {
         **permessi, **filtro, 'q': q, 'mostra_gruppi': not filtro['gruppo'],
         'titolo': {'macchinari': 'Lista macchinari e attrezzature', 'mezzi': 'Lista mezzi',
-                   'segnaletica': 'Inventario piazzale'}.get(filtro['gruppo'], 'Macchine e mezzi'),
+                   'segnaletica': 'Segnaletica e Cartelli'}.get(filtro['gruppo'], 'Macchine e mezzi'),
         'gruppi': [g for g in gruppi if g[1]], 'form': form,
         'ci_sono_esempi': Macchina.objects.filter(esempio=True).exists(),
     })
