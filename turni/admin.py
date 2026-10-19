@@ -112,3 +112,15 @@ class OrdineRicambioAdmin(admin.ModelAdmin):
 
 
 admin.site.register(ManutenzioneProgrammata)
+
+
+from .models import ProdottoProduzione, ProduzioneTurno  # noqa: E402
+
+
+@admin.register(ProdottoProduzione)
+class ProdottoProduzioneAdmin(admin.ModelAdmin):
+    list_display = ['codice', 'nome', 'impianto', 'categoria', 'ordine', 'attivo']
+    list_editable = ['categoria', 'ordine', 'attivo']
+
+
+admin.site.register(ProduzioneTurno)

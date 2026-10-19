@@ -34,7 +34,11 @@
     <p class="tenue piccolo">Se scegli la macchina, si apre anche l'intervento per il manutentore.</p>
     {% endif %}
     <label>Cosa è successo (facoltativo)<textarea name="descrizione" rows="2" maxlength="500" placeholder="Es. nastro strappato vicino al vaglio"></textarea></label>
-    <label>Fermo da<input type="datetime-local" name="dal" value="{{ adesso }}"></label>
+    <div class="cm-date">
+      <label>Fermo da<input type="datetime-local" name="dal" value="{{ adesso }}"></label>
+      <label>Già ripartito alle<input type="datetime-local" name="ripartito"></label>
+    </div>
+    <p class="tenue piccolo">Se è già ripartito (es. dalle 10:05 alle 10:26), scrivi anche l'ora di ripartenza.</p>
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
       <span>📷 Foto (facoltativa)</span>

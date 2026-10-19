@@ -1,0 +1,28 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Produzione del turno{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:produzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Produzione</a>
+<div class="intestazione"><h1>Produzione del turno</h1><p class="tenue piccolo">Copia i valori dal display della pesa (in tonnellate). Puoi lasciare vuote le righe che non servono.</p></div>
+<form method="post" enctype="multipart/form-data" class="mn-form">{% csrf_token %}
+  <div class="cm-date">
+    <label>Giorno<input type="date" name="data" value="{{ giorno|date:'Y-m-d' }}" required></label>
+    <label>Turno<select name="fascia">{% for v, n in fasce %}<option value="{{ v }}" {% if v == fascia %}selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  </div>
+  {% regroup prodotti by get_impianto_display as gruppi %}
+  {% for g in gruppi %}
+  <section class="scheda pr-gruppo">
+    <h2>{{ g.grouper }}</h2>
+    {% for p in g.list %}
+    <label class="pr-riga{% if p.categoria == 'SCARTO' %} scarto{% endif %}"><span><b>{{ p.codice }}</b> {{ p.nome }}</span>
+      <input type="text" name="p{{ p.pk }}" value="{{ p.valore }}" inputmode="decimal" placeholder="0,00" autocomplete="off"><i>t</i></label>
+    {% endfor %}
+  </section>
+  {% endfor %}
+  <label class="bottone foto-btn mn-foto">
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+    <span>📷 Foto del display (facoltativa)</span>
+  </label>
+  <label>Note (facoltative)<input type="text" name="note" maxlength="500" placeholder="Es. fermo di 20 minuti per alimentazione esterna"></label>
+  <button class="bottone pieno piena-larghezza cb-invia">Salva la produzione</button>
+</form>
+{% endblock %}

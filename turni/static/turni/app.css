@@ -1245,3 +1245,20 @@ details.scheda summary { cursor: pointer; }
 .mn-colleghi input:focus-visible + span { outline: 2px solid var(--primario); }
 .mn-video.pronta { background: var(--primario-chiaro); }
 .mn-video-player { width: 100%; max-height: 260px; border-radius: 10px; background: #000; grid-column: 1 / -1; }
+
+/* produzione */
+.pr-gruppo { margin-bottom: 12px; }
+.pr-gruppo h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.pr-riga { display: grid !important; grid-template-columns: 1fr 110px auto; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--bordo); font-weight: 400 !important; }
+.pr-riga span { font-size: .9rem; }
+.pr-riga input { text-align: right; font-family: var(--font-mono); font-size: 1rem !important; }
+.pr-riga i { font-style: normal; color: var(--tenue); font-size: .8rem; }
+.pr-riga.scarto span { color: #b45309; }
+.pr-tabella { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.pr-tabella th, .pr-tabella td { padding: 6px 4px; border-bottom: 1px solid var(--bordo); text-align: right; }
+.pr-tabella th:first-child, .pr-tabella td:first-child { text-align: left; }
+.pr-impianto td { font-weight: 800; background: var(--altro); text-align: left !important; }
+.pr-scarto td { color: #b45309; }
+.pr-alto td, span.pr-alto { color: #b91c1c; font-weight: 800; }
+tr.pr-alto { background: #fee2e2; }
+@media (prefers-color-scheme: dark) { tr.pr-alto { background: #3a1414; } .pr-alto td, span.pr-alto { color: #fca5a5; } }

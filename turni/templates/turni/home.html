@@ -68,6 +68,13 @@
     <b>Manutenzione</b><small>Segnala un guasto, interventi e ricambi</small>
   </a>
 
+  {% if vede_produzione %}
+  <a class="home-tasto" href="{% url 'turni:produzione' %}">
+    <span class="home-icona">📊</span>
+    <b>Produzione</b><small>Tonnellate e scarti del turno</small>
+  </a>
+  {% endif %}
+
   <a class="home-tasto" href="{% url 'turni:messaggi' %}?vista=bacheca">
     {% if bacheca_nuovi %}<i class="home-badge">{{ bacheca_nuovi }}</i>{% endif %}
     <span class="home-icona">📢</span>

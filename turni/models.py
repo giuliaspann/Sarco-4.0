@@ -987,6 +987,7 @@ class FermoImpianto(models.Model):
         NASTRO = 'NASTRO', 'Rottura nastro'
         TRAMOGGIA = 'TRAMOGGIA', 'Blocco tramoggia'
         MACCHINA = 'MACCHINA', 'Guasto a una macchina'
+        CORRENTE = 'CORRENTE', 'Alimentazione esterna (corrente)'
         ALTRO = 'ALTRO', 'Altro guasto'
 
     impianto = models.CharField(max_length=10, choices=IMPIANTI)
@@ -1134,3 +1135,59 @@ class RispostaComunicazione(models.Model):
     @property
     def chi(self):
         return Intervento._nome(self.autore)
+
+
+# ================================================================ produzione di fine turno
+
+
+class ProdottoProduzione(models.Model):
+    """Una riga del display della pesa a fine turno (es. "A-MISTO IMP1", "E-BARROTTI")."""
+
+    class Categoria(models.TextChoices):
+        PRODOTTO = 'PRODOTTO', 'Prodotto'
+        RECUPERO = 'RECUPERO', 'Recupero (ferro, ecc.)'
+        SCARTO = 'SCARTO', 'Scarto'
+
+    codice = models.CharField(max_length=4)
+    nome = models.CharField(max_length=40)
+    impianto = models.CharField(max_length=10, choices=[('IMP1', 'Impianto 1'), ('IMP2', 'Impianto 2')])
+    categoria = models.CharField(max_length=10, choices=Categoria.choices, default=Categoria.PRODOTTO)
+    ordine = models.PositiveSmallIntegerField(default=0)
+    attivo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'prodotto (produzione)'
+        verbose_name_plural = 'prodotti (produzione)'
+        ordering = ['impianto', 'ordine']
+
+    def __str__(self):
+        return f'{self.codice}-{self.nome}'
+
+
+class ProduzioneTurno(models.Model):
+    FASCE = [('1T', '1° turno'), ('2T', '2° turno'), ('N', 'Notturno')]
+
+    data = models.DateField()
+    fascia = models.CharField(max_length=2, choices=FASCE)
+    inserita_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    inserita_il = models.DateTimeField(default=timezone.now)
+    foto = models.ImageField(upload_to='produzione/%Y/%m/', blank=True)
+    note = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        verbose_name = 'produzione del turno'
+        verbose_name_plural = 'produzione dei turni'
+        ordering = ['-data', '-fascia']
+        constraints = [models.UniqueConstraint(fields=['data', 'fascia'], name='una_produzione_per_turno')]
+
+    def __str__(self):
+        return f'{self.data:%d/%m} {self.get_fascia_display()}'
+
+
+class RigaProduzione(models.Model):
+    produzione = models.ForeignKey(ProduzioneTurno, on_delete=models.CASCADE, related_name='righe')
+    prodotto = models.ForeignKey(ProdottoProduzione, on_delete=models.PROTECT)
+    tonnellate = models.DecimalField(max_digits=8, decimal_places=2)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['produzione', 'prodotto'], name='una_riga_per_prodotto')]

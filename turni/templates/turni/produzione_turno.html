@@ -1,0 +1,23 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Produzione {{ t }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:produzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Produzione</a>
+<div class="intestazione">
+  <p class="occhiello">Produzione</p>
+  <h1>{{ t.data|date:'D j M'|capfirst }} · {{ t.get_fascia_display }}</h1>
+  <p class="tenue piccolo">Inserita da {{ t.inserita_da.dipendente.nome_breve|default:'Ufficio' }} · {{ t.inserita_il|date:'H:i' }}{% if t.note %} · {{ t.note }}{% endif %}</p>
+</div>
+<section class="scheda">
+  <table class="pr-tabella">
+    <tr><th>Prodotto</th><th>t</th><th>%</th><th>media</th></tr>
+    {% for x in righe %}{% ifchanged x.r.prodotto.impianto %}<tr class="pr-impianto"><td colspan="4">{{ x.r.prodotto.get_impianto_display }}</td></tr>{% endifchanged %}
+    <tr class="{% if x.alto %}pr-alto{% elif x.r.prodotto.categoria == 'SCARTO' %}pr-scarto{% endif %}">
+      <td>{{ x.r.prodotto.codice }} {{ x.r.prodotto.nome }}</td><td>{{ x.r.tonnellate|floatformat:2 }}</td>
+      <td>{% if x.perc is not None %}{{ x.perc|floatformat:1 }}%{% endif %}</td><td>{% if x.media %}{{ x.media|floatformat:1 }}%{% else %}–{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  <p class="tenue piccolo">In rosso gli scarti oltre una volta e mezza la media degli ultimi 30 giorni.</p>
+  {% if t.foto %}<img class="pl-foto" src="{% url 'turni:foto_produzione' t.pk %}" alt="Foto del display" loading="lazy">{% endif %}
+</section>
+<a class="bottone piena-larghezza" href="?modifica=1">✏️ Correggi i valori</a>
+{% endblock %}

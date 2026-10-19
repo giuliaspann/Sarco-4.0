@@ -525,7 +525,7 @@ def etichette(request):
 
 
 
-CAUSE_ICONE = {'NASTRO': '➰', 'TRAMOGGIA': '🧱', 'MACCHINA': '⚙️', 'ALTRO': '❓'}
+CAUSE_ICONE = {'NASTRO': '➰', 'TRAMOGGIA': '🧱', 'MACCHINA': '⚙️', 'CORRENTE': '⚡', 'ALTRO': '❓'}
 
 
 def _quando(valore):
@@ -564,7 +564,12 @@ def nuovo_fermo(request):
             except (ValueError, OSError):
                 messages.error(request, 'La foto non è valida: riprova.')
             else:
-                messages.success(request, 'Fermo segnalato: responsabile, capo turno e manutentori sono avvisati.')
+                # fermo già finito (es. "dalle 10:05 alle 10:26"): si registra subito anche la ripartenza
+                if request.POST.get('ripartito'):
+                    fine = _quando(request.POST.get('ripartito'))
+                    if fine > f.fermo_dal:
+                        mn.fai_ripartire(request.user, f, fine, '')
+                messages.success(request, 'Fermo registrato: responsabile, capo turno e manutentori sono avvisati.')
                 return redirect('turni:fermo', f.pk)
     return render(request, 'turni/mn_fermo_nuovo.html', {
         'impianto': impianto, 'nome_impianto': impianti[impianto], 'macchine': macchine,
