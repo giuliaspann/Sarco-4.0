@@ -1340,3 +1340,6 @@ tr.pr-alto { background: #fee2e2; }
 .wa-sfondo { padding-bottom: 84px; }
 .mn-quando-rapido { margin: 6px 0 14px; }
 .mn-azione input[type=date], .mn-riassegna input[type=date], .mn-azione input[type=text], .mn-riassegna input[type=text] { width: 100%; box-sizing: border-box; min-height: 48px; }
+
+.tasto-programma { margin: 14px 0 4px; background: #eef4ff; border-color: #c7d7fe; }
+.tasto-programma b { color: #1e40af; }

@@ -22,7 +22,7 @@ from .models import Comunicazione, Dipendente, FermoImpianto, FotoComunicazione,
 GRUPPI = [
     ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA', 'ANALISI']),
     ('mezzi', 'Mezzi', '🚚', ['MEZZI', 'ESTERNI']),
-    ('segnaletica', 'Segnaletica e specchi', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA']),
+    ('segnaletica', 'Inventario piazzale', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA']),
 ]
 
 
@@ -155,8 +155,25 @@ def segnala(request):
     scelta = request.POST.get('macchina') or request.GET.get('macchina') or ''
     macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
     lavoro = (request.POST.get('lavoro') or request.GET.get('lavoro')) == '1'
-    if lavoro and not mn.puo_registrare_lavoro(request.user):
+    programma = not lavoro and (request.POST.get('programma') or request.GET.get('programma')) == '1'
+    if lavoro and not mn.puo_registrare_lavoro(request.user) or programma and not mn.puo_chiedere_pezzi(request.user):
         raise PermissionDenied
+    if request.method == 'POST' and programma:
+        from datetime import date
+
+        attivita = (request.POST.get('attivita') or '').strip()[:120]
+        try:
+            quando = date.fromisoformat(request.POST.get('quando') or '')
+        except ValueError:
+            quando = None
+        ogni = request.POST.get('ogni') or '0'
+        ogni = int(ogni) if ogni in ('0', '7', '14', '30', '90', '180', '365') else 0
+        if not (macchina and attivita and quando):
+            messages.error(request, 'Scrivi cosa va fatto e quando.')
+        else:
+            mn.programma(request.user, macchina, attivita, quando, ogni, (request.POST.get('istruzioni') or '').strip()[:1000])
+            messages.success(request, 'Manutenzione programmata.')
+            return redirect('turni:segnala')
     if request.method == 'POST' and lavoro:
         testo = (request.POST.get('descrizione') or '').strip()[:1000]
         foto = request.FILES.getlist('foto')
@@ -196,7 +213,12 @@ def segnala(request):
                 messages.success(request, 'Segnalazione inviata: il capo turno e il responsabile manutenzione la ricevono subito.')
                 return redirect('turni:intervento', i.pk)
     contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', ''),
-                'lavoro': lavoro, 'pre': 'lavoro=1&' if lavoro else ''}
+                'lavoro': lavoro, 'programma': programma,
+                'pre': 'lavoro=1&' if lavoro else ('programma=1&' if programma else '')}
+    if macchina and programma:
+        contesto.update(domani=timezone.localdate() + timedelta(days=1), ripetizioni=[
+            ('0', 'Una volta'), ('7', 'Ogni settimana'), ('14', 'Ogni 2 settimane'), ('30', 'Ogni mese'),
+            ('90', 'Ogni 3 mesi'), ('365', "Ogni anno")])
     if macchina and lavoro:
         contesto['tipi_lavoro'] = Intervento._meta.get_field('tipo_lavoro').choices
         compatibili = list(macchina.ricambi.all())
@@ -222,6 +244,9 @@ def segnala(request):
                 contesto['luoghi'] = [x for x in luoghi if x[3] or g != 'segnaletica']
             else:
                 contesto['gruppi'] = [(x, nome, icona, macchine.filter(cond_gruppo(x)).count()) for x, nome, icona, _ in GRUPPI]
+                if not lavoro and not programma:
+                    mn.genera_programmate()
+                    contesto.update(mn.calendario_manutenzioni(), puo_programmare=mn.puo_chiedere_pezzi(request.user))
     return render(request, 'turni/mn_segnala.html', contesto)
 
 

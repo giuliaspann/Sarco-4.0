@@ -309,6 +309,24 @@ class ManutenzioneTest(TestCase):
         self.assertEqual(i.eventi.filter(testo='👍').count(), 1)
         self.assertEqual(self.avvisati(), ['vito'])
 
+    def test_programma_manutenzione(self):
+        self.entra('operaio')
+        self.assertEqual(self.client.get(reverse('turni:segnala'), {'programma': '1'}).status_code, 403)
+        self.entra('vito')
+        domani = timezone.localdate() + timedelta(days=1)
+        # una volta sola: intervento da assegnare per quel giorno
+        self.client.post(reverse('turni:segnala'), {'programma': '1', 'macchina': self.pala.pk, 'attivita': 'Cambio olio', 'quando': domani.isoformat(), 'ogni': '0'})
+        i = Intervento.objects.get(macchina=self.pala, descrizione='Cambio olio')
+        self.assertEqual((i.tipo, i.da_fare_il), ('PROGRAMMATA', domani))
+        # ripetuta: diventa un piano
+        self.client.post(reverse('turni:segnala'), {'programma': '1', 'macchina': self.pala.pk, 'attivita': 'Controllo freni', 'quando': domani.isoformat(), 'ogni': '30'})
+        p = ManutenzioneProgrammata.objects.get(attivita='Controllo freni')
+        self.assertEqual((p.ogni_giorni, p.prossima), (30, domani))
+        r = self.client.get(reverse('turni:segnala'))
+        cose = [x['cosa'] for x in r.context['prossime']]
+        self.assertIn('Cambio olio', cose)
+        self.assertIn('Controllo freni', cose)
+
     def test_togli_esempi(self):
         self.assertGreater(togli(), 0)
         self.assertFalse(Macchina.objects.exists())
