@@ -1450,3 +1450,21 @@ body.as-aperto { overflow: hidden; }
 /* la foto allegata si distingue dalla tabella dei valori */
 .foto-allegata { margin: 18px 0 8px; padding-top: 14px; border-top: 2px solid var(--bordo); font-weight: 700; color: var(--tenue); }
 .foto-allegata + .pl-foto { border: 1px solid var(--bordo); border-radius: 12px; }
+
+/* pulizie: due tasti, foto prima e dopo */
+.tasto-pulizia { background: #eefaf0; border-color: #cfeed6; } .tasto-pulizia b { color: #166534; }
+.tasto-aggiuntiva { background: #eef4ff; border-color: #c7d7fe; } .tasto-aggiuntiva b { color: #1e40af; }
+@media (prefers-color-scheme: dark) { .tasto-pulizia, .tasto-aggiuntiva { background: var(--carta); } .tasto-pulizia b, .tasto-aggiuntiva b { color: inherit; } }
+.pl-modulo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pl-modulo > * { min-width: 0; }
+.pl-modulo h2 { margin: 0; font-size: 1.3rem; }
+.pl-due-foto { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pl-due-foto .foto-btn { min-height: 64px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 1.05rem; }
+.pl-campo-nota { width: 100%; box-sizing: border-box; }
+.pl-invia { min-height: 58px; font-size: 1.15rem; white-space: normal; }
+.pl-riga { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 12px; margin-bottom: 8px; border: 1px solid var(--bordo); border-radius: 16px; background: var(--carta); }
+.pl-riga .rq-testo small { display: block; color: var(--tenue); }
+.pl-miniature { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pl-miniature figure { margin: 0; }
+.pl-miniature img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--bordo); }
+.pl-miniature figcaption { font-size: .85rem; font-weight: 700; color: var(--tenue); text-align: center; }

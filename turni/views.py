@@ -20,7 +20,7 @@ from django.views.decorators.http import require_POST
 from . import accessi, importa
 from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
-from .pulizie import genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
+from .pulizie import aggiungibili, genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
 from .richieste import extra_per
 from .views_messaggi import non_letti_bacheca, non_letti_chat
 
@@ -335,6 +335,16 @@ def pulizie(request, turno_id=None):
         if azione == 'aggiungi':
             elemento = get_object_or_404(mezzi_aggiungibili(turno), pk=request.POST.get('elemento'))
             Pulizia.objects.get_or_create(turno=turno, elemento=elemento, defaults={'aggiunta_da_operaio': True})
+        elif azione == 'aggiuntiva':
+            # pulizia in più, fatta di propria iniziativa: entra già come fatta, con le foto
+            elemento = get_object_or_404(aggiungibili(turno), pk=request.POST.get('elemento'))
+            p = Pulizia(turno=turno, elemento=elemento, aggiunta_da_operaio=True)
+            if not _foto_pulizia(request, p):
+                return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + '?fai=aggiuntiva')
+            p.nota = request.POST.get('nota', '')[:300]
+            p.stato, p.fatta_il = Pulizia.Stato.FATTA, timezone.now()
+            p.save()
+            messages.success(request, f'Pulizia aggiuntiva completata: {elemento.nome}.')
         else:
             p = get_object_or_404(turno.pulizie, pk=request.POST.get('pulizia'))
             if p.stato == Pulizia.Stato.VERIFICATA:
@@ -342,31 +352,46 @@ def pulizie(request, turno_id=None):
             elif azione == 'rimuovi' and p.aggiunta_da_operaio and p.stato == Pulizia.Stato.DA_FARE:
                 p.delete()
             elif azione == 'fatta':
-                if request.FILES.get('foto'):
-                    try:
-                        salva_foto(p, request.FILES['foto'])
-                    except Exception:
-                        messages.error(request, 'La foto non si legge: riprova a scattarla.')
-                        return redirect('turni:pulizie_turno', turno.pk)
+                if not _foto_pulizia(request, p):
+                    return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=assegnata&voce={p.pk}')
                 p.nota = request.POST.get('nota', '')[:300]
                 p.stato = Pulizia.Stato.FATTA
                 p.fatta_il = timezone.now()
                 p.save()
+                messages.success(request, f'Pulizia completata: {p.elemento.nome}.')
         return redirect('turni:pulizie_turno', turno.pk)
 
     genera_pulizie(turno)
     voci = list(turno.pulizie.select_related('elemento'))
-    return render(
-        request,
-        'turni/pulizie.html',
-        {
-            'turno': turno,
-            'voci': voci,
-            'fatte': sum(v.stato in (Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA) for v in voci),
-            'mezzi': mezzi_aggiungibili(turno),
-            'recenti': recenti,
-        },
-    )
+    da_fare = [v for v in voci if v.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
+    contesto = {
+        'turno': turno,
+        'voci': voci,
+        'da_fare': da_fare,
+        'fatte': sum(v.stato in (Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA) for v in voci),
+        'recenti': recenti,
+        'fai': request.GET.get('fai'),
+    }
+    if contesto['fai'] == 'assegnata':
+        scelta = next((v for v in da_fare if str(v.pk) == request.GET.get('voce')), None)
+        if scelta is None and len(da_fare) == 1:
+            scelta = da_fare[0]  # una sola pulizia assegnata: si va dritti al modulo
+        contesto['voce'] = scelta
+    elif contesto['fai'] == 'aggiuntiva':
+        contesto['aggiungibili'] = aggiungibili(turno)
+    return render(request, 'turni/pulizie.html', contesto)
+
+
+def _foto_pulizia(request, p):
+    """Salva la foto prima e quella dopo, se ci sono. False (con il messaggio) se una non si legge."""
+    for campo in ('foto_prima', 'foto'):
+        if request.FILES.get(campo):
+            try:
+                salva_foto(p, request.FILES[campo], campo)
+            except Exception:
+                messages.error(request, 'La foto non si legge: riprova a scattarla.')
+                return False
+    return True
 
 
 @login_required
@@ -432,9 +457,10 @@ def foto(request, pulizia_id):
     proprietario = p.turno.dipendente.utente_id == request.user.pk
     if not (proprietario or e_capoturno(request.user, p.turno.data)):
         raise PermissionDenied
-    if not p.foto:
+    f = p.foto_prima if request.GET.get('quale') == 'prima' else p.foto
+    if not f:
         raise Http404
-    return FileResponse(p.foto.open('rb'), content_type='image/jpeg')
+    return FileResponse(f.open('rb'), content_type='image/jpeg')
 
 
 # ---------------------------------------------------------------- ufficio

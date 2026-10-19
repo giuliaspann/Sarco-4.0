@@ -353,6 +353,10 @@ def percorso_foto(istanza, nome):
     return f'pulizie/{istanza.turno.data:%Y/%m}/{istanza.turno_id}-{istanza.elemento_id}-{timezone.now():%H%M%S}.jpg'
 
 
+def percorso_foto_prima(istanza, nome):
+    return f'pulizie/{istanza.turno.data:%Y/%m}/{istanza.turno_id}-{istanza.elemento_id}-prima-{timezone.now():%H%M%S}.jpg'
+
+
 class Pulizia(models.Model):
     class Stato(models.TextChoices):
         DA_FARE = 'DA_FARE', 'Da fare'
@@ -365,7 +369,8 @@ class Pulizia(models.Model):
     aggiunta_da_operaio = models.BooleanField(default=False, help_text='mezzo usato aggiunto a mano')
     stato = models.CharField(max_length=12, choices=Stato.choices, default=Stato.DA_FARE)
     fatta_il = models.DateTimeField(null=True, blank=True)
-    foto = models.ImageField(upload_to=percorso_foto, blank=True)
+    foto_prima = models.ImageField('foto prima', upload_to=percorso_foto_prima, blank=True)
+    foto = models.ImageField('foto dopo', upload_to=percorso_foto, blank=True)
     nota = models.CharField(max_length=300, blank=True)
     verificata_da = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'

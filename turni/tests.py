@@ -223,6 +223,39 @@ class PulizieTest(TestCase):
             with self.a(LUNEDI + timedelta(days=20)):
                 self.assertEqual(self.client.get(reverse('turni:foto', args=[p.pk])).status_code, 403)
 
+    def test_foto_prima_e_dopo_e_pulizia_aggiuntiva(self):
+        from PIL import Image
+
+        def jpg():
+            b = BytesIO()
+            Image.new('RGB', (40, 30), 'blue').save(b, 'JPEG')
+            b.seek(0)
+            b.name = 'x.jpg'
+            return b
+
+        self.client.login(username='drame.bouba', password='654321')
+        turno = Turno.objects.get(dipendente=self.drame, data=LUNEDI)  # 2T Imp. 1: nastro
+        url = reverse('turni:pulizie_turno', args=[turno.pk])
+        with self.settings(MEDIA_ROOT=self._tmp()):
+            r = self.client.get(url)
+            for t in ('Segnala completamento pulizia assegnata', 'Segnala completamento pulizia aggiuntiva'):
+                self.assertContains(r, t)
+            # una sola pulizia assegnata: si apre subito il modulo con foto prima e dopo
+            r = self.client.get(url + '?fai=assegnata')
+            self.assertContains(r, 'Foto prima')
+            self.assertContains(r, 'Foto dopo')
+            p = turno.pulizie.get()
+            self.client.post(url, {'pulizia': p.pk, 'azione': 'fatta', 'foto_prima': jpg(), 'foto': jpg()})
+            p.refresh_from_db()
+            self.assertEqual(p.stato, Pulizia.Stato.FATTA)
+            self.assertTrue(p.foto_prima and p.foto)
+            self.assertEqual(self.client.get(reverse('turni:foto', args=[p.pk]) + '?quale=prima').status_code, 200)
+            # pulizia in più: entra già fatta
+            self.assertContains(self.client.get(url + '?fai=aggiuntiva'), 'Pala gommata')
+            self.client.post(url, {'azione': 'aggiuntiva', 'elemento': self.pala.pk, 'foto': jpg()})
+            extra = turno.pulizie.get(elemento=self.pala)
+            self.assertEqual((extra.stato, extra.aggiunta_da_operaio), (Pulizia.Stato.FATTA, True))
+
     def _tmp(self):
         import tempfile
 

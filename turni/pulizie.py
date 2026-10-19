@@ -41,7 +41,7 @@ MAX_FOTO = 15 * 1024 * 1024
 Image.MAX_IMAGE_PIXELS = 50_000_000
 
 
-def salva_foto(pulizia, file):
+def salva_foto(pulizia, file, campo='foto'):
     """Riduce la foto (il telefono la manda già piccola, ma non sempre) e la salva in JPEG."""
     if file.size > MAX_FOTO:
         raise ValueError('foto troppo grande')
@@ -49,6 +49,13 @@ def salva_foto(pulizia, file):
     img.thumbnail((1600, 1600))
     buf = BytesIO()
     img.save(buf, 'JPEG', quality=75, optimize=True)
-    if pulizia.foto:
-        pulizia.foto.delete(save=False)
-    pulizia.foto.save('foto.jpg', ContentFile(buf.getvalue()), save=False)
+    f = getattr(pulizia, campo)
+    if f:
+        f.delete(save=False)
+    f.save('foto.jpg', ContentFile(buf.getvalue()), save=False)
+
+
+def aggiungibili(turno):
+    """Per "Segnala pulizia aggiuntiva": mezzi e zone non già nella lista del turno."""
+    gia = turno.pulizie.values_list('elemento_id', flat=True)
+    return ElementoPulizia.objects.filter(attivo=True).exclude(pk__in=gia).order_by('tipo', 'nome')

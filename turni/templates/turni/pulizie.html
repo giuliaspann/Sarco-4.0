@@ -1,105 +1,96 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Pulizie{% endblock %}
 {% block contenuto %}
-<div class="intestazione">
-  <p class="occhiello">Fine turno</p>
-  <h1>Pulizie</h1>
-</div>
-
 {% if not turno or not turno.lavora %}
+  <div class="intestazione"><h1>Pulizie</h1></div>
   <div class="pl-vuoto">
     <span class="home-icona">☕</span>
     <b>Nessuna pulizia da fare</b>
     <small>{% if turno %}Oggi: {% include 'turni/_pillola.html' with t=turno %}{% else %}Oggi non hai turni.{% endif %}</small>
   </div>
+
+{% elif fai == 'assegnata' %}
+  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
+  <div class="intestazione"><h1>Segnala completamento pulizia assegnata</h1></div>
+  {% if voce %}
+  <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
+    <input type="hidden" name="pulizia" value="{{ voce.pk }}">
+    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.elemento.nome }}</h2>
+    {% if voce.elemento.istruzioni %}<p class="pl-istruzioni">{{ voce.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
+    {% if voce.stato == 'SEGNALATA' and voce.nota_verifica %}<p class="pl-segnalazione">Capo turno: {{ voce.nota_verifica }}</p>{% endif %}
+    <div class="pl-due-foto">
+      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Foto prima</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto dopo</span></label>
+    </div>
+    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ Segnala completata</button>
+  </form>
+  {% elif da_fare %}
+  <div class="home-griglia">
+    {% for v in da_fare %}
+    <a class="home-tasto" href="?fai=assegnata&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.elemento.nome }}</b></a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="pl-fatto"><span class="home-icona">✅</span><b>Hai già completato tutte le pulizie assegnate</b></div>
+  {% endif %}
+
+{% elif fai == 'aggiuntiva' %}
+  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
+  <div class="intestazione"><h1>Segnala completamento pulizia aggiuntiva</h1></div>
+  <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
+    <p class="mn-sottotitolo">Cosa hai pulito?</p>
+    <div class="scegli lista">
+      {% for m in aggiungibili %}<label><input type="radio" name="elemento" value="{{ m.pk }}" required><span>{% if m.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ m.nome }}</span></label>{% endfor %}
+    </div>
+    <div class="pl-due-foto">
+      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Foto prima</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto dopo</span></label>
+    </div>
+    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="aggiuntiva">✓ Segnala completata</button>
+  </form>
+
 {% else %}
+  <div class="intestazione"><h1>Pulizie</h1></div>
   <div class="home-oggi {{ turno.classe_fascia }}-bordo">
     <span class="home-etichetta">{{ turno.data|date:'l j F'|capfirst }}</span>
     <span class="home-turno">{% include 'turni/_pillola.html' with t=turno %}</span>
-    {% if turno.orario_pulizie %}
-      <span class="pl-quando">🕒 Da fare dalle <b>{{ turno.orario_pulizie|slice:':5' }}</b> alle <b>{{ turno.orario_pulizie|slice:'-5:' }}</b></span>
-    {% endif %}
+    {% if turno.orario_pulizie %}<span class="pl-quando">🕒 Dalle <b>{{ turno.orario_pulizie|slice:':5' }}</b> alle <b>{{ turno.orario_pulizie|slice:'-5:' }}</b></span>{% endif %}
   </div>
 
-  {% if voci %}
-    {% if fatte == voci|length %}
-      <div class="pl-fatto">
-        <span class="home-icona">✅</span>
-        <b>Tutto completato!</b>
-        <small>Il capo turno controllerà le pulizie.</small>
-      </div>
-    {% else %}
-      <div class="pl-progresso">
-        <div class="pl-numeri"><b>{{ fatte }}</b> di {{ voci|length }} <span>completate</span></div>
-        <progress class="barra-avanzamento" value="{{ fatte }}" max="{{ voci|length }}" aria-label="Pulizie completate"></progress>
-        <small>Tocca <b>Fatto</b> su ogni voce. La foto aiuta il capo turno a controllare.</small>
-      </div>
-    {% endif %}
-  {% else %}
-    <div class="pl-vuoto">
-      <span class="home-icona">👍</span>
-      <b>Per il tuo ruolo non ci sono pulizie previste</b>
-      <small>Se hai usato un mezzo, aggiungilo qui sotto.</small>
-    </div>
-  {% endif %}
+  <div class="home-griglia">
+    <a class="home-tasto tasto-pulizia" href="?fai=assegnata">
+      {% if da_fare %}<i class="home-badge">{{ da_fare|length }}</i>{% endif %}
+      <span class="home-icona">✅</span><b>Segnala completamento pulizia assegnata</b>
+    </a>
+    <a class="home-tasto tasto-aggiuntiva" href="?fai=aggiuntiva">
+      <span class="home-icona">➕</span><b>Segnala completamento pulizia aggiuntiva</b>
+    </a>
+  </div>
 
+  <h2 class="rq-sezione">Pulizie del turno</h2>
   {% for v in voci %}
-  <div class="pl-voce pl-{{ v.stato|lower }}">
-    <div class="pl-testa">
-      <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
-      <span class="pl-nome">
-        <b>{{ v.elemento.nome }}</b>
-        <small>{{ v.elemento.get_tipo_display }}{% if v.aggiunta_da_operaio %} · mezzo usato{% endif %}</small>
-      </span>
-      <span class="pl-stato">
-        {% if v.stato == 'VERIFICATA' %}✓✓ Verificata{% elif v.stato == 'FATTA' %}✓ Fatta{% elif v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}
-      </span>
+  <div class="pl-riga pl-{{ v.stato|lower }}">
+    <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
+    <span class="rq-testo"><b>{{ v.elemento.nome }}</b>{% if v.aggiunta_da_operaio %}<small>Aggiuntiva</small>{% endif %}</span>
+    <span class="stato-chip {% if v.stato == 'VERIFICATA' or v.stato == 'FATTA' %}ok{% elif v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'VERIFICATA' %}Verificata{% elif v.stato == 'FATTA' %}Fatta{% elif v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
+    {% if v.foto_prima or v.foto %}
+    <div class="pl-miniature">
+      {% if v.foto_prima %}<figure><img src="{% url 'turni:foto' v.pk %}?quale=prima" alt="Prima" loading="lazy"><figcaption>Prima</figcaption></figure>{% endif %}
+      {% if v.foto %}<figure><img src="{% url 'turni:foto' v.pk %}" alt="Dopo" loading="lazy"><figcaption>Dopo</figcaption></figure>{% endif %}
     </div>
-
-    {% if v.elemento.istruzioni and v.stato != 'VERIFICATA' %}<p class="pl-istruzioni">{{ v.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
-    {% if v.stato == 'SEGNALATA' and v.nota_verifica %}<p class="pl-segnalazione">Capo turno: {{ v.nota_verifica }}</p>{% endif %}
-    {% if v.foto %}<img class="pl-foto" src="{% url 'turni:foto' v.pk %}" alt="Foto pulizia {{ v.elemento.nome }}" loading="lazy">{% endif %}
-
-    {% if v.stato != 'VERIFICATA' %}
-    {% if v.stato == 'FATTA' %}<details class="pl-modifica"><summary>Modifica</summary>{% endif %}
-    <form method="post" enctype="multipart/form-data" class="pl-azioni">{% csrf_token %}
-      <input type="hidden" name="pulizia" value="{{ v.pk }}">
-      <label class="bottone foto-btn">
-        <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-        <span>📷 {% if v.foto %}Cambia foto{% else %}Foto{% endif %}</span>
-      </label>
-      <button class="bottone pieno" name="azione" value="fatta">{% if v.stato == 'DA_FARE' %}✓ Fatto{% else %}✓ Aggiorna{% endif %}</button>
-      <details class="pl-nota">
-        <summary>{% if v.nota %}Nota: {{ v.nota|truncatechars:30 }}{% else %}Aggiungi una nota{% endif %}</summary>
-        <input type="text" name="nota" placeholder="Es. manca il detergente" value="{{ v.nota }}" maxlength="300">
-      </details>
-      {% if v.aggiunta_da_operaio and v.stato == 'DA_FARE' %}
-        <button class="link-piccolo" name="azione" value="rimuovi">Togli dalla lista</button>
-      {% endif %}
-    </form>
-    {% if v.stato == 'FATTA' %}</details>{% endif %}
     {% endif %}
   </div>
+  {% empty %}
+  <p class="tenue piccolo">Nessuna pulizia assegnata in questo turno.</p>
   {% endfor %}
 
-  {% if mezzi %}
-  <form method="post" class="pl-voce pl-mezzo">{% csrf_token %}
-    <div class="pl-testa">
-      <span class="home-icona">🚜</span>
-      <span class="pl-nome"><b>Hai usato un mezzo?</b><small>Aggiungilo e puliscilo a fine turno</small></span>
-    </div>
-    <div class="scegli lista">
-      {% for m in mezzi %}<label><input type="radio" name="elemento" value="{{ m.pk }}" required><span>{{ m.nome }}</span></label>{% endfor %}
-    </div>
-    <button class="bottone pieno piena-larghezza" name="azione" value="aggiungi">Aggiungi</button>
-  </form>
+  {% if recenti|length > 1 %}
+  <div class="pl-altri">
+    <span>Altri turni:</span>
+    {% for r in recenti %}{% if r.pk != turno.pk %}<a href="{% url 'turni:pulizie_turno' r.pk %}">{{ r.data|date:'D j'|capfirst }}</a>{% endif %}{% endfor %}
+  </div>
   {% endif %}
-{% endif %}
-
-{% if recenti|length > 1 %}
-<div class="pl-altri">
-  <span>Altri turni:</span>
-  {% for r in recenti %}{% if r.pk != turno.pk %}<a href="{% url 'turni:pulizie_turno' r.pk %}">{{ r.data|date:'D j'|capfirst }}</a>{% endif %}{% endfor %}
-</div>
 {% endif %}
 {% endblock %}
