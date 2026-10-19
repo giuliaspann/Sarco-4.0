@@ -26,8 +26,23 @@ def attiva():
     return bool(os.environ.get('ANTHROPIC_API_KEY'))
 
 
+def chiave_valida():
+    """La chiave deve essere solo "sk-ant-…", senza spazi né altro testo: se no non la si manda nemmeno
+    (un valore sbagliato finirebbe scritto nei log degli errori)."""
+    import re
+
+    return bool(re.fullmatch(r'sk-ant-[A-Za-z0-9_\-]{20,}', os.environ.get('ANTHROPIC_API_KEY', '')))
+
+
+CHIAVE_SBAGLIATA = ('La chiave Anthropic su Railway non è scritta bene: nella variabile ANTHROPIC_API_KEY '
+                    'va incollata solo la chiave che inizia con sk-ant-, senza altro testo.')
+
+
 def _chiedi(jpeg, istruzioni, schema):
     import anthropic
+
+    if not chiave_valida():
+        raise LetturaNonRiuscita(CHIAVE_SBAGLIATA)
 
     client = anthropic.Anthropic(timeout=75.0, max_retries=1)
     try:

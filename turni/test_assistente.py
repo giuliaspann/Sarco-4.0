@@ -24,7 +24,7 @@ class AssistenteTest(TestCase):
 
     def setUp(self):
         test_richieste.RichiesteTest.setUp(self)
-        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'prova'})
+        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij'})
         p.start()
         self.addCleanup(p.stop)
         self.client.login(username='spano', password='123456')
@@ -87,3 +87,12 @@ class AssistenteTest(TestCase):
         t = Turno.objects.get(dipendente=self.drame, data=self.MER)
         self.assertEqual((t.fascia, t.postazione), ('1T', 'IMP1'))
         self.assertEqual(ModificaTurno.objects.get().dipendente, self.drame)  # presa visione richiesta
+
+    def test_chiave_scritta_male(self):
+        with mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-curl https://api.anthropic.com --header x'}):
+            finto = mock.MagicMock()
+            with mock.patch('anthropic.Anthropic', finto):
+                r = self.client.post(reverse('turni:assistente'), {'testo': 'ciao'}, content_type='application/json')
+            self.assertEqual(r.status_code, 502)
+            self.assertIn('non è scritta bene', r.json()['errore'])
+            finto.assert_not_called()

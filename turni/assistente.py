@@ -331,6 +331,11 @@ def rispondi(conversazione, testo, utente):
     (testo della risposta, proposte da confermare). La storia si allunga e basta: niente si riscrive."""
     import anthropic
 
+    from .lettura import CHIAVE_SBAGLIATA, chiave_valida
+
+    if not chiave_valida():
+        log.error('ANTHROPIC_API_KEY non valida (non la si usa)')
+        raise Errore(CHIAVE_SBAGLIATA)
     client = anthropic.Anthropic(timeout=75.0, max_retries=1)
     messaggi = conversazione.messaggi
     messaggi.append({'role': 'user', 'content': testo[:2000]})

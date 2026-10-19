@@ -71,7 +71,7 @@ class StatisticheTest(TestCase):
             os.environ.pop('ANTHROPIC_API_KEY', None)
             self.assertNotContains(self.client.get(reverse('turni:analisi_nuova')), 'Leggi i numeri')
             self.assertEqual(self.client.post(reverse('turni:leggi_foto'), {'foto': foto()}).status_code, 503)
-        with mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'prova'}):
+        with mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij'}):
             self.assertContains(self.client.get(reverse('turni:analisi_nuova')), 'Leggi i numeri')
             with mock.patch('turni.lettura.leggi_analisi', return_value={'peso_kg': 19.5, 'csp': 0.4, 'campione': 'BIANCO'}):
                 j = self.client.post(reverse('turni:leggi_foto'), {'foto': foto(), 'tipo': 'analisi'}).json()
