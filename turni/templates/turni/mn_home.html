@@ -21,7 +21,7 @@
 
   <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
     <span class="home-icona">⚠️</span>
-    <b>Segnala un guasto</b><small>Foto e due righe, arriva subito</small>
+    <b>Segnala guasto o necessità di manutenzione</b><small>Foto e due righe, arriva subito</small>
   </a>
 
   {% if registra_lavoro %}
@@ -38,11 +38,6 @@
   </a>
   {% endif %}
 
-  <a class="home-tasto" href="{% url 'turni:comunicazioni' %}">
-    {% if comunicazioni_aperte %}<i class="home-badge">{{ comunicazioni_aperte }}</i>{% endif %}
-    <span class="home-icona">📋</span>
-    <b>Comunicazioni</b><small>Qualità, procedure, controlli, mezzi non disponibili</small>
-  </a>
 
   <a class="home-tasto" href="{% url 'turni:interventi' %}">
     {% if badge_interventi %}<i class="home-badge">{{ badge_interventi }}</i>{% endif %}

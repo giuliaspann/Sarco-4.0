@@ -9,7 +9,7 @@
   {% if m.esempio %}<span class="stato-chip spento">Esempio</span>{% endif %}
 </div>
 
-<a class="mn-segnala" href="{% url 'turni:segnala' %}?macchina={{ m.pk }}"><span>⚠️</span><b>Segnala un guasto</b><small>su questa macchina</small></a>
+<a class="mn-segnala" href="{% url 'turni:segnala' %}?macchina={{ m.pk }}"><span>⚠️</span><b>Segnala guasto o necessità di manutenzione</b><small>su questa macchina</small></a>
 
 <div class="mn-numeri">
   <div><b>{{ stat.guasti }}</b><small>guasti in 12 mesi</small></div>
