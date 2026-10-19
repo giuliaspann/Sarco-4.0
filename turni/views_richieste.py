@@ -17,6 +17,15 @@ from .views import dipendente_di
 FINESTRA_RECUPERO = 14
 
 
+def _ora(testo):
+    from datetime import time
+
+    try:
+        return time.fromisoformat(testo) if testo else None
+    except ValueError:
+        return None
+
+
 def _data(valore):
     try:
         return date.fromisoformat(valore)
@@ -175,18 +184,20 @@ def nuovo_cambio(request):
 def nuove_ferie(request):
     dip = _serve_dipendente(request)
     if request.method == 'POST':
-        dal, al = _data(request.POST.get('dal')), _data(request.POST.get('al'))
         tipo = request.POST.get('tipo')
+        dal = _data(request.POST.get('dal'))
+        al = dal if tipo == RichiestaFerie.Tipo.PERMESSO else _data(request.POST.get('al'))
         if not dal or not al or tipo not in RichiestaFerie.Tipo.values:
             messages.error(request, 'Indica tipo, data di inizio e di fine.')
         else:
             try:
-                svc.crea_ferie(dip, tipo, dal, al, request.POST.get('motivo', ''))
+                dalle, alle = _ora(request.POST.get('dalle')), _ora(request.POST.get('alle'))
+                svc.crea_ferie(dip, tipo, dal, al, request.POST.get('motivo', ''), dalle, alle)
             except svc.RichiestaNonValida as e:
                 messages.error(request, str(e))
             else:
                 messages.success(request, 'Richiesta inviata all\'ufficio.')
-                return redirect('turni:richieste')
+                return redirect(reverse('turni:miei_turni') + '#richieste')
     return render(
         request,
         'turni/ferie_nuove.html',
@@ -291,9 +302,25 @@ def nuovo_avviso(request):
         elif abs((giorno - oggi).days) > 30:
             messages.error(request, 'La data è troppo lontana.')
         else:
-            AvvisoAssenza.objects.create(dipendente=dip, data=giorno, tipo=tipo, nota=request.POST.get('nota', '')[:300])
-            messages.success(request, "Avviso inviato all'ufficio e al capo turno.")
-            return redirect('turni:richieste')
+            dalle, alle = _ora(request.POST.get('dalle')), _ora(request.POST.get('alle'))
+            if tipo == AvvisoAssenza.Tipo.USCITA:
+                alle = None
+            elif tipo == AvvisoAssenza.Tipo.RITARDO:
+                dalle = None
+            elif tipo == AvvisoAssenza.Tipo.MALATTIA:
+                dalle = alle = None
+            if tipo == AvvisoAssenza.Tipo.USCITA and not dalle:
+                messages.error(request, 'Scrivi a che ora esci.')
+            elif tipo == AvvisoAssenza.Tipo.RITARDO and not alle:
+                messages.error(request, 'Scrivi a che ora entri.')
+            elif dalle and alle and alle <= dalle:
+                messages.error(request, "L'ora di fine deve essere dopo quella di inizio.")
+            else:
+                AvvisoAssenza.objects.create(
+                    dipendente=dip, data=giorno, tipo=tipo, nota=request.POST.get('nota', '')[:300], dalle=dalle, alle=alle
+                )
+                messages.success(request, "Avviso inviato all'ufficio e al capo turno.")
+                return redirect(reverse('turni:miei_turni') + '#richieste')
     return render(
         request, 'turni/avviso_nuovo.html', {'tipi': AvvisoAssenza.Tipo.choices, 'oggi': oggi, 'dati': request.POST}
     )

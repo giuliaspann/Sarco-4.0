@@ -9,9 +9,11 @@
   <div class="scegli">
     {% for v, nome in tipi %}<label><input type="radio" name="tipo" value="{{ v }}" {% if dati.tipo == v or not dati.tipo and forloop.first %}checked{% endif %}><span>{{ nome }}</span></label>{% endfor %}
   </div>
-  <div class="riga-form">
-    <label>Dal<input type="date" name="dal" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.dal }}" required></label>
-    <label>Al<input type="date" name="al" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.al }}" required></label>
+  <label><span class="solo-ferie">Dal</span><span class="solo-permesso">Giorno</span><input type="date" name="dal" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.dal }}" required></label>
+  <label class="solo-ferie">Al<input type="date" name="al" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.al }}"></label>
+  <div class="orari solo-permesso">
+    <label>Dalle<input type="time" name="dalle" value="{{ dati.dalle }}" step="900"></label>
+    <label>Alle<input type="time" name="alle" value="{{ dati.alle }}" step="900"></label>
   </div>
   <label>Note per l'ufficio (facoltative)<textarea name="motivo" rows="2" maxlength="300">{{ dati.motivo }}</textarea></label>
   <button class="bottone pieno piena-larghezza">Invia all'ufficio</button>

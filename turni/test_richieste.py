@@ -157,3 +157,55 @@ class RichiesteTest(TestCase):
         self.assertEqual(self.turno(self.drame, lun2).fascia, Fascia.FERIE)
         self.assertEqual(self.turno(self.drame, lun2 + timedelta(days=1)).fascia, Fascia.FERIE)
         self.assertEqual(self.turno(self.drame, lun2 + timedelta(days=3)).fascia, Fascia.MATTINA)
+
+
+class OrariEPresaVisioneTest(RichiesteTest):
+    """Permesso a ore, orari di ritardo/uscita e presa visione dei turni cambiati dall'ufficio."""
+
+    def test_permesso_a_ore(self):
+        self.client.login(username='spano', password='123456')
+        r = self.client.post(reverse('turni:nuove_ferie'), {'tipo': 'PERMESSO', 'dal': self.MER, 'dalle': '08:00', 'alle': '10:30'})
+        self.assertEqual(r.status_code, 302)
+        f = RichiestaFerie.objects.get()
+        self.assertEqual((f.dal, f.al, f.orario), (self.MER, self.MER, 'dalle 8:00 alle 10:30'))
+        svc.decisione_ufficio_ferie(f, self.resp, True)
+        t = self.turno(self.spano, self.MER)
+        self.assertTrue(t.capoturno)  # il turno resta, solo annotato
+        self.assertIn('8:00', t.nota_modifica)
+        # fine prima dell'inizio: rifiutato
+        r = self.client.post(reverse('turni:nuove_ferie'), {'tipo': 'PERMESSO', 'dal': self.MER + timedelta(days=1), 'dalle': '10:00', 'alle': '09:00'})
+        self.assertEqual(RichiestaFerie.objects.count(), 1)
+
+    def test_orari_di_ritardo_e_uscita(self):
+        from .models import AvvisoAssenza
+
+        self.client.login(username='spano', password='123456')
+        self.client.post(reverse('turni:nuovo_avviso'), {'tipo': 'USCITA', 'data': LUNEDI})
+        self.assertFalse(AvvisoAssenza.objects.exists())
+        self.client.post(reverse('turni:nuovo_avviso'), {'tipo': 'USCITA', 'data': LUNEDI, 'dalle': '11:00'})
+        self.client.post(reverse('turni:nuovo_avviso'), {'tipo': 'RITARDO', 'data': LUNEDI, 'alle': '09:30', 'dalle': '05:00'})
+        self.assertEqual(sorted(a.orario for a in AvvisoAssenza.objects.all()), ['entra alle 9:30', 'esce alle 11:00'])
+
+    def test_presa_visione(self):
+        from .models import ModificaTurno
+
+        corrette = [list(r) for r in RIGHE]
+        corrette[0][2] = '2T- Imp. 1 '  # martedì di Spano: da riposo a 2° turno
+        self.client.force_login(get_user_model().objects.create_user('uff', password='x', is_staff=True))
+        importa.salva_settimana(importa.leggi_file(file_turni(corrette), LUNEDI))
+        m = ModificaTurno.objects.get()
+        self.assertEqual((m.dipendente, m.data), (self.spano, self.MAR))
+        self.client.login(username='spano', password='123456')
+        r = self.client.get(reverse('turni:home'))
+        self.assertContains(r, 'Il tuo turno è cambiato')
+        self.assertContains(r, 'Presa visione')
+        self.client.post(reverse('turni:presa_visione'))
+        m.refresh_from_db()
+        self.assertIsNotNone(m.vista_il)
+        self.assertNotContains(self.client.get(reverse('turni:home')), 'Il tuo turno è cambiato')
+        # l'ufficio vede chi ha preso visione
+        self.client.force_login(get_user_model().objects.get(username='uff'))
+        self.assertContains(self.client.get(reverse('turni:importa')), 'Presa visione dei turni cambiati')
+        # ricaricare lo stesso file non crea altre richieste
+        importa.salva_settimana(importa.leggi_file(file_turni(corrette), LUNEDI))
+        self.assertEqual(ModificaTurno.objects.count(), 1)

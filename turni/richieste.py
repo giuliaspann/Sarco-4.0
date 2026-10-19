@@ -117,7 +117,13 @@ def decisione_ufficio_cambio(cambio, utente, approva, nota=''):
         cambio.save()
 
 
-def crea_ferie(dipendente, tipo, dal, al, motivo=''):
+def crea_ferie(dipendente, tipo, dal, al, motivo='', dalle=None, alle=None):
+    if tipo == RichiestaFerie.Tipo.PERMESSO and (dalle or alle):
+        if not (dalle and alle) or alle <= dalle:
+            raise RichiestaNonValida("Indica dalle che ora alle che ora (la fine dopo l'inizio).")
+        al = dal
+    else:
+        dalle = alle = None
     if al < dal:
         raise RichiestaNonValida('La data di fine è prima di quella di inizio.')
     if dal < timezone.localdate():
@@ -129,10 +135,18 @@ def crea_ferie(dipendente, tipo, dal, al, motivo=''):
     )
     if sovrapposte.exists():
         raise RichiestaNonValida('Hai già una richiesta per alcuni di questi giorni.')
-    return RichiestaFerie.objects.create(dipendente=dipendente, tipo=tipo, dal=dal, al=al, motivo=motivo[:300])
+    return RichiestaFerie.objects.create(
+        dipendente=dipendente, tipo=tipo, dal=dal, al=al, motivo=motivo[:300], dalle=dalle, alle=alle
+    )
 
 
 def segna_ferie_sui_turni(richiesta, turni):
+    if richiesta.a_ore:
+        # permesso di qualche ora: il turno resta, si annota solo l'orario
+        for t in turni:
+            t.nota_modifica = f'Permesso {richiesta.orario}'
+            t.save(update_fields=['nota_modifica'])
+        return
     for t in turni:
         t.fascia = richiesta.fascia
         t.postazione = ''

@@ -84,6 +84,7 @@ def home(request):
             'oggi': timezone.localdate(),
             'turno': turno,
             'turno_etichetta': 'Stanotte' if turno and turno.data != timezone.localdate() else 'Oggi',
+            'da_vedere': dip.modifiche_turno.filter(vista_il__isnull=True),
             'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
             'pulizie_da_fare': pulizie_da_fare,
             'capi_da_completare': capi_da_completare(request.user).filter(dipendente=dip)[:7],
@@ -443,6 +444,35 @@ def foto(request, pulizia_id):
 # ---------------------------------------------------------------- ufficio
 
 
+def avvisa_modifiche(settimana, modifiche):
+    """Notifica a tutti che i turni sono cambiati; a chi è toccato, il dettaglio e la richiesta di presa visione."""
+    from . import push
+
+    per_persona = {}
+    for m in modifiche:
+        per_persona.setdefault(m.dipendente, []).append(m)
+    interessati = set()
+    for dip, righe in per_persona.items():
+        if dip.utente_id:
+            interessati.add(dip.utente_id)
+            testo = '; '.join(f'{m.data:%d/%m} {m.dopo}' for m in righe[:3])
+            push.invia([dip.utente_id], 'Il tuo turno è cambiato', f'{testo}. Apri e premi "Presa visione".', '/turni/')
+    altri = Dipendente.objects.filter(attivo=True, utente__isnull=False).exclude(utente_id__in=interessati)
+    push.invia(altri.values_list('utente_id', flat=True), 'Turni aggiornati', f'Nuova versione dei turni ({settimana}).', '/turni/settimana/')
+
+
+@login_required
+@require_POST
+def presa_visione(request):
+    from .models import ModificaTurno
+
+    dip = dipendente_di(request)
+    if dip:
+        ModificaTurno.objects.filter(dipendente=dip, vista_il__isnull=True).update(vista_il=timezone.now())
+        messages.success(request, 'Grazie, presa visione registrata.')
+    return redirect('turni:home')
+
+
 @staff_member_required
 def importa_turni(request):
     if request.method == 'POST':
@@ -464,8 +494,11 @@ def importa_turni(request):
                     return redirect('turni:anteprima')
     else:
         form = ImportaForm()
+    from .models import ModificaTurno
+
     settimane = Settimana.objects.annotate(n=Count('turni__dipendente', distinct=True))[:8]
-    return render(request, 'turni/ufficio_importa.html', {'form': form, 'settimane': settimane})
+    modifiche = ModificaTurno.objects.filter(creata_il__gte=timezone.now() - timedelta(days=14)).select_related('dipendente').order_by('vista_il', '-creata_il')[:60]
+    return render(request, 'turni/ufficio_importa.html', {'form': form, 'settimane': settimane, 'modifiche': modifiche})
 
 
 @staff_member_required
@@ -475,9 +508,16 @@ def anteprima(request):
         return redirect('turni:importa')
     letta = importa.da_sessione(dati)
     if request.method == 'POST':
+        from .models import ModificaTurno
+
+        ultima = ModificaTurno.objects.order_by('-pk').values_list('pk', flat=True).first() or 0
         settimana, nuovi, mantenuti = importa.salva_settimana(
             letta, request.user, request.session.get('import_nome_file', '')
         )
+        modifiche = ModificaTurno.objects.filter(pk__gt=ultima).select_related('dipendente')
+        if modifiche:
+            avvisa_modifiche(settimana, modifiche)
+            messages.info(request, f'Turni cambiati a {len({m.dipendente_id for m in modifiche})} persone: devono dare la presa visione.')
         del request.session['import_turni']
         messages.success(request, f'Turni caricati: {settimana}.')
         if nuovi:

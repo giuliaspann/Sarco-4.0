@@ -14,6 +14,18 @@
   <button class="bottone pieno">Leggi il file</button>
 </form>
 
+{% if modifiche %}
+<section class="scheda">
+  <h2>Presa visione dei turni cambiati</h2>
+  <ul class="elenco">
+    {% for m in modifiche %}
+      <li><span><b>{{ m.dipendente.nome_breve }}</b> {{ m.data|date:'D j/m' }}<br><span class="tenue piccolo">{{ m.prima }} → {{ m.dopo }}</span></span>
+      {% if m.vista_il %}<span class="stato-chip ok">✓ {{ m.vista_il|date:'d/m H:i' }}</span>{% else %}<span class="stato-chip attesa">Da vedere</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 {% if settimane %}
 <section class="scheda">
   <h2>Settimane caricate</h2>

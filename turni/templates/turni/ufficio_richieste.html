@@ -17,7 +17,7 @@
   <ul class="elenco">
   {% for a in avvisi %}
     <li class="{% if not a.visto_il %}nuovo{% endif %}">
-      <span><b>{{ a.dipendente.nome_breve }}</b> · {{ a.get_tipo_display }}<br>
+      <span><b>{{ a.dipendente.nome_breve }}</b> · {{ a.get_tipo_display }}{% if a.orario %} · {{ a.orario }}{% endif %}<br>
         <span class="tenue piccolo">{{ a.data|date:'D j M' }} · inviato {{ a.creato_il|date:'d/m H:i' }}</span>
         {% if a.nota %}<br>“{{ a.nota }}”{% endif %}</span>
       {% if a.visto_il %}<span class="stato-richiesta ok">Visto</span>
@@ -60,6 +60,7 @@
 {% for f in ferie %}
 <section class="scheda">
   <h2>{{ f.get_tipo_display }}: {{ f.dipendente.nome_breve }}</h2>
+  {% if f.a_ore %}<p><b>{{ f.dal|date:'l j F' }} · {{ f.orario }}</b></p>{% endif %}
   <p>Dal <b>{{ f.dal|date:'D j M' }}</b> al <b>{{ f.al|date:'D j M Y' }}</b> · {{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}</p>
   <p class="tenue piccolo">
     {% if f.turni_lavoro %}Giorni in cui era in turno: {% for t in f.turni_lavoro %}<span class="giorno-turno">{{ t.data|date:'D j' }} {% include 'turni/_pillola.html' %}</span>{% endfor %}{% elif f.non_caricati < f.giorni %}Nei giorni già caricati non era in turno.{% endif %}

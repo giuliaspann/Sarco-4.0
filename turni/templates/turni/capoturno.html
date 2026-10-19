@@ -19,7 +19,7 @@
   <h2>Avvisi di assenza del giorno</h2>
   <ul class="elenco">
   {% for a in avvisi %}
-    <li class="nuovo"><span><b>{{ a.dipendente.nome_breve }}</b> · {{ a.get_tipo_display }}{% if a.nota %}<br><span class="tenue piccolo">{{ a.nota }}</span>{% endif %}</span>
+    <li class="nuovo"><span><b>{{ a.dipendente.nome_breve }}</b> · {{ a.get_tipo_display }}{% if a.orario %} · {{ a.orario }}{% endif %}{% if a.nota %}<br><span class="tenue piccolo">{{ a.nota }}</span>{% endif %}</span>
       <span class="tenue piccolo">{{ a.creato_il|date:'H:i' }}</span></li>
   {% endfor %}
   </ul>

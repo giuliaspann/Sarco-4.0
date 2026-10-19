@@ -53,7 +53,7 @@
 <div class="rq-riga">
   <span class="home-icona">⏸️</span>
   <span class="rq-testo">
-    <b>{{ f.get_tipo_display }} · {{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}</b>
+    <b>{{ f.get_tipo_display }} · {% if f.a_ore %}{{ f.orario }}{% else %}{{ f.giorni }} giorn{{ f.giorni|pluralize:'o,i' }}{% endif %}</b>
     <small>Dal {{ f.dal|date:'j M' }} al {{ f.al|date:'j M Y' }}{% if f.nota_ufficio %} · Ufficio: {{ f.nota_ufficio }}{% endif %}</small>
     {% if f.stato == 'ATTESA' %}
     <form method="post" action="{% url 'turni:richieste' %}">{% csrf_token %}<input type="hidden" name="ferie" value="{{ f.pk }}">
@@ -68,7 +68,7 @@
 <div class="rq-riga">
   <span class="home-icona">📝</span>
   <span class="rq-testo">
-    <b>{{ a.get_tipo_display }}</b>
+    <b>{{ a.get_tipo_display }}{% if a.orario %} · {{ a.orario }}{% endif %}</b>
     <small>{{ a.data|date:'D j M'|capfirst }}{% if a.nota %} · {{ a.nota }}{% endif %}</small>
   </span>
   <span class="stato-chip {% if a.visto_il %}ok{% else %}attesa{% endif %}">{% if a.visto_il %}Visto{% else %}Inviato{% endif %}</span>

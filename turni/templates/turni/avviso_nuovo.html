@@ -10,7 +10,11 @@
     {% for v, nome in tipi %}<label><input type="radio" name="tipo" value="{{ v }}" required {% if dati.tipo == v %}checked{% endif %}><span>{{ nome }}</span></label>{% endfor %}
   </div>
   <label>Giorno<input type="date" name="data" value="{% if dati.data %}{{ dati.data }}{% else %}{{ oggi|date:'Y-m-d' }}{% endif %}" required></label>
-  <label>Nota (facoltativa)<textarea name="nota" rows="2" maxlength="300" placeholder="Es. esco alle 11, passo dall'ufficio"></textarea></label>
+  <div class="orari">
+    <label class="se-uscita se-altro"><span class="se-uscita">Esco alle</span><span class="se-altro">Dalle</span><input type="time" name="dalle" value="{{ dati.dalle }}" step="900"></label>
+    <label class="se-ritardo se-altro"><span class="se-ritardo">Entro alle</span><span class="se-altro">Alle</span><input type="time" name="alle" value="{{ dati.alle }}" step="900"></label>
+  </div>
+  <label>Nota (facoltativa)<textarea name="nota" rows="2" maxlength="300">{{ dati.nota }}</textarea></label>
   <button class="bottone pieno piena-larghezza">Invia avviso</button>
 </form>
 {% endblock %}

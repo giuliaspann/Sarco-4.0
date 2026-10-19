@@ -232,8 +232,15 @@ def salva_settimana(letta, utente=None, nome_file=''):
     lista restituita dice quali differivano dal file, per avvisare l'ufficio."""
     from django.db import transaction
 
-    from .models import Dipendente, NotaSettimana, Settimana, Turno
+    from django.utils import timezone
+
+    from .models import Dipendente, ModificaTurno, NotaSettimana, Settimana, Turno
     from .richieste import ferie_approvate, segna_ferie_sui_turni
+
+    oggi = timezone.localdate()
+    lunedi_corrente = oggi - timedelta(days=oggi.weekday())
+    # presa visione solo per i giorni da oggi a domenica della settimana prossima
+    da_avvisare = (oggi, lunedi_corrente + timedelta(days=13))
 
     with transaction.atomic():
         settimana, _ = Settimana.objects.update_or_create(
@@ -263,6 +270,8 @@ def salva_settimana(letta, utente=None, nome_file=''):
                 if (vecchio and t.capoturno and fascia == Fascia.ALTRO and vecchio.capoturno
                         and vecchio.postazione == t.postazione and vecchio.fascia != Fascia.ALTRO):
                     fascia = vecchio.fascia  # capo turno: fascia già indicata nell'app
+                prima = vecchio.descrizione if vecchio else None
+                cambiato = vecchio and (vecchio.fascia, vecchio.postazione, vecchio.capoturno) != (fascia, t.postazione, t.capoturno)
                 nuovo, _ = Turno.objects.update_or_create(
                     dipendente=dip,
                     data=giorno,
@@ -274,6 +283,8 @@ def salva_settimana(letta, utente=None, nome_file=''):
                         'capoturno': t.capoturno,
                     },
                 )
+                if cambiato and da_avvisare[0] <= giorno <= da_avvisare[1]:
+                    ModificaTurno.objects.create(dipendente=dip, data=giorno, prima=prima[:80], dopo=nuovo.descrizione[:80])
                 ferie = ferie_approvate(dip, giorno)
                 if ferie and nuovo.fascia != ferie.fascia:
                     segna_ferie_sui_turni(ferie, [nuovo])

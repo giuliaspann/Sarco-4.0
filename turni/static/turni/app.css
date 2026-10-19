@@ -191,7 +191,7 @@ body.larga .pagina { max-width: 1200px; }
 
 /* ------------------------------------------------ moduli */
 label { display: grid; gap: 4px; margin-bottom: 12px; font-size: .9rem; font-weight: 600; }
-input[type=text], input[type=password], input[type=date], input[type=number], input[type=file], select {
+input[type=text], input[type=password], input[type=date], input[type=time], input[type=number], input[type=file], select {
   width: 100%; font: inherit; font-weight: 400; padding: 11px 12px; border-radius: 10px;
   border: 1px solid var(--bordo); background: var(--sfondo); color: var(--testo); min-height: 44px;
 }
@@ -410,7 +410,7 @@ h2.grande { font-size: 1.3rem; }
 .bottone:disabled { background: var(--altro); border-color: var(--altro); color: var(--spento); }
 
 /* campi */
-input[type=text], input[type=password], input[type=date], input[type=number], input[type=file], select, textarea {
+input[type=text], input[type=password], input[type=date], input[type=time], input[type=number], input[type=file], select, textarea {
   min-height: 52px; border-radius: var(--raggio); background: var(--carta); border: 1px solid var(--bordo); padding: 12px 14px;
 }
 input:focus, select:focus, textarea:focus { outline: none; border: 2px solid var(--primario); padding: 11px 13px; }
@@ -1354,3 +1354,29 @@ tr.pr-alto { background: #fee2e2; }
 
 /* area personale: turni sopra, richieste sotto */
 .ap-sezione { margin: 26px 2px 10px; padding-top: 16px; border-top: 2px solid var(--bordo); font-size: 1.25rem; }
+
+/* orari di permesso, ritardo, uscita: compaiono solo per il tipo scelto */
+.orari { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.orari > label { min-width: 0; }
+.orari input, form.scheda input[type=date] { width: 100%; min-width: 0; box-sizing: border-box; }
+.solo-permesso { display: none; }
+form:has(input[value=PERMESSO]:checked) span.solo-permesso { display: inline; }
+form:has(input[value=PERMESSO]:checked) div.solo-permesso { display: grid; }
+form:has(input[value=PERMESSO]:checked) .solo-ferie { display: none; }
+.se-uscita, .se-ritardo, .se-altro { display: none; }
+form:has(input[value=USCITA]:checked) label.se-uscita,
+form:has(input[value=RITARDO]:checked) label.se-ritardo,
+form:has(input[value=ALTRO]:checked) label.se-altro { display: block; }
+form:has(input[value=USCITA]:checked) span.se-uscita,
+form:has(input[value=RITARDO]:checked) span.se-ritardo,
+form:has(input[value=ALTRO]:checked) span.se-altro { display: inline; }
+form:has(input[value=USCITA]:checked) .orari, form:has(input[value=RITARDO]:checked) .orari { grid-template-columns: 1fr; }
+
+/* presa visione dei turni cambiati dall'ufficio */
+.pv-riquadro { margin: 0 0 14px; padding: 16px; border: 3px solid #f59e0b; border-radius: 18px; background: #fffbeb; }
+.pv-riquadro h2 { margin: 0 0 10px; font-size: 1.25rem; color: #92400e; }
+.pv-riquadro p { margin: 0 0 10px; display: grid; gap: 2px; font-size: 1.05rem; }
+.pv-prima { text-decoration: line-through; color: #9a3412; opacity: .75; }
+.pv-dopo { font-weight: 800; font-size: 1.15rem; }
+.pv-riquadro .bottone { min-height: 58px; font-size: 1.2rem; margin-top: 4px; }
+@media (prefers-color-scheme: dark) { .pv-riquadro { background: #33240f; } .pv-riquadro h2 { color: #fcd34d; } .pv-prima { color: #fdba74; } }

@@ -440,6 +440,26 @@ class CambioTurno(models.Model):
         return self.in_corso and self.giorno1 <= timezone.localdate()
 
 
+class ModificaTurno(models.Model):
+    """L'ufficio ricarica i turni di questa settimana o della prossima e il turno di qualcuno cambia:
+    la persona deve premere "Presa visione"; l'ufficio vede chi l'ha già fatto."""
+
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='modifiche_turno')
+    data = models.DateField()
+    prima = models.CharField(max_length=80)
+    dopo = models.CharField(max_length=80)
+    creata_il = models.DateTimeField(auto_now_add=True)
+    vista_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'modifica turno'
+        verbose_name_plural = 'modifiche turno'
+        ordering = ['data', 'creata_il']
+
+    def __str__(self):
+        return f'{self.dipendente} {self.data:%d/%m}: {self.prima} → {self.dopo}'
+
+
 class RichiestaFerie(models.Model):
     class Tipo(models.TextChoices):
         FERIE = 'FERIE', 'Ferie'
@@ -456,6 +476,9 @@ class RichiestaFerie(models.Model):
     dal = models.DateField()
     al = models.DateField()
     motivo = models.CharField(max_length=300, blank=True)
+    # permesso a ore: dalle/alle nello stesso giorno (vuoti = giornate intere)
+    dalle = models.TimeField(null=True, blank=True)
+    alle = models.TimeField(null=True, blank=True)
     stato = models.CharField(max_length=10, choices=Stato.choices, default=Stato.ATTESA)
     creata_il = models.DateTimeField(auto_now_add=True)
     gestita_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
@@ -477,6 +500,22 @@ class RichiestaFerie(models.Model):
     @property
     def fascia(self):
         return Fascia.FERIE if self.tipo == self.Tipo.FERIE else Fascia.PERMESSO
+
+    @property
+    def a_ore(self):
+        return bool(self.dalle and self.alle)
+
+    @property
+    def orario(self):
+        """Es. "esce alle 11:00", "entra alle 9:30", "dalle 8:00 alle 10:00"."""
+        f = lambda t: f'{t.hour}:{t.minute:02d}'
+        if self.dalle and self.alle:
+            return f'dalle {f(self.dalle)} alle {f(self.alle)}'
+        if self.dalle:
+            return f'esce alle {f(self.dalle)}'
+        if self.alle:
+            return f'entra alle {f(self.alle)}'
+        return ''
 
 
 class TurnoExtra(models.Model):
@@ -568,6 +607,9 @@ class AvvisoAssenza(models.Model):
     data = models.DateField()
     tipo = models.CharField(max_length=10, choices=Tipo.choices)
     nota = models.CharField(max_length=300, blank=True)
+    # uscita anticipata: "dalle" (ora in cui esce); ritardo: "alle" (ora in cui entra); altro: tutte e due
+    dalle = models.TimeField(null=True, blank=True)
+    alle = models.TimeField(null=True, blank=True)
     creato_il = models.DateTimeField(auto_now_add=True)
     visto_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     visto_il = models.DateTimeField(null=True, blank=True)
@@ -579,6 +621,18 @@ class AvvisoAssenza(models.Model):
 
     def __str__(self):
         return f'{self.dipendente} {self.data:%d/%m} {self.get_tipo_display()}'
+
+    @property
+    def orario(self):
+        """Es. "esce alle 11:00", "entra alle 9:30", "dalle 8:00 alle 10:00"."""
+        f = lambda t: f'{t.hour}:{t.minute:02d}'
+        if self.dalle and self.alle:
+            return f'dalle {f(self.dalle)} alle {f(self.alle)}'
+        if self.dalle:
+            return f'esce alle {f(self.dalle)}'
+        if self.alle:
+            return f'entra alle {f(self.alle)}'
+        return ''
 
 
 # ---------------------------------------------------------------- Messaggi

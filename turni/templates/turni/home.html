@@ -3,6 +3,16 @@
 {% block contenuto %}
 <p class="home-saluto">Buongiorno, <b>{{ dip.nome_breve }}</b></p>
 
+{% if da_vedere %}
+<form method="post" action="{% url 'turni:presa_visione' %}" class="pv-riquadro">{% csrf_token %}
+  <h2>⚠️ Il tuo turno è cambiato</h2>
+  {% for m in da_vedere %}
+  <p><b>{{ m.data|date:'l j F'|capfirst }}</b><span class="pv-prima">{{ m.prima }}</span><span class="pv-dopo">{{ m.dopo }}</span></p>
+  {% endfor %}
+  <button class="bottone pieno piena-larghezza">✓ Presa visione</button>
+</form>
+{% endif %}
+
 <div class="home-due-turni">
   {% include 'turni/_home_turno.html' with t=turno etichetta=turno_etichetta %}
   {% include 'turni/_home_turno.html' with t=domani etichetta='Domani' %}
