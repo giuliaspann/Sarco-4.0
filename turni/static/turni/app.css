@@ -1468,3 +1468,19 @@ body.as-aperto { overflow: hidden; }
 .pl-miniature figure { margin: 0; }
 .pl-miniature img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid var(--bordo); }
 .pl-miniature figcaption { font-size: .85rem; font-weight: 700; color: var(--tenue); text-align: center; }
+
+.tasto-richiedi { background: #fff7ed; border-color: #fed7aa; } .tasto-richiedi b { color: #9a3412; }
+@media (prefers-color-scheme: dark) { .tasto-richiedi { background: var(--carta); } .tasto-richiedi b { color: inherit; } }
+a.pl-riga { color: inherit; text-decoration: none; }
+.pl-tasti { margin-top: 16px; }
+
+.tasto-impedimento { background: #fef2f2; border-color: #fecaca; } .tasto-impedimento b { color: #991b1b; }
+@media (prefers-color-scheme: dark) { .tasto-impedimento { background: var(--carta); } .tasto-impedimento b { color: inherit; } }
+.pl-foto-motivo { min-height: 64px; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; }
+.bottone.pieno.pl-invia-impedimento { background: #b91c1c !important; border-color: #b91c1c !important; color: #fff; }
+.pl-motivo { grid-column: 1 / -1; color: #991b1b; font-weight: 600; }
+
+/* legenda dei turni sempre visibile (non più da aprire) */
+.mt-legenda { margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--bordo); border-radius: 14px; background: var(--carta); }
+.mt-legenda .legenda { margin: 0; justify-content: center; gap: 8px 14px; font-size: .88rem; }
+.mt-legenda .legenda i { font-size: .8rem; min-width: 26px; }

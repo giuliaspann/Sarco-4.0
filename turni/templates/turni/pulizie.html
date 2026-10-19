@@ -8,6 +8,9 @@
     <b>Nessuna pulizia da fare</b>
     <small>{% if turno %}Oggi: {% include 'turni/_pillola.html' with t=turno %}{% else %}Oggi non hai turni.{% endif %}</small>
   </div>
+  <div class="home-griglia pl-tasti">
+    <a class="home-tasto tasto-richiedi" href="?fai=richiedi"><span class="home-icona">📣</span><b>Richiedi pulizia</b></a>
+  </div>
 
 {% elif fai == 'assegnata' %}
   <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
@@ -35,6 +38,31 @@
   <div class="pl-fatto"><span class="home-icona">✅</span><b>Hai già completato tutte le pulizie assegnate</b></div>
   {% endif %}
 
+{% elif fai == 'impedimento' %}
+  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
+  <div class="intestazione"><h1>Segnala impedimento pulizia</h1></div>
+  {% if voce %}
+  <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
+    <input type="hidden" name="pulizia" value="{{ voce.pk }}">
+    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.elemento.nome }}</h2>
+    <p class="mn-sottotitolo">Perché non si può fare?</p>
+    <div class="scegli">
+      {% for m in motivi %}<label><input type="radio" name="motivo" value="{{ m }}" required><span>{{ m }}</span></label>{% endfor %}
+    </div>
+    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto del motivo</span></label>
+    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="250" class="pl-campo-nota">
+    <button class="bottone pieno piena-larghezza pl-invia pl-invia-impedimento" name="azione" value="impedita">⚠️ Segnala impedimento</button>
+  </form>
+  {% elif da_fare %}
+  <div class="home-griglia">
+    {% for v in da_fare %}
+    <a class="home-tasto" href="?fai=impedimento&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.elemento.nome }}</b></a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="pl-fatto"><span class="home-icona">✅</span><b>Non ci sono pulizie da fare</b></div>
+  {% endif %}
+
 {% elif fai == 'aggiuntiva' %}
   <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
   <div class="intestazione"><h1>Segnala completamento pulizia aggiuntiva</h1></div>
@@ -59,7 +87,18 @@
     {% if turno.orario_pulizie %}<span class="pl-quando">🕒 Dalle <b>{{ turno.orario_pulizie|slice:':5' }}</b> alle <b>{{ turno.orario_pulizie|slice:'-5:' }}</b></span>{% endif %}
   </div>
 
-  <div class="home-griglia">
+  <h2 class="rq-sezione">Da pulire</h2>
+  {% for v in da_fare %}
+  <a class="pl-riga pl-{{ v.stato|lower }}" href="?fai=assegnata&voce={{ v.pk }}">
+    <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
+    <span class="rq-testo"><b>{{ v.elemento.nome }}</b><small>{% if v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
+    <span class="stato-chip {% if v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
+  </a>
+  {% empty %}
+  <div class="pl-fatto"><span class="home-icona">✅</span><b>Pulizia del turno completata</b></div>
+  {% endfor %}
+
+  <div class="home-griglia pl-tasti">
     <a class="home-tasto tasto-pulizia" href="?fai=assegnata">
       {% if da_fare %}<i class="home-badge">{{ da_fare|length }}</i>{% endif %}
       <span class="home-icona">✅</span><b>Segnala completamento pulizia assegnata</b>
@@ -67,24 +106,31 @@
     <a class="home-tasto tasto-aggiuntiva" href="?fai=aggiuntiva">
       <span class="home-icona">➕</span><b>Segnala completamento pulizia aggiuntiva</b>
     </a>
+    <a class="home-tasto tasto-richiedi" href="?fai=richiedi">
+      <span class="home-icona">📣</span><b>Richiedi pulizia</b>
+    </a>
+    <a class="home-tasto tasto-impedimento" href="?fai=impedimento">
+      <span class="home-icona">⚠️</span><b>Segnala impedimento pulizia</b>
+    </a>
   </div>
 
-  <h2 class="rq-sezione">Pulizie del turno</h2>
-  {% for v in voci %}
+  {% if completate %}
+  <h2 class="rq-sezione">Segnalate</h2>
+  {% for v in completate %}
   <div class="pl-riga pl-{{ v.stato|lower }}">
     <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
-    <span class="rq-testo"><b>{{ v.elemento.nome }}</b>{% if v.aggiunta_da_operaio %}<small>Aggiuntiva</small>{% endif %}</span>
-    <span class="stato-chip {% if v.stato == 'VERIFICATA' or v.stato == 'FATTA' %}ok{% elif v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'VERIFICATA' %}Verificata{% elif v.stato == 'FATTA' %}Fatta{% elif v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
+    <span class="rq-testo"><b>{{ v.elemento.nome }}</b><small>{% if v.aggiunta_da_operaio %}Aggiuntiva{% elif v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
+    <span class="stato-chip {% if v.stato == 'IMPEDITA' %}no{% else %}ok{% endif %}">{% if v.stato == 'VERIFICATA' %}Verificata{% elif v.stato == 'IMPEDITA' %}Non eseguibile{% else %}Fatta{% endif %}</span>
+    {% if v.stato == 'IMPEDITA' and v.nota %}<small class="pl-motivo">{{ v.nota }}</small>{% endif %}
     {% if v.foto_prima or v.foto %}
     <div class="pl-miniature">
       {% if v.foto_prima %}<figure><img src="{% url 'turni:foto' v.pk %}?quale=prima" alt="Prima" loading="lazy"><figcaption>Prima</figcaption></figure>{% endif %}
-      {% if v.foto %}<figure><img src="{% url 'turni:foto' v.pk %}" alt="Dopo" loading="lazy"><figcaption>Dopo</figcaption></figure>{% endif %}
+      {% if v.foto %}<figure><img src="{% url 'turni:foto' v.pk %}" alt="Dopo" loading="lazy"><figcaption>{% if v.stato == 'IMPEDITA' %}Motivo{% else %}Dopo{% endif %}</figcaption></figure>{% endif %}
     </div>
     {% endif %}
   </div>
-  {% empty %}
-  <p class="tenue piccolo">Nessuna pulizia assegnata in questo turno.</p>
   {% endfor %}
+  {% endif %}
 
   {% if recenti|length > 1 %}
   <div class="pl-altri">

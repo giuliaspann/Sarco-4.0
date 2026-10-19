@@ -20,7 +20,7 @@ from django.views.decorators.http import require_POST
 from . import accessi, importa
 from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
-from .pulizie import aggiungibili, genera_pulizie, mezzi_aggiungibili, salva_foto, turno_attuale
+from .pulizie import aggiungibili, genera_pulizie, in_turno_oggi, mezzi_aggiungibili, richiedi_pulizia, salva_foto, turno_attuale
 from .richieste import extra_per
 from .views_messaggi import non_letti_bacheca, non_letti_chat
 
@@ -321,6 +321,26 @@ def pulizie(request, turno_id=None):
     oggi = timezone.localdate()
     recenti = dip.turni.filter(data__range=(oggi - timedelta(days=2), oggi), fascia__in=FASCE_LAVORATIVE).order_by('-data')
 
+    # "Richiedi pulizia" funziona anche per chi oggi non è in turno (es. il capo turno a casa o l'ufficio)
+    if request.GET.get('fai') == 'richiedi' or request.POST.get('azione') == 'richiedi':
+        colleghi = in_turno_oggi(escluso=dip)
+        if request.method == 'POST':
+            t = next((c for c in colleghi if str(c.pk) == request.POST.get('turno')), None)
+            el = ElementoPulizia.objects.filter(attivo=True, pk=request.POST.get('elemento')).first()
+            if not t or not el:
+                messages.error(request, 'Scegli chi e cosa.')
+            else:
+                try:
+                    richiedi_pulizia(request.user, t, el, request.POST.get('nota', ''))
+                except ValueError as e:
+                    messages.error(request, str(e))
+                else:
+                    messages.success(request, f'Pulizia chiesta a {t.dipendente.nome_breve}: {el.nome}.')
+                    return redirect('turni:pulizie')
+        return render(request, 'turni/pulizie_richiedi.html', {
+            'colleghi': colleghi, 'elementi': ElementoPulizia.objects.filter(attivo=True).order_by('tipo', 'nome'),
+        })
+
     if turno is None or not turno.lavora:
         return render(request, 'turni/pulizie.html', {'turno': turno, 'recenti': recenti})
 
@@ -351,6 +371,23 @@ def pulizie(request, turno_id=None):
                 messages.info(request, 'Questa pulizia è già stata verificata.')
             elif azione == 'rimuovi' and p.aggiunta_da_operaio and p.stato == Pulizia.Stato.DA_FARE:
                 p.delete()
+            elif azione == 'impedita':
+                # foto obbligatoria: giustifica perché la pulizia non si è potuta fare
+                if not request.FILES.get('foto'):
+                    messages.error(request, 'Serve una foto che mostri il motivo.')
+                    return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=impedimento&voce={p.pk}')
+                if not _foto_pulizia(request, p):
+                    return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=impedimento&voce={p.pk}')
+                motivo = request.POST.get('motivo') if request.POST.get('motivo') in Pulizia.MOTIVI_IMPEDIMENTO else 'Altro'
+                nota = request.POST.get('nota', '').strip()
+                p.nota = (motivo + (f': {nota}' if nota else ''))[:300]
+                p.stato, p.fatta_il = Pulizia.Stato.IMPEDITA, timezone.now()
+                p.save()
+                from . import manutenzione as mn
+
+                mn.avvisa(mn.capiturno_oggi(), request.user, f'🧹 Pulizia non eseguibile · {dip.nome_breve}',
+                          f'{p.elemento.nome}: {p.nota}', reverse('turni:capoturno'))
+                messages.success(request, f'Impedimento segnalato: {p.elemento.nome}.')
             elif azione == 'fatta':
                 if not _foto_pulizia(request, p):
                     return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=assegnata&voce={p.pk}')
@@ -362,17 +399,19 @@ def pulizie(request, turno_id=None):
         return redirect('turni:pulizie_turno', turno.pk)
 
     genera_pulizie(turno)
-    voci = list(turno.pulizie.select_related('elemento'))
+    voci = list(turno.pulizie.select_related('elemento', 'richiesta_da__dipendente'))
     da_fare = [v for v in voci if v.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
     contesto = {
         'turno': turno,
         'voci': voci,
         'da_fare': da_fare,
         'fatte': sum(v.stato in (Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA) for v in voci),
+        'completate': [v for v in voci if v.stato in (Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA, Pulizia.Stato.IMPEDITA)],
+        'motivi': Pulizia.MOTIVI_IMPEDIMENTO,
         'recenti': recenti,
         'fai': request.GET.get('fai'),
     }
-    if contesto['fai'] == 'assegnata':
+    if contesto['fai'] in ('assegnata', 'impedimento'):
         scelta = next((v for v in da_fare if str(v.pk) == request.GET.get('voce')), None)
         if scelta is None and len(da_fare) == 1:
             scelta = da_fare[0]  # una sola pulizia assegnata: si va dritti al modulo

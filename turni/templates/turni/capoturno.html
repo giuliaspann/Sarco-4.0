@@ -48,7 +48,7 @@
       </div>
       {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
       {% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto {{ p.elemento.nome }}" loading="lazy"></a>{% endif %}
-      {% if p.stato == 'FATTA' or p.stato == 'SEGNALATA' %}
+      {% if p.stato == 'FATTA' or p.stato == 'SEGNALATA' or p.stato == 'IMPEDITA' %}
       <form method="post" class="form-voce">{% csrf_token %}
         <input type="hidden" name="pulizia" value="{{ p.pk }}">
         <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">

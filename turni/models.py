@@ -363,10 +363,15 @@ class Pulizia(models.Model):
         FATTA = 'FATTA', 'Fatta'
         VERIFICATA = 'VERIFICATA', 'Verificata'
         SEGNALATA = 'SEGNALATA', 'Da rifare'
+        IMPEDITA = 'IMPEDITA', 'Non eseguibile'
+
+    MOTIVI_IMPEDIMENTO = ['Mezzo in uso', 'Zona non accessibile', 'Mancano i prodotti', 'Guasto', 'Tempo insufficiente', 'Altro']
 
     turno = models.ForeignKey(Turno, on_delete=models.CASCADE, related_name='pulizie')
     elemento = models.ForeignKey(ElementoPulizia, on_delete=models.PROTECT)
     aggiunta_da_operaio = models.BooleanField(default=False, help_text='mezzo usato aggiunto a mano')
+    # "Richiedi pulizia": un collega (di solito il capo turno) la chiede a chi è in turno
+    richiesta_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     stato = models.CharField(max_length=12, choices=Stato.choices, default=Stato.DA_FARE)
     fatta_il = models.DateTimeField(null=True, blank=True)
     foto_prima = models.ImageField('foto prima', upload_to=percorso_foto_prima, blank=True)

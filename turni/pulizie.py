@@ -59,3 +59,27 @@ def aggiungibili(turno):
     """Per "Segnala pulizia aggiuntiva": mezzi e zone non già nella lista del turno."""
     gia = turno.pulizie.values_list('elemento_id', flat=True)
     return ElementoPulizia.objects.filter(attivo=True).exclude(pk__in=gia).order_by('tipo', 'nome')
+
+
+def in_turno_oggi(escluso=None):
+    """A chi si può chiedere una pulizia: chi lavora oggi (o fa la notte iniziata ieri)."""
+    oggi = timezone.localdate()
+    adesso = timezone.localtime()
+    turni = Turno.objects.filter(data=oggi, settimana__pubblicata=True, dipendente__attivo=True)
+    if adesso.hour < FINE_NOTTE:
+        turni = turni | Turno.objects.filter(data=oggi - timedelta(days=1), fascia=Fascia.NOTTE, settimana__pubblicata=True,
+                                             dipendente__attivo=True)
+    turni = [t for t in turni.select_related('dipendente') if t.lavora and t.dipendente_id != getattr(escluso, 'pk', None)]
+    return sorted(turni, key=lambda t: t.dipendente.nome)
+
+
+def richiedi_pulizia(utente, turno, elemento, nota=''):
+    from . import push
+
+    if turno.pulizie.filter(elemento=elemento).exists():
+        raise ValueError(f'{elemento.nome} è già nella lista di {turno.dipendente.nome_breve}.')
+    p = Pulizia.objects.create(turno=turno, elemento=elemento, richiesta_da=utente, nota=nota[:300])
+    if turno.dipendente.utente_id:
+        da = getattr(getattr(utente, 'dipendente', None), 'nome_breve', None) or utente.get_username()
+        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{elemento.nome} (da {da})', f'/turni/pulizie/{turno.pk}/')
+    return p

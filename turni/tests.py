@@ -256,6 +256,46 @@ class PulizieTest(TestCase):
             extra = turno.pulizie.get(elemento=self.pala)
             self.assertEqual((extra.stato, extra.aggiunta_da_operaio), (Pulizia.Stato.FATTA, True))
 
+    def test_richiedi_pulizia_a_un_collega(self):
+        self.client.login(username='spano.mauro', password='123456')
+        with self.a(LUNEDI), mock.patch('pywebpush.webpush'):
+            r = self.client.get(reverse('turni:pulizie') + '?fai=richiedi')
+            self.assertContains(r, 'Richiedi pulizia')
+            t = next(c for c in r.context['colleghi'] if c.dipendente == self.drame)
+            self.assertNotIn(self.spano, [c.dipendente for c in r.context['colleghi']])
+            self.client.post(reverse('turni:pulizie'), {'azione': 'richiedi', 'turno': t.pk, 'elemento': self.ufficio.pk})
+            p = Pulizia.objects.get(turno=t, elemento=self.ufficio)
+            self.assertEqual(p.richiesta_da.username, 'spano.mauro')
+            # la seconda volta no: è già nella sua lista
+            self.client.post(reverse('turni:pulizie'), {'azione': 'richiedi', 'turno': t.pk, 'elemento': self.ufficio.pk})
+            self.assertEqual(Pulizia.objects.filter(turno=t, elemento=self.ufficio).count(), 1)
+            # Drame la vede in alto tra le cose da pulire
+            self.client.login(username='drame.bouba', password='654321')
+            r = self.client.get(reverse('turni:pulizie'))
+            self.assertContains(r, 'Chiesta da')
+            self.assertIn(p, r.context['da_fare'])
+
+    def test_impedimento_pulizia_con_foto(self):
+        from PIL import Image
+
+        b = BytesIO()
+        Image.new('RGB', (40, 30), 'gray').save(b, 'JPEG')
+        b.seek(0)
+        b.name = 'x.jpg'
+        self.client.login(username='drame.bouba', password='654321')
+        turno = Turno.objects.get(dipendente=self.drame, data=LUNEDI)
+        url = reverse('turni:pulizie_turno', args=[turno.pk])
+        with self.settings(MEDIA_ROOT=self._tmp()), mock.patch('pywebpush.webpush'):
+            self.assertContains(self.client.get(url), 'Segnala impedimento pulizia')
+            p = turno.pulizie.get()
+            self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita', 'motivo': 'Mezzo in uso'})
+            p.refresh_from_db()
+            self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # senza foto non vale
+            self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita', 'motivo': 'Mezzo in uso', 'nota': 'lo usa la ditta', 'foto': b})
+            p.refresh_from_db()
+            self.assertEqual((p.stato, p.nota), (Pulizia.Stato.IMPEDITA, 'Mezzo in uso: lo usa la ditta'))
+            self.assertTrue(p.foto)
+
     def _tmp(self):
         import tempfile
 
