@@ -16,7 +16,7 @@
   </table>
   {% if not a.peso_kg %}<p class="tenue piccolo">Senza il peso del campione non si calcolano i g/t.</p>{% endif %}
   {% if a.note %}<p>{{ a.note }}</p>{% endif %}
-  {% if a.foto %}<img class="pl-foto" src="{% url 'turni:foto_analisi' a.pk %}" alt="Foto dell'analisi" loading="lazy">{% endif %}
+  {% if a.foto %}<p class="foto-allegata">📷 Foto allegata</p><img class="pl-foto" src="{% url 'turni:foto_analisi' a.pk %}" alt="Foto dell'analisi" loading="lazy">{% endif %}
 </section>
 {% if a.inserita_da_id == user.pk or user.is_superuser %}
 <form method="post">{% csrf_token %}<button class="bottone piena-larghezza" name="azione" value="elimina" data-conferma="Eliminare questa analisi?">🗑️ Elimina</button></form>

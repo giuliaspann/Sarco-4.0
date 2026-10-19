@@ -17,7 +17,7 @@
     {% endfor %}
   </table>
   <p class="tenue piccolo">In rosso gli scarti oltre una volta e mezza la media degli ultimi 30 giorni.</p>
-  {% if t.foto %}<img class="pl-foto" src="{% url 'turni:foto_produzione' t.pk %}" alt="Foto del display" loading="lazy">{% endif %}
+  {% if t.foto %}<p class="foto-allegata">📷 Foto allegata</p><img class="pl-foto" src="{% url 'turni:foto_produzione' t.pk %}" alt="Foto del display" loading="lazy">{% endif %}
 </section>
 <a class="bottone piena-larghezza" href="?modifica=1">✏️ Correggi i valori</a>
 {% endblock %}

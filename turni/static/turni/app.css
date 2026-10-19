@@ -1446,3 +1446,7 @@ body.as-aperto { overflow: hidden; }
 .st-conferma-box .bottone { min-height: 56px; font-size: 1.15rem; margin-top: 8px; }
 .as-apri { width: 44px; height: 44px; padding: 0; font-size: 1.35rem; line-height: 1; }
 .testa-destra .link-esci, .marchio-modulo { white-space: nowrap; }
+
+/* la foto allegata si distingue dalla tabella dei valori */
+.foto-allegata { margin: 18px 0 8px; padding-top: 14px; border-top: 2px solid var(--bordo); font-weight: 700; color: var(--tenue); }
+.foto-allegata + .pl-foto { border: 1px solid var(--bordo); border-radius: 12px; }
