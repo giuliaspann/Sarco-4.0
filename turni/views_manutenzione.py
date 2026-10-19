@@ -778,3 +778,12 @@ def video(request, tipo, oggetto_id):
     r['Content-Range'] = f'bytes {inizio}-{fine}/{dimensione}'
     r['Accept-Ranges'] = 'bytes'
     return r
+
+
+@login_required
+def ripartenza(request):
+    """Un solo impianto fermo: si va dritti alla ripartenza. Più di uno: si sceglie quale."""
+    in_corso = list(FermoImpianto.objects.filter(ripartito_il__isnull=True).select_related('macchina').order_by('fermo_dal'))
+    if len(in_corso) == 1:
+        return redirect(reverse('turni:fermo', args=[in_corso[0].pk]) + '#riparti')
+    return render(request, 'turni/mn_ripartenza.html', {'in_corso': in_corso})

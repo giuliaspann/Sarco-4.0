@@ -33,6 +33,7 @@ urlpatterns = [
     path('manutenzione/', views_manutenzione.manutenzione, name='manutenzione'),
     path('manutenzione/interventi/', views_manutenzione.interventi, name='interventi'),
     path('manutenzione/fermi/', views_manutenzione.fermi, name='fermi'),
+    path('manutenzione/fermi/ripartenza/', views_manutenzione.ripartenza, name='ripartenza'),
     path('manutenzione/fermi/nuovo/', views_manutenzione.nuovo_fermo, name='nuovo_fermo'),
     path('manutenzione/fermi/<int:fermo_id>/', views_manutenzione.fermo, name='fermo'),
     path('manutenzione/fermi/<int:fermo_id>/foto/<str:quale>/', views_manutenzione.foto_fermo, name='foto_fermo'),

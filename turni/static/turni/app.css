@@ -1343,3 +1343,8 @@ tr.pr-alto { background: #fee2e2; }
 
 .tasto-programma { margin: 14px 0 4px; background: #eef4ff; border-color: #c7d7fe; }
 .tasto-programma b { color: #1e40af; }
+
+.tasto-ripartenza { background: #eefaf0; border-color: #cfeed6; }
+.tasto-ripartenza .home-icona { background: #d9fdd3; }
+.tasto-ripartenza b { color: #166534; }
+@media (prefers-color-scheme: dark) { .tasto-ripartenza { background: #12301d; border-color: #166534; } .tasto-ripartenza b { color: #bbf7d0; } }

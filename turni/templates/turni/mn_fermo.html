@@ -30,7 +30,7 @@
 </section>
 
 {% if f.in_corso and puo %}
-<form method="post" enctype="multipart/form-data" class="scheda mn-azione mn-form">{% csrf_token %}
+<form method="post" enctype="multipart/form-data" class="scheda mn-azione mn-form" id="riparti">{% csrf_token %}
   <h2>L'impianto è ripartito?</h2>
   <label>Ripartito alle<input type="datetime-local" name="quando" value="{{ adesso }}"></label>
   <label>Cosa è stato sistemato (facoltativo)<textarea name="sistemazione" rows="2" maxlength="500" placeholder="Es. giuntato il nastro, sbloccata la tramoggia"></textarea></label>

@@ -66,3 +66,17 @@ class FermoCorrenteTest(TestCase):
         f = FermoImpianto.objects.get()
         self.assertFalse(f.in_corso)
         self.assertEqual((f.minuti, f.get_causa_display()), (21, 'Alimentazione esterna (corrente)'))
+
+
+class RipartenzaTest(TestCase):
+    def test_pulsante_ripartenza(self):
+        u = get_user_model().objects.create_user('nino', password='123456')
+        Dipendente.objects.create(nome='NINO', utente=u)
+        self.client.login(username='nino', password='123456')
+        self.assertContains(self.client.get(reverse('turni:ripartenza')), 'Nessun impianto risulta fermo')
+        f = FermoImpianto.objects.create(impianto='IMP1', causa='NASTRO')
+        self.assertRedirects(self.client.get(reverse('turni:ripartenza')), reverse('turni:fermo', args=[f.pk]) + '#riparti', fetch_redirect_response=False)
+        FermoImpianto.objects.create(impianto='SABBIA', causa='TRAMOGGIA')
+        r = self.client.get(reverse('turni:ripartenza'))
+        self.assertContains(r, 'Quale impianto è ripartito?')
+        self.assertContains(r, 'Sabbia')

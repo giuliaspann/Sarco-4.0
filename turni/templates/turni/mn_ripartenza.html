@@ -1,0 +1,16 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Ripartenza impianto{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
+<div class="intestazione"><h1>Segnala ripartenza impianto</h1></div>
+{% if in_corso %}
+<h2 class="rq-sezione">Quale impianto è ripartito?</h2>
+<div class="sg-gruppi">
+  {% for f in in_corso %}
+  <a href="{% url 'turni:fermo' f.pk %}#riparti"><span>⛔</span><b>{{ f.get_impianto_display }}</b><small>Fermo da {{ f.durata }} · {{ f.get_causa_display }}</small></a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="scheda centrato"><p class="mn-descrizione">✅ Nessun impianto risulta fermo.</p></div>
+{% endif %}
+{% endblock %}

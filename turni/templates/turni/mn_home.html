@@ -16,7 +16,13 @@
 <div class="home-griglia">
   <a class="home-tasto tasto-fermo" href="{% url 'turni:nuovo_fermo' %}">
     <span class="home-icona">⛔</span>
-    <b>Fermo impianto</b><small>Impianto 1, Impianto 2, sabbia, metalli</small>
+    <b>Segnala fermo impianto</b><small>Impianto 1, Impianto 2, sabbia, metalli</small>
+  </a>
+
+  <a class="home-tasto tasto-ripartenza" href="{% url 'turni:ripartenza' %}">
+    {% if fermi_in_corso %}<i class="home-badge">{{ fermi_in_corso|length }}</i>{% endif %}
+    <span class="home-icona">▶️</span>
+    <b>Segnala ripartenza impianto</b>
   </a>
 
   <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
