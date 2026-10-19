@@ -1,0 +1,20 @@
+{% if assistente_attivo %}
+<button type="button" class="as-fumetto" id="as-apri" aria-label="Apri l'assistente">💬</button>
+<div class="as-pannello" id="as-pannello" hidden>
+  <div class="as-testa">
+    <span class="as-avatar">🤖</span>
+    <b>Assistente Sarco</b>
+    <button type="button" class="as-nuova" id="as-nuova">Nuova chat</button>
+    <button type="button" class="as-chiudi" id="as-chiudi" aria-label="Chiudi">✕</button>
+  </div>
+  <div class="as-corpo" id="as-corpo">
+    <div class="as-msg bot">Ciao! Scrivimi o premi 🎤 e parla. Posso dirti i turni, preparare avvisi, ferie e cambi: tu confermi con un tasto.</div>
+  </div>
+  <div class="as-suggerimenti" id="as-suggerimenti"></div>
+  <form class="as-scrivi" id="as-scrivi">{% csrf_token %}
+    <button type="button" class="as-mic" id="as-mic" aria-label="Parla" hidden>🎤</button>
+    <input type="text" id="as-testo" placeholder="Scrivi un messaggio…" autocomplete="off" maxlength="2000">
+    <button class="as-invia" aria-label="Invia">➤</button>
+  </form>
+</div>
+{% endif %}

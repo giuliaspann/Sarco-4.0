@@ -1327,3 +1327,36 @@ class AnalisiProdotto(models.Model):
     @property
     def fuori_limite(self):
         return [v for v in self.valori() if v['fuori']]
+
+
+class ConversazioneAssistente(models.Model):
+    """La chat con l'assistente digitale: messaggi nel formato dell'API e azioni in attesa di conferma."""
+
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversazioni')
+    messaggi = models.JSONField(default=list)
+    proposte = models.JSONField(default=list)
+    creata_il = models.DateTimeField(auto_now_add=True)
+    aggiornata_il = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'conversazione con l\'assistente'
+        verbose_name_plural = 'conversazioni con l\'assistente'
+        ordering = ['-aggiornata_il']
+
+    def __str__(self):
+        return f'{self.utente} {self.creata_il:%d/%m %H:%M}'
+
+    def per_lo_schermo(self):
+        """Solo i testi da mostrare: domande dell'utente e risposte dell'assistente."""
+        righe = []
+        for m in self.messaggi:
+            c = m['content']
+            if m['role'] == 'user' and isinstance(c, str) and not c.startswith('['):
+                righe.append({'chi': 'io', 'testo': c})
+            elif m['role'] == 'user' and isinstance(c, str):
+                righe.append({'chi': 'esito', 'testo': c.strip('[]')})
+            elif m['role'] == 'assistant' and isinstance(c, list):
+                testo = '\n'.join(b.get('text', '') for b in c if b.get('type') == 'text').strip()
+                if testo:
+                    righe.append({'chi': 'bot', 'testo': testo})
+        return righe

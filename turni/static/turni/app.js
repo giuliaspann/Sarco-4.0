@@ -273,3 +273,113 @@ document.querySelectorAll('[data-condividi]').forEach(btn => {
     location.href = 'https://wa.me/?text=' + encodeURIComponent(testo);
   });
 });
+
+// Assistente digitale: fumetto in basso a destra, chat a tutto schermo, voce con il microfono del telefono
+(() => {
+  const apri = document.getElementById('as-apri');
+  if (!apri) return;
+  const pannello = document.getElementById('as-pannello'), corpo = document.getElementById('as-corpo');
+  const modulo = document.getElementById('as-scrivi'), campo = document.getElementById('as-testo');
+  const sugg = document.getElementById('as-suggerimenti'), mic = document.getElementById('as-mic');
+  const csrf = modulo.querySelector('[name=csrfmiddlewaretoken]').value;
+  let caricata = false, occupato = false;
+
+  const invia = (url, dati) => fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf }, body: JSON.stringify(dati || {}),
+  }).then(r => r.json().then(j => (r.ok ? j : Promise.reject(j.errore || 'Errore'))));
+
+  const fumetto = (chi, testo) => {
+    const d = document.createElement('div');
+    d.className = 'as-msg ' + chi;
+    d.textContent = testo;
+    corpo.appendChild(d);
+    corpo.scrollTop = corpo.scrollHeight;
+    return d;
+  };
+
+  const proposta = p => {
+    const d = document.createElement('div');
+    d.className = 'as-proposta';
+    d.innerHTML = '<p></p><div><button type="button" class="si">✓ Conferma</button><button type="button" class="no">Annulla</button></div>';
+    d.querySelector('p').textContent = p.riassunto;
+    d.querySelectorAll('button').forEach(b => b.addEventListener('click', async () => {
+      d.querySelectorAll('button').forEach(x => (x.disabled = true));
+      try {
+        const j = await invia('/turni/assistente/conferma/', { id: p.id, accetta: b.classList.contains('si') });
+        d.replaceWith(fumetto('esito', j.esito));
+      } catch (e) { fumetto('errore', e); }
+    }));
+    corpo.appendChild(d);
+    corpo.scrollTop = corpo.scrollHeight;
+  };
+
+  const suggerimenti = elenco => {
+    sugg.innerHTML = '';
+    (elenco || []).forEach(t => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = t;
+      b.addEventListener('click', () => manda(t));
+      sugg.appendChild(b);
+    });
+  };
+
+  async function manda(testo) {
+    testo = (testo || '').trim();
+    if (!testo || occupato) return;
+    occupato = true;
+    sugg.innerHTML = '';
+    fumetto('io', testo);
+    campo.value = '';
+    const attesa = fumetto('bot attesa', '…');
+    try {
+      const j = await invia('/turni/assistente/', { testo });
+      attesa.remove();
+      fumetto('bot', j.risposta);
+      j.proposte.forEach(proposta);
+    } catch (e) {
+      attesa.remove();
+      fumetto('errore', typeof e === 'string' ? e : 'Senza rete: riprova.');
+    } finally { occupato = false; }
+  }
+
+  async function carica() {
+    if (caricata) return;
+    caricata = true;
+    try {
+      const j = await fetch('/turni/assistente/').then(r => r.json());
+      j.messaggi.forEach(m => fumetto(m.chi, m.testo));
+      j.proposte.forEach(proposta);
+      suggerimenti(j.suggerimenti);
+    } catch (e) { /* senza rete: resta il saluto */ }
+  }
+
+  apri.addEventListener('click', () => { pannello.hidden = false; apri.hidden = true; document.body.classList.add('as-aperto'); carica(); });
+  document.getElementById('as-chiudi').addEventListener('click', () => { pannello.hidden = true; apri.hidden = false; document.body.classList.remove('as-aperto'); });
+  document.getElementById('as-nuova').addEventListener('click', async () => {
+    const j = await invia('/turni/assistente/nuova/');
+    corpo.querySelectorAll('.as-msg:not(:first-child), .as-proposta').forEach(x => x.remove());
+    suggerimenti(j.suggerimenti);
+  });
+  modulo.addEventListener('submit', e => { e.preventDefault(); manda(campo.value); });
+
+  // voce: il riconoscimento vocale del telefono (Safari e Chrome), in italiano
+  const Riconosci = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (Riconosci) {
+    mic.hidden = false;
+    mic.addEventListener('click', () => {
+      const r = new Riconosci();
+      r.lang = 'it-IT';
+      r.interimResults = true;
+      mic.classList.add('ascolto');
+      campo.placeholder = 'Ti ascolto…';
+      r.onresult = ev => {
+        const t = [...ev.results].map(x => x[0].transcript).join('');
+        campo.value = t;
+        if (ev.results[ev.results.length - 1].isFinal) manda(t);
+      };
+      r.onend = r.onerror = () => { mic.classList.remove('ascolto'); campo.placeholder = 'Scrivi un messaggio…'; };
+      r.start();
+    });
+  }
+})();

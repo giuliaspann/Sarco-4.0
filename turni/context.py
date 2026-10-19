@@ -16,6 +16,7 @@ def navigazione(request):
         'nav_dipendente': dip,
         'nav_responsabile': responsabile,
         'nav_ufficio': user.is_staff or responsabile,
+        'assistente_attivo': __import__('turni.assistente', fromlist=['attivo']).attivo(),
     }
     from .views_messaggi import non_letti_bacheca, non_letti_chat, stato_di
 
