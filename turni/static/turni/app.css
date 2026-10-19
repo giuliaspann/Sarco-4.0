@@ -1430,3 +1430,19 @@ body.as-aperto { overflow: hidden; }
 .as-invia { background: #2f7a16; color: #fff; }
 .as-mic.ascolto { background: #dc2626; color: #fff; animation: as-pulsa 1s infinite; }
 @keyframes as-pulsa { 50% { transform: scale(1.1); } }
+
+/* tasto dell'assistente in alto, accanto a Esci: non copre niente */
+.testa-destra { display: flex; align-items: center; gap: 10px; }
+.as-apri { border: 0; border-radius: 99px; padding: 9px 14px; background: var(--primario); color: #fff; font: inherit; font-weight: 700; font-size: .95rem; cursor: pointer; white-space: nowrap; }
+.as-apri[hidden] { display: none; }
+
+/* conferma dei valori letti dalla foto */
+.st-conferma { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.45); }
+.st-conferma-box { width: 100%; max-width: 520px; max-height: 88vh; overflow-y: auto; box-sizing: border-box; padding: 20px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: var(--carta); }
+.st-conferma-box h2 { margin: 0 0 4px; font-size: 1.35rem; }
+.st-conferma-box table { width: 100%; margin: 12px 0 16px; border-collapse: collapse; font-size: 1.05rem; }
+.st-conferma-box td { padding: 9px 4px; border-bottom: 1px solid var(--bordo); }
+.st-conferma-box td:last-child { text-align: right; font-weight: 800; font-family: var(--font-mono); }
+.st-conferma-box .bottone { min-height: 56px; font-size: 1.15rem; margin-top: 8px; }
+.as-apri { width: 44px; height: 44px; padding: 0; font-size: 1.35rem; line-height: 1; }
+.testa-destra .link-esci, .marchio-modulo { white-space: nowrap; }

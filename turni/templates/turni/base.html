@@ -26,9 +26,12 @@
       <span class="marchio-modulo">4.0</span>
     </span>
     {% if user.is_authenticated %}
-      <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
-        <button class="link-esci" type="submit">Esci</button>
-      </form>
+      <div class="testa-destra">
+        {% if assistente_attivo %}<button type="button" class="as-apri" id="as-apri" aria-label="Assistente">💬</button>{% endif %}
+        <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
+          <button class="link-esci" type="submit">Esci</button>
+        </form>
+      </div>
     {% endif %}
   </header>
 

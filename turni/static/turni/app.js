@@ -383,3 +383,33 @@ document.querySelectorAll('[data-condividi]').forEach(btn => {
     });
   }
 })();
+
+// Valori letti dalla foto: prima di salvare l'utente vede il riepilogo e conferma (o torna a correggere)
+document.querySelectorAll('form[data-lettura]').forEach(form => {
+  form.addEventListener('submit', e => {
+    if (form.dataset.confermato || !form.querySelector('input.letto')) return;
+    e.preventDefault();
+    // il blocco dei doppi invii ha già segnato il modulo come inviato: lo riapro finché non si conferma
+    delete form.dataset.inviato;
+    form.querySelectorAll('button').forEach(b => (b.disabled = false));
+    const righe = [];
+    const nomi = { campione: 'Campione', fascia: 'Turno' };
+    const giorno = form.querySelector('input[name=data]');
+    if (giorno && giorno.value) righe.push(['Giorno', giorno.value.split('-').reverse().join('/')]);
+    form.querySelectorAll('input[type=radio]:checked').forEach(r => righe.push([nomi[r.name] || r.name, r.nextElementSibling.textContent]));
+    form.querySelectorAll('.pr-riga').forEach(l => {
+      const i = l.querySelector('input');
+      if (i.value.trim()) righe.push([l.querySelector('span').textContent.trim(), i.value + ' ' + (l.querySelector('i')?.textContent || '')]);
+    });
+    const v = document.createElement('div');
+    v.className = 'st-conferma';
+    v.innerHTML = '<div class="st-conferma-box"><h2>Controlla i valori</h2><p class="tenue">Letti dalla foto: sono giusti?</p><table></table>' +
+      '<button type="button" class="bottone pieno piena-larghezza si">✓ Conferma e salva</button>' +
+      '<button type="button" class="bottone piena-larghezza no">✏️ Correggi</button></div>';
+    const t = v.querySelector('table');
+    righe.filter(r => r[0]).forEach(([n, x]) => { const tr = t.insertRow(); tr.insertCell().textContent = n; tr.insertCell().textContent = x; });
+    v.querySelector('.si').addEventListener('click', () => { form.dataset.confermato = '1'; v.remove(); form.requestSubmit(); });
+    v.querySelector('.no').addEventListener('click', () => { v.remove(); form.querySelector('input.letto')?.focus(); });
+    document.body.appendChild(v);
+  });
+});

@@ -31,11 +31,11 @@ class AssistenteTest(TestCase):
 
     def test_spento_senza_chiave(self):
         with mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': ''}):
-            self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'as-fumetto')
+            self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'id="as-apri"')
             self.assertEqual(self.client.get(reverse('turni:assistente')).status_code, 404)
 
     def test_fumetto_e_suggerimenti(self):
-        self.assertContains(self.client.get(reverse('turni:miei_turni')), 'as-fumetto')
+        self.assertContains(self.client.get(reverse('turni:miei_turni')), 'id="as-apri"')
         j = self.client.get(reverse('turni:assistente')).json()
         self.assertIn('Che turno faccio sabato?', j['suggerimenti'])
         self.assertNotIn('Quali richieste devo approvare?', j['suggerimenti'])
