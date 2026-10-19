@@ -301,7 +301,7 @@ class ManutenzioneTest(TestCase):
         })
         i = Intervento.objects.get(macchina=lab)
         self.assertEqual((i.titolo_lavoro, i.descrizione), ('Pezzo sistemato · Rete vaglio', 'Pezzo sistemato · Rete vaglio'))
-        self.assertContains(self.client.get(reverse('turni:home')), 'Lavoro fatto')
+        self.assertContains(self.client.get(reverse('turni:home')), 'Manutenzione fatta')
         self.entra('marchese')
         self.webpush.reset_mock()
         for _ in range(2):  # un solo 👍 a testa

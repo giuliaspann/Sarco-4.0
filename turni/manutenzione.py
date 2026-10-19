@@ -419,7 +419,7 @@ def registra_lavoro(utente, macchina, testo, foto, ore, pezzi, tipo_lavoro='', p
         if ricambio:
             ricambio.scorta -= quantita
             ricambio.save(update_fields=['scorta'])
-    evento(i, utente, 'Lavoro registrato')
+    evento(i, utente, 'Manutenzione registrata')
     avvisa(responsabili(), utente, f'✅ {macchina.nome}', testo, url_intervento(i))
     return i
 

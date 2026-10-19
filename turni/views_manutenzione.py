@@ -180,7 +180,7 @@ def segnala(request):
             except (ValueError, OSError):
                 messages.error(request, 'Una delle foto o il video non sono validi (video: massimo 50 MB).')
             else:
-                messages.success(request, 'Lavoro registrato nello storico della macchina.')
+                messages.success(request, 'Manutenzione registrata nello storico della macchina.')
                 return redirect('turni:intervento', i.pk)
     elif request.method == 'POST':
         descrizione = (request.POST.get('descrizione') or '').strip()[:1000]

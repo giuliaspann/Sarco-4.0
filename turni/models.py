@@ -739,7 +739,7 @@ class Intervento(models.Model):
     class Tipo(models.TextChoices):
         GUASTO = 'GUASTO', 'Guasto'
         PROGRAMMATA = 'PROGRAMMATA', 'Programmata'
-        LAVORO = 'LAVORO', 'Lavoro fatto'  # ripristino o sostituzione registrato senza segnalazione
+        LAVORO = 'LAVORO', 'Manutenzione fatta'  # ripristino o sostituzione registrato senza segnalazione
 
     class Priorita(models.IntegerChoices):
         BASSA = 1, 'Bassa'
