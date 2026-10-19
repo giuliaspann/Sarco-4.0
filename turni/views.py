@@ -143,7 +143,7 @@ def miei_turni(request):
     giorno = leggi_data(request.GET.get('giorno'), None)
     base = leggi_data(request.GET.get('settimana'), giorno or oggi)
     inizio = base - timedelta(days=base.weekday())
-    fine = inizio + timedelta(days=13)
+    fine = inizio + timedelta(days=6)  # una settimana per volta: più semplice
     if giorno and inizio <= giorno <= fine:
         scelto = giorno
     else:
@@ -152,7 +152,7 @@ def miei_turni(request):
     turni = {t.data: t for t in dip.turni.filter(data__range=(inizio, fine), settimana__pubblicata=True)}
     lunedi_oggi = oggi - timedelta(days=oggi.weekday())
     settimane = []
-    for lun in (inizio, inizio + timedelta(days=7)):
+    for lun in (inizio,):
         distanza = (lun - lunedi_oggi).days // 7
         quale = {0: 'questa', 1: 'prossima', -1: 'scorsa'}.get(distanza, '')
         nome = f'Settimana {lun.isocalendar()[1]}' + (f' · {quale}' if quale else '')

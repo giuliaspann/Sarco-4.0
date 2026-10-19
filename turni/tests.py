@@ -295,7 +295,7 @@ class CalendarioTest(TestCase):
     def test_due_settimane_con_sigle_e_dettaglio_del_giorno(self):
         r = self.client.get(reverse('turni:miei_turni'), {'giorno': LUNEDI + timedelta(days=1)})
         self.assertEqual(r.status_code, 200)
-        self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI, LUNEDI + timedelta(days=7)])
+        self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI])  # una settimana per volta
         sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
         self.assertEqual(sigle, ['N', 'CTN', 'N', 'N', 'G', 'G', '1T'])  # il capo turno di notte è CTN
         posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
@@ -308,12 +308,12 @@ class CalendarioTest(TestCase):
         self.assertEqual(r.context['inizio'], LUNEDI + timedelta(days=7))
         self.assertEqual(r.context['prec'], LUNEDI)
         self.assertIsNone(r.context['turno'])
-        # toccare un giorno della seconda riga non sposta la finestra
+        # toccare un giorno della settimana mostrata lo seleziona
         r = self.client.get(
-            reverse('turni:miei_turni'), {'settimana': LUNEDI, 'giorno': LUNEDI + timedelta(days=9)}
+            reverse('turni:miei_turni'), {'settimana': LUNEDI, 'giorno': LUNEDI + timedelta(days=2)}
         )
         self.assertEqual(r.context['inizio'], LUNEDI)
-        self.assertEqual(r.context['scelto'], LUNEDI + timedelta(days=9))
+        self.assertEqual(r.context['scelto'], LUNEDI + timedelta(days=2))
 
 
 class HomeTest(TestCase):

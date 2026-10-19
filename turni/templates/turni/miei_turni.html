@@ -1,10 +1,9 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Turni{% endblock %}
 {% block contenuto %}
-<p class="occhiello centrato">I miei turni · settimana {{ inizio|date:'W' }}</p>
 <div class="naviga mese">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
-  <h1>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</h1>
+  <h1 class="mt-titolo">Settimana {{ inizio|date:'W' }}<small>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</small></h1>
   <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
 </div>
 
@@ -26,6 +25,7 @@
 </section>
 {% endfor %}
 
+<details class="mt-legenda"><summary>Legenda</summary>
 <ul class="legenda legenda-due-righe">
   <li><i class="f-mattina">1T</i>1° turno</li>
   <li><i class="f-pomeriggio">2T</i>2° turno</li>
@@ -35,12 +35,12 @@
   <li><i class="f-riposo">R</i>Riposo</li>
   <li><i class="f-ferie">F</i>Ferie</li>
 </ul>
+</details>
 
 <div class="calendario">
   {% for settimana in settimane %}
-  <p class="cal-nome">{{ settimana.nome }}</p>
   {% if not settimana.caricata %}
-  <p class="cal-vuota">{{ settimana.giorni.0.data|date:'j M' }} – {{ settimana.giorni.6.data|date:'j M' }}: turni non ancora pubblicati</p>
+  <p class="cal-vuota">Turni non ancora pubblicati</p>
   {% else %}
   <div class="cal-testa">{% for c in settimana.giorni %}<span>{{ c.data|date:'D'|slice:':3' }}</span>{% endfor %}</div>
   <div class="cal-riga">
@@ -49,7 +49,6 @@
          class="cal-giorno{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}{% if c.data < oggi %} passato{% endif %}">
         <span class="cal-num">{{ c.data.day }}</span>
         {% if c.turno %}<span class="cal-sigla {{ c.turno.classe_fascia }}">{{ c.turno.sigla }}</span>{% endif %}
-        {% if c.turno.sigla_postazione %}<span class="cal-posto">{{ c.turno.sigla_postazione }}</span>{% endif %}
       </a>
     {% endfor %}
   </div>
@@ -64,7 +63,6 @@
   {% if turno %}
     <h2 class="grande">{% include 'turni/_pillola.html' with t=turno %}</h2>
     {% if turno.orario %}<p class="orario">{{ turno.orario }}</p>{% endif %}
-    {% if turno.nota_modifica %}<p class="tenue piccolo">{{ turno.nota_modifica }}</p>{% endif %}
     {% if colleghi %}<p>Con: {% for c in colleghi %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
     <div class="azioni-giorno">
       {% if scelto == oggi and turno.lavora %}<a class="bottone pieno" href="{% url 'turni:pulizie' %}">Pulizie di fine turno</a>{% endif %}
