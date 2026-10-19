@@ -83,6 +83,7 @@ def home(request):
             'dip': dip,
             'oggi': timezone.localdate(),
             'turno': turno,
+            'turno_etichetta': 'Stanotte' if turno and turno.data != timezone.localdate() else 'Oggi',
             'domani': dip.turni.filter(data=domani, settimana__pubblicata=True).first(),
             'pulizie_da_fare': pulizie_da_fare,
             'capi_da_completare': capi_da_completare(request.user).filter(dipendente=dip)[:7],

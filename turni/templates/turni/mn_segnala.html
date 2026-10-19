@@ -29,20 +29,10 @@
     </label>
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" multiple data-riduci required>
-      <span>📷 Foto: prima, durante, dopo (anche più di una)</span>
+      <span>📷 Foto</span>
     </label>
-    <p class="mn-sottotitolo">Pezzi usati (facoltativo, si scalano dal magazzino)</p>
-    {% for n in righe_pezzi %}
-    <div class="mn-pezzo-riga">
-      <select name="pezzo_{{ n }}">
-        <option value="">{% if forloop.first %}Nessuno{% else %}—{% endif %}</option>
-        {% for r in ricambi %}<option value="{{ r.pk }}">{{ r.nome }} ({{ r.scorta }} {{ r.unita }})</option>{% endfor %}
-      </select>
-      <input type="number" name="quantita_{{ n }}" value="1" min="1" max="999" inputmode="numeric" aria-label="Quantità">
-      <input type="text" name="altro_{{ n }}" maxlength="100" placeholder="…oppure scrivi il pezzo">
-    </div>
-    {% endfor %}
-    <label>Ore di lavoro (facoltativo)<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
+    {% include 'turni/_mn_pezzi.html' %}
+    <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
     {% include 'turni/_mn_colleghi_video.html' %}
     <button class="bottone pieno piena-larghezza">✅ Registra il lavoro</button>
   </form>
@@ -59,7 +49,7 @@
     </fieldset>
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
-      <span>📷 Foto del guasto (obbligatoria)</span>
+      <span>📷 Foto</span>
     </label>
     <button class="bottone pieno piena-larghezza">Invia segnalazione</button>
   </form>

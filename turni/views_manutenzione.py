@@ -316,7 +316,7 @@ def _quando_e_dove(request, i):
 
 
 def _pezzi_usati(request):
-    pezzi = []
+    pezzi = [(r, '', 1) for r in Ricambio.objects.filter(pk__in=[x for x in request.POST.getlist('pezzo_sel') if x.isdigit()])]
     for n in range(3):
         rid, testo = request.POST.get(f'pezzo_{n}'), (request.POST.get(f'altro_{n}') or '').strip()[:100]
         try:
@@ -549,7 +549,7 @@ def nuovo_fermo(request):
             'impianti': [(v, n, ICONE_LUOGHI[v], FermoImpianto.objects.filter(impianto=v, ripartito_il__isnull=True).exists())
                          for v, n in FermoImpianto.IMPIANTI],
         })
-    macchine = Macchina.objects.filter(attiva=True, luogo=impianto)
+    macchine = Macchina.objects.filter(attiva=True, luogo=impianto).exclude(tipo=Macchina.Tipo.SEGNALETICA)
     if request.method == 'POST':
         causa = request.POST.get('causa')
         scelta = request.POST.get('macchina') or ''

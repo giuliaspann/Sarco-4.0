@@ -1262,3 +1262,53 @@ details.scheda summary { cursor: pointer; }
 .pr-alto td, span.pr-alto { color: #b91c1c; font-weight: 800; }
 tr.pr-alto { background: #fee2e2; }
 @media (prefers-color-scheme: dark) { tr.pr-alto { background: #3a1414; } .pr-alto td, span.pr-alto { color: #fca5a5; } }
+
+/* ============ semplificazione: niente scritte sotto i pulsanti, tutto allineato */
+.home-griglia .home-tasto small { display: none; }
+.home-due .home-tasto { align-items: center; justify-content: center; text-align: center; min-height: 118px; gap: 8px; }
+.home-due .home-tasto .home-icona { align-self: center; margin: 0; width: 52px; height: 52px; font-size: 1.7rem; }
+.home-due .home-tasto b { text-align: center; font-size: 1.02rem; }
+.home-griglia:not(.home-due) .home-tasto { grid-template-rows: auto; min-height: 76px; }
+.home-griglia:not(.home-due) .home-tasto b { grid-row: 1; align-self: center; }
+/* oggi e domani affiancati, uguali */
+.home-due-turni { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.home-giorno { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-height: 124px; padding: 12px; box-sizing: border-box;
+  background: var(--carta); border: 1px solid var(--bordo); border-top: 6px solid var(--bordo); border-radius: var(--raggio); text-decoration: none; color: var(--testo); min-width: 0; }
+.home-giorno .pillola { font-size: .95rem; padding: 4px 10px; white-space: normal; }
+.home-giorno .posto { font-size: .82rem; }
+.home-giorno .orario { margin-top: auto; font-weight: 700; font-family: var(--font-mono); font-size: .9rem; }
+.home-vuoto { color: var(--tenue); font-size: .9rem; }
+.home-giorno.f-mattina-bordo { border-top-color: #ffd60a; }
+.home-giorno.f-pomeriggio-bordo { border-top-color: #ff7a00; }
+.home-giorno.f-notte-bordo { border-top-color: #1e3a8a; }
+.home-giorno.f-giorno-bordo { border-top-color: #16a34a; }
+.home-giorno.f-capo-bordo { border-top-color: #38bdf8; }
+.home-giorno.f-ferie-bordo { border-top-color: #c026d3; }
+/* filtri: due per riga, uguali */
+.mn-gruppi { grid-template-columns: 1fr 1fr; }
+.mn-gruppi a { min-height: 46px; font-size: .9rem; }
+.mn-luoghi { grid-template-columns: 1fr 1fr; }
+/* righe intervento più snelle */
+.mn-riga { padding: 12px 14px; }
+.mn-riga .rq-testo small:not(.mn-chi) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* scelte a pulsanti (al posto dei menu a tendina) */
+.scegli { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 14px; }
+.scegli.tre { grid-template-columns: repeat(3, 1fr); }
+.scegli.quattro { grid-template-columns: repeat(2, 1fr); }
+.scegli.lista { grid-template-columns: 1fr; }
+.scegli label { position: relative; margin: 0; min-width: 0; }
+.scegli input { position: absolute; opacity: 0; }
+.scegli span { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 10px; box-sizing: border-box; text-align: center;
+  border-radius: 12px; border: 2px solid var(--bordo); background: var(--carta); font-weight: 700; font-size: .92rem; line-height: 1.2; }
+.scegli.lista span { justify-content: flex-start; text-align: left; }
+.scegli span em { font-style: normal; font-weight: 400; color: var(--tenue); font-size: .78rem; margin-left: 6px; }
+.scegli input:checked + span { border-color: var(--primario); background: var(--primario-chiaro); color: var(--primario-scuro); }
+.scegli input:focus-visible + span { outline: 2px solid var(--primario); }
+.cm-gruppo { margin-bottom: 8px; }
+.cm-gruppo summary { padding: 12px 14px; border-radius: 12px; background: var(--altro); font-weight: 700; cursor: pointer; }
+.cm-gruppo .scegli { margin-top: 8px; }
+.mn-altri-colleghi summary { padding: 10px 0; font-weight: 600; color: var(--tenue); cursor: pointer; }
+.mn-form input[type=datetime-local], .mn-form input[type=date] { width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0; display: block; }
+.mn-form input[type=text][name=altro_0], .mn-form input[name=descrizione] { width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+.menu { z-index: 50; }
+.mn-form input[type=datetime-local], .mn-form input[type=date] { min-height: 48px; padding: 10px 12px; border-radius: 12px; font-size: 1rem; }

@@ -3,16 +3,10 @@
 {% block contenuto %}
 <p class="home-saluto">Buongiorno, <b>{{ dip.nome_breve }}</b></p>
 
-<a class="home-oggi {% if turno %}{{ turno.classe_fascia }}-bordo{% endif %}" href="{% url 'turni:miei_turni' %}">
-  <span class="home-etichetta">{% if turno and turno.data != oggi %}Turno di stanotte{% else %}Oggi{% endif %}</span>
-  {% if turno %}
-    <span class="home-turno">{% include 'turni/_pillola.html' with t=turno %}</span>
-    {% if turno.orario %}<span class="orario">{{ turno.orario }}</span>{% endif %}
-  {% else %}
-    <span class="home-turno">Turno non pubblicato</span>
-  {% endif %}
-  {% if domani %}<span class="home-domani">Domani: {% include 'turni/_pillola.html' with t=domani %}{% if domani.orario %} <span class="orario">{{ domani.orario }}</span>{% endif %}</span>{% endif %}
-</a>
+<div class="home-due-turni">
+  {% include 'turni/_home_turno.html' with t=turno etichetta=turno_etichetta %}
+  {% include 'turni/_home_turno.html' with t=domani etichetta='Domani' %}
+</div>
 
 {% include 'turni/_capi_da_completare.html' %}
 {% for c in mezzi_non_disponibili %}

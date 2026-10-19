@@ -88,13 +88,10 @@
       <span class="home-icona">🚜</span>
       <span class="pl-nome"><b>Hai usato un mezzo?</b><small>Aggiungilo e puliscilo a fine turno</small></span>
     </div>
-    <div class="pl-azioni">
-      <select name="elemento" required>
-        <option value="">Scegli il mezzo…</option>
-        {% for m in mezzi %}<option value="{{ m.pk }}">{{ m.nome }}</option>{% endfor %}
-      </select>
-      <button class="bottone" name="azione" value="aggiungi">Aggiungi</button>
+    <div class="scegli lista">
+      {% for m in mezzi %}<label><input type="radio" name="elemento" value="{{ m.pk }}" required><span>{{ m.nome }}</span></label>{% endfor %}
     </div>
+    <button class="bottone pieno piena-larghezza" name="azione" value="aggiungi">Aggiungi</button>
   </form>
   {% endif %}
 {% endif %}

@@ -47,9 +47,10 @@
   <h2>{% if i.tipo == 'PROGRAMMATA' %}Assegna{% else %}Approva e invia al manutentore{% endif %}</h2>
   {% include 'turni/_mn_scegli_manutentore.html' %}
   {% include 'turni/_mn_quando.html' %}
-  <label>Priorità
-    <select name="priorita">{% for v, nome in priorita %}<option value="{{ v }}" {% if v == i.priorita %}selected{% endif %}>{{ nome }}</option>{% endfor %}</select>
-  </label>
+  <p class="mn-sottotitolo">Priorità</p>
+  <div class="scegli quattro">
+    {% for v, nome in priorita %}<label><input type="radio" name="priorita" value="{{ v }}" {% if v == i.priorita %}checked{% endif %}><span>{{ nome }}</span></label>{% endfor %}
+  </div>
   <button class="bottone pieno piena-larghezza" name="azione" value="approva">Invia al manutentore</button>
   <details class="mn-rifiuta">
     <summary>Non serve / non approvare</summary>
@@ -73,21 +74,11 @@
 <form method="post" enctype="multipart/form-data" class="scheda mn-azione mn-form">{% csrf_token %}
   <h2>Chiudi: macchina riparata</h2>
   <label>Cosa hai fatto<textarea name="lavoro" rows="3" maxlength="2000" required placeholder="Es. sostituito il tubo e rabboccato l'olio, provata 10 minuti"></textarea></label>
-  <p class="mn-sottotitolo">Pezzi usati (si scalano dal magazzino)</p>
-  {% for n in righe_pezzi %}
-  <div class="mn-pezzo-riga">
-    <select name="pezzo_{{ n }}">
-      <option value="">{% if forloop.first %}Nessuno{% else %}—{% endif %}</option>
-      {% for r in ricambi %}<option value="{{ r.pk }}">{{ r.nome }} ({{ r.scorta }} {{ r.unita }})</option>{% endfor %}
-    </select>
-    <input type="number" name="quantita_{{ n }}" value="1" min="1" max="999" inputmode="numeric" aria-label="Quantità">
-    <input type="text" name="altro_{{ n }}" maxlength="100" placeholder="…oppure scrivi il pezzo">
-  </div>
-  {% endfor %}
+  {% include 'turni/_mn_pezzi.html' %}
   <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
-    <span>📷 Foto della macchina riparata (obbligatoria)</span>
+    <span>📷 Foto</span>
   </label>
   {% include 'turni/_mn_colleghi_video.html' %}
   <button class="bottone pieno piena-larghezza" name="azione" value="completa">✅ Riparata</button>

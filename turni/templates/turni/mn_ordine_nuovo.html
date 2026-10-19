@@ -8,14 +8,12 @@
 </div>
 <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
   {% if i %}<input type="hidden" name="intervento" value="{{ i.pk }}">{% endif %}
-  <label>Pezzo dal magazzino
-    <select name="ricambio">
-      <option value="">Non c'è in elenco: lo scrivo sotto</option>
-      {% if compatibili %}<optgroup label="Di questa macchina">{% for r in compatibili %}<option value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}selected{% endif %}>{{ r.nome }} · {{ r.scorta }} {{ r.unita }}</option>{% endfor %}</optgroup>{% endif %}
-      <optgroup label="{% if compatibili %}Altri{% else %}Magazzino{% endif %}">{% for r in altri %}<option value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}selected{% endif %}>{{ r.nome }} · {{ r.scorta }} {{ r.unita }}</option>{% endfor %}</optgroup>
-    </select>
-  </label>
-  <label>…oppure scrivi il pezzo<input type="text" name="descrizione" maxlength="120" placeholder="Es. tubo idraulico 1/2 pollice, 80 cm"></label>
+  <p class="mn-sottotitolo">Quale pezzo</p>
+  <div class="scegli lista">
+    {% for r in compatibili %}<label><input type="radio" name="ricambio" value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}checked{% endif %}><span>{{ r.nome }}</span></label>{% endfor %}
+    {% for r in altri %}<label><input type="radio" name="ricambio" value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}checked{% endif %}><span>{{ r.nome }}</span></label>{% endfor %}
+  </div>
+  <input type="text" name="descrizione" maxlength="120" placeholder="Non c'è? Scrivilo qui">
   <label>Quantità<input type="number" name="quantita" value="1" min="1" max="9999" inputmode="numeric"></label>
   <label class="mn-check"><input type="checkbox" name="urgente" value="1"> Urgente (macchina ferma)</label>
   <label>Nota per chi ordina<input type="text" name="nota" maxlength="300" placeholder="Es. codice sulla targhetta, fornitore abituale"></label>

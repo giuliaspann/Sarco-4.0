@@ -1,0 +1,10 @@
+<a class="home-giorno {% if t %}{{ t.classe_fascia }}-bordo{% endif %}" href="{% url 'turni:miei_turni' %}">
+  <span class="home-etichetta">{{ etichetta }}</span>
+  {% if t %}
+    <span class="pillola {{ t.classe_fascia }}">{{ t.descrizione_fascia }}</span>
+    {% if t.nome_postazione %}<span class="posto">{{ t.nome_postazione }}</span>{% endif %}
+    {% if t.orario %}<span class="orario">{{ t.orario }}</span>{% endif %}
+  {% else %}
+    <span class="home-vuoto">Non pubblicato</span>
+  {% endif %}
+</a>

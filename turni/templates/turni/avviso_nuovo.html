@@ -4,15 +4,11 @@
 <div class="intestazione">
   <a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Richieste</a>
   <h1>Avviso assenza</h1>
-  <p class="tenue piccolo">Lo vedono solo l'ufficio e il capo turno, non i colleghi.</p>
 </div>
 <form method="post" class="scheda">{% csrf_token %}
-  <label>Cosa succede
-    <select name="tipo" required>
-      <option value="">Scegli…</option>
-      {% for v, nome in tipi %}<option value="{{ v }}" {% if dati.tipo == v %}selected{% endif %}>{{ nome }}</option>{% endfor %}
-    </select>
-  </label>
+  <div class="scegli">
+    {% for v, nome in tipi %}<label><input type="radio" name="tipo" value="{{ v }}" required {% if dati.tipo == v %}checked{% endif %}><span>{{ nome }}</span></label>{% endfor %}
+  </div>
   <label>Giorno<input type="date" name="data" value="{% if dati.data %}{{ dati.data }}{% else %}{{ oggi|date:'Y-m-d' }}{% endif %}" required></label>
   <label>Nota (facoltativa)<textarea name="nota" rows="2" maxlength="300" placeholder="Es. esco alle 11, passo dall'ufficio"></textarea></label>
   <button class="bottone pieno piena-larghezza">Invia avviso</button>

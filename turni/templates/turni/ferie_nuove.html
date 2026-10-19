@@ -6,15 +6,14 @@
   <h1>Chiedi ferie o permesso</h1>
 </div>
 <form method="post" class="scheda">{% csrf_token %}
-  <label>Tipo
-    <select name="tipo">{% for v, nome in tipi %}<option value="{{ v }}" {% if dati.tipo == v %}selected{% endif %}>{{ nome }}</option>{% endfor %}</select>
-  </label>
+  <div class="scegli">
+    {% for v, nome in tipi %}<label><input type="radio" name="tipo" value="{{ v }}" {% if dati.tipo == v or not dati.tipo and forloop.first %}checked{% endif %}><span>{{ nome }}</span></label>{% endfor %}
+  </div>
   <div class="riga-form">
     <label>Dal<input type="date" name="dal" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.dal }}" required></label>
     <label>Al<input type="date" name="al" min="{{ domani|date:'Y-m-d' }}" value="{{ dati.al }}" required></label>
   </div>
   <label>Note per l'ufficio (facoltative)<textarea name="motivo" rows="2" maxlength="300">{{ dati.motivo }}</textarea></label>
   <button class="bottone pieno piena-larghezza">Invia all'ufficio</button>
-  <p class="tenue piccolo">Quando l'ufficio approva, i giorni compaiono come ferie nei tuoi turni.</p>
 </form>
 {% endblock %}

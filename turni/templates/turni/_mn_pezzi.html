@@ -1,0 +1,5 @@
+<p class="mn-sottotitolo">Pezzi usati</p>
+<div class="scegli lista">
+  {% for r in ricambi|slice:':10' %}<label><input type="checkbox" name="pezzo_sel" value="{{ r.pk }}"><span>{{ r.nome }}</span></label>{% endfor %}
+</div>
+<input type="text" name="altro_0" maxlength="100" placeholder="Altro pezzo (scrivilo)">

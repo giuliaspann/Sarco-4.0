@@ -34,25 +34,23 @@
   <input type="hidden" name="destinatari" value="TUTTI">
   {% else %}
   <label>Comunicazione<textarea name="testo" rows="4" maxlength="2000" required placeholder="{% if tipo == 'INDISPONIBILE' %}Es. intervento Volvo sui freni: la pala resta ferma tutto il giorno{% elif tipo == 'QUALITA' %}Es. forte aumento dello scarto barrotti: 14% nel 2° turno (media 6%){% elif tipo == 'PROCEDURA' %}Es. pulizia vaglio a barrotti: cestinare il materiale estratto nei mastelli{% else %}Es. situazione attuale rulli frantoio{% endif %}">{{ request.POST.testo }}</textarea></label>
-  <label>{% if tipo == 'INDISPONIBILE' %}Mezzo o macchina{% else %}Macchina (facoltativa){% endif %}
-    <select name="macchina" {% if tipo == 'INDISPONIBILE' %}required{% endif %}>
-      <option value="">{% if tipo == 'INDISPONIBILE' %}Scegli…{% else %}Nessuna in particolare{% endif %}</option>
-      {% for nome, macchine in gruppi %}<optgroup label="{{ nome }}">{% for m in macchine %}<option value="{{ m.pk }}">{{ m.nome }}{% if m.modello %} · {{ m.modello }}{% endif %}</option>{% endfor %}</optgroup>{% endfor %}
-    </select>
-  </label>
+  <h2 class="rq-sezione">{% if tipo == 'INDISPONIBILE' %}Quale mezzo o macchina{% else %}Macchina (se serve){% endif %}</h2>
+  {% for nome, macchine in gruppi %}
+  <details class="cm-gruppo" {% if forloop.first and tipo == 'INDISPONIBILE' %}open{% endif %}><summary>{{ nome }}</summary>
+    <div class="scegli lista">{% for m in macchine %}<label><input type="radio" name="macchina" value="{{ m.pk }}" {% if tipo == 'INDISPONIBILE' %}required{% endif %}><span>{{ m.nome }}{% if m.modello %} · {{ m.modello }}{% endif %}</span></label>{% endfor %}</div>
+  </details>
+  {% endfor %}
   {% if tipo == 'QUALITA' or tipo == 'CONTROLLO' %}
   <label>Valore misurato (facoltativo)<input type="text" name="valore" maxlength="60" placeholder="Es. 8,9 g di ceramica · scarto 14%"></label>
   {% endif %}
   {% if tipo == 'INDISPONIBILE' %}
-  <div class="cm-date">
-    <label>Non disponibile dal<input type="datetime-local" name="dal" required></label>
-    <label>fino al<input type="datetime-local" name="al" required></label>
-  </div>
+  <label>Non disponibile dal<input type="datetime-local" name="dal" required></label>
+  <label>fino al<input type="datetime-local" name="al" required></label>
   {% else %}
-  <div class="cm-date">
-    <label>Impianto / zona<select name="luogo"><option value="">—</option>{% for v, n in luoghi %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
-    <label>Turno<select name="fascia"><option value="">—</option><option value="1T">1° turno</option><option value="2T">2° turno</option><option value="N">Notturno</option></select></label>
-  </div>
+  <p class="mn-sottotitolo">Dove</p>
+  <div class="scegli">{% for v, n in luoghi %}<label><input type="radio" name="luogo" value="{{ v }}"><span>{{ n }}</span></label>{% endfor %}</div>
+  <p class="mn-sottotitolo">Turno</p>
+  <div class="scegli tre"><label><input type="radio" name="fascia" value="1T"><span>1° turno</span></label><label><input type="radio" name="fascia" value="2T"><span>2° turno</span></label><label><input type="radio" name="fascia" value="N"><span>Notte</span></label></div>
   {% endif %}
   <label class="mn-check cm-urgente"><input type="checkbox" name="urgente" value="1"> ⚠️ Urgente</label>
   <fieldset class="cm-a">
@@ -62,11 +60,11 @@
   {% endif %}
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" multiple data-riduci>
-    <span>📷 Foto (facoltative, anche più di una)</span>
+    <span>📷 Foto</span>
   </label>
   <label class="bottone foto-btn mn-foto mn-video">
     <input type="file" name="video" accept="video/*">
-    <span>🎥 Video (facoltativo, massimo 50 MB)</span>
+    <span>🎥 Video</span>
   </label>
   <button class="bottone pieno piena-larghezza cb-invia">Invia la comunicazione</button>
 </form>

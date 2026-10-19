@@ -164,7 +164,7 @@ class ManutenzioneTest(TestCase):
         self.assertEqual([m.codice for m in r.context['elenco']], ['PZ-PALA1'])
         r = self.client.get(reverse('turni:segnala'), {'macchina': self.pala.pk})
         self.assertEqual(r.context['macchina'], self.pala)
-        self.assertContains(r, 'Foto del guasto')
+        self.assertContains(r, 'name="foto"')
 
     def test_segnalazione_senza_foto_rifiutata(self):
         self.entra('operaio')
