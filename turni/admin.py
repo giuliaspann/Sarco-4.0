@@ -87,8 +87,8 @@ from .models import Intervento, Macchina, ManutenzioneProgrammata, OrdineRicambi
 
 @admin.register(Macchina)
 class MacchinaAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'codice', 'luogo', 'tipo', 'categoria', 'marca', 'modello', 'attiva', 'esempio']
-    list_filter = ['luogo', 'tipo', 'attiva', 'esempio']
+    list_display = ['nome', 'codice', 'luogo', 'centro_costo', 'tipo', 'categoria', 'marca', 'modello', 'attiva', 'esempio']
+    list_filter = ['luogo', 'centro_costo', 'tipo', 'attiva', 'esempio']
     search_fields = ['nome', 'codice', 'marca', 'matricola']
 
 

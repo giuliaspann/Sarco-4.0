@@ -45,7 +45,7 @@ ICONE_LUOGHI = {'ANALISI': '🧪', 'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '
 class MacchinaForm(forms.ModelForm):
     class Meta:
         model = Macchina
-        fields = ['nome', 'codice', 'luogo', 'tipo', 'categoria', 'marca', 'modello', 'matricola', 'anno', 'contaore', 'note']
+        fields = ['nome', 'codice', 'luogo', 'centro_costo', 'tipo', 'categoria', 'marca', 'modello', 'matricola', 'anno', 'contaore', 'note']
         widgets = {'note': forms.Textarea(attrs={'rows': 2})}
 
 

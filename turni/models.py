@@ -764,6 +764,19 @@ class Luogo(models.TextChoices):
     ESTERNI = 'ESTERNI', 'Mezzi esterni'
 
 
+class CentroCosto(models.TextChoices):
+    """Centri di costo della contabilità analitica (proposta di settembre 2026)."""
+    IMP1 = 'IMP1', 'Impianto 1'
+    IMP2 = 'IMP2', 'Impianto 2'
+    SABBIA = 'SABBIA', 'Sabbia (Superbi)'
+    METALLI = 'METALLI', 'Metalli'
+    TRASPORTI = 'TRASPORTI', 'Trasporti'
+    TRASP_ENT = 'TRASP_ENT', 'Trasporti in entrata'
+    TRASP_USC = 'TRASP_USC', 'Trasporti in uscita'
+    PIAZZALE = 'PIAZZALE', 'Piazzale'
+    GENERALI = 'GENERALI', 'Generali'
+
+
 class Macchina(models.Model):
     class Tipo(models.TextChoices):
         IMPIANTO = 'IMPIANTO', 'Macchinario / attrezzatura'
@@ -775,6 +788,7 @@ class Macchina(models.Model):
     tipo = models.CharField(max_length=12, choices=Tipo.choices, default=Tipo.IMPIANTO)
     categoria = models.CharField(max_length=40, blank=True, help_text='Es. pala gommata, muletto, nastro, vaglio')
     luogo = models.CharField(max_length=10, choices=Luogo.choices)
+    centro_costo = models.CharField('centro di costo', max_length=10, choices=CentroCosto.choices, blank=True)
     marca = models.CharField(max_length=40, blank=True)
     modello = models.CharField(max_length=60, blank=True)
     matricola = models.CharField('matricola / targa', max_length=40, blank=True)
