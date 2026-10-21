@@ -329,7 +329,9 @@ class ManutenzioneTest(TestCase):
 
     def test_togli_esempi(self):
         self.assertGreater(togli(), 0)
-        self.assertFalse(Macchina.objects.exists())
+        # restano solo le macchine vere (elenco All. 02/03), non gli esempi
+        self.assertFalse(Macchina.objects.filter(esempio=True).exists())
+        self.assertTrue(Macchina.objects.filter(codice='15634', nome__contains='Pala gommata').exists())
         self.assertFalse(Ricambio.objects.exists())
 
 
