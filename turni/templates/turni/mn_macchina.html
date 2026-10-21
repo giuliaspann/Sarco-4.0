@@ -19,6 +19,7 @@
 
 <section class="scheda mn-dati">
   {% if m.categoria %}<div><small>Tipo</small><b>{{ m.categoria }}</b></div>{% endif %}
+  {% if m.centro_costo %}<div><small>Centro di costo</small><b>{{ m.get_centro_costo_display }}</b></div>{% endif %}
   {% if m.marca or m.modello %}<div><small>Marca e modello</small><b>{{ m.marca }} {{ m.modello }}</b></div>{% endif %}
   {% if m.matricola %}<div><small>Matricola / targa</small><b>{{ m.matricola }}</b></div>{% endif %}
   {% if m.anno %}<div><small>Anno</small><b>{{ m.anno }}</b></div>{% endif %}

@@ -334,6 +334,11 @@ class ManutenzioneTest(TestCase):
         self.assertTrue(Macchina.objects.filter(codice='15634', nome__contains='Pala gommata').exists())
         self.assertFalse(Ricambio.objects.exists())
 
+    def test_centro_costo_dalla_proposta(self):
+        self.assertEqual(Macchina.objects.get(codice='15634').get_centro_costo_display(), 'Piazzale')
+        self.assertEqual(Macchina.objects.get(codice='XA431ZX').centro_costo, 'TRASP_USC')
+        self.assertEqual(Macchina.objects.get(codice='28').centro_costo, '')  # Sabbia o Metalli: da decidere
+
 
 
 @override_settings(MEDIA_ROOT=MEDIA)
