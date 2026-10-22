@@ -2,7 +2,7 @@
 Settings di Sarco 4.0.
 
 La configurazione arriva dalle variabili d'ambiente: in locale da un file .env,
-su Railway dalle variabili del servizio (DATABASE_URL viene dal servizio Postgres).
+in produzione dalle variabili del servizio (Railway o AWS Lightsail).
 """
 
 import os
@@ -30,9 +30,10 @@ if not SECRET_KEY:
     SECRET_KEY = 'solo-per-sviluppo-locale'
 
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
-# Railway espone il dominio pubblico del servizio in questa variabile
-if os.environ.get('RAILWAY_PUBLIC_DOMAIN'):
-    ALLOWED_HOSTS.append(os.environ['RAILWAY_PUBLIC_DOMAIN'])
+# Indirizzo pubblico del sito: SITO_DOMINIO (es. su AWS), oppure quello che Railway espone da solo
+SITO_DOMINIO = os.environ.get('SITO_DOMINIO') or os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
+if SITO_DOMINIO:
+    ALLOWED_HOSTS.append(SITO_DOMINIO)
 
 CSRF_TRUSTED_ORIGINS = [f'https://{h}' for h in ALLOWED_HOSTS if h not in ('localhost', '127.0.0.1')]
 
@@ -48,6 +49,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    # /health/ risponde prima dei controlli sul nome del sito: il controllo di AWS arriva con l'indirizzo interno
+    'turni.sicurezza.ControlloSalute',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -121,6 +124,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Foto delle pulizie: su Railway MEDIA_ROOT punta al volume montato (es. /data/media)
 MEDIA_URL = 'media/'
 MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', BASE_DIR / 'media'))
+# Su AWS le foto stanno in un bucket privato: le chiavi arrivano da AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+# L'app le legge e le passa al browser solo dopo i controlli dei permessi, come col disco.
+if os.environ.get('FOTO_BUCKET'):
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'bucket_name': os.environ['FOTO_BUCKET'],
+            'region_name': os.environ.get('FOTO_BUCKET_REGIONE', 'eu-central-1'),
+            'default_acl': None,
+            'file_overwrite': False,
+            'querystring_auth': True,
+        },
+    }
 # Le foto arrivano già ridotte dal telefono; margine per quelle non ridotte
 DATA_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
@@ -151,12 +167,12 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 
-# Dietro il proxy HTTPS di Railway
+# Dietro il proxy HTTPS di Railway o di AWS
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    # tutto solo in HTTPS; /health/ resta raggiungibile in HTTP per il controllo interno di Railway
+    # tutto solo in HTTPS; /health/ resta raggiungibile in HTTP per il controllo interno (vedi ControlloSalute)
     SECURE_SSL_REDIRECT = True
     SECURE_REDIRECT_EXEMPT = [r'^health/$']
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 365
@@ -167,7 +183,7 @@ LOGGING = {
     'handlers': {'console': {'class': 'logging.StreamHandler'}},
     'loggers': {
         'turni': {'handlers': ['console'], 'level': 'INFO'},
-        # errori 500 nei log di Railway (con DEBUG spento Django altrimenti non li stampa)
+        # errori 500 nei log del servizio (con DEBUG spento Django altrimenti non li stampa)
         'django.request': {'handlers': ['console'], 'level': 'ERROR', 'propagate': False},
     },
 }

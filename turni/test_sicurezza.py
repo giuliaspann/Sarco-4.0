@@ -119,3 +119,16 @@ class CaricamentiTest(TestCase):
         grande = SimpleUploadedFile('DAL 12-10-2026.xlsx', b'0' * (5 * 1024 * 1024 + 1))
         r = self.client.post(reverse('turni:importa'), {'file': grande})
         self.assertContains(r, 'troppo grande')
+
+
+class ControlloSaluteTest(TestCase):
+    """AWS controlla l'app chiamando /health/ con l'indirizzo interno del container."""
+
+    def test_health_risponde_anche_con_nome_sito_sconosciuto(self):
+        r = self.client.get('/health/', HTTP_HOST='172.26.3.4:8000')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {'status': 'ok'})
+
+    def test_altre_pagine_rifiutano_nome_sito_sconosciuto(self):
+        r = self.client.get('/turni/', HTTP_HOST='172.26.3.4:8000')
+        self.assertEqual(r.status_code, 400)

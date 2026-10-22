@@ -5,6 +5,7 @@ from datetime import timedelta
 from urllib.parse import urlparse
 
 from django import forms
+from django.http import JsonResponse
 from django.utils import timezone
 
 log = logging.getLogger('turni.sicurezza')
@@ -18,7 +19,7 @@ MESSAGGIO_BLOCCO = 'Troppi tentativi sbagliati: riprova tra qualche minuto o chi
 
 
 def ip_client(request):
-    """Railway aggiunge l'indirizzo vero del client in fondo a X-Forwarded-For."""
+    """Railway e il bilanciatore di AWS aggiungono l'indirizzo vero del client in fondo a X-Forwarded-For."""
     inoltrato = request.META.get('HTTP_X_FORWARDED_FOR', '')
     if inoltrato:
         return inoltrato.split(',')[-1].strip()
@@ -127,3 +128,19 @@ class IntestazioniSicurezza:
         risposta.setdefault('Content-Security-Policy', CSP_ADMIN if request.path.startswith('/admin/') else CSP)
         risposta.setdefault('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=()')
         return risposta
+
+
+class ControlloSalute:
+    """Risponde a /health/ subito, senza controllare il nome del sito né il redirect HTTPS.
+
+    Il controllo di salute di AWS Lightsail chiama il container col suo indirizzo interno, che non è
+    tra ALLOWED_HOSTS: senza questa scorciatoia Django risponderebbe 400 e AWS fermerebbe l'app.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path == '/health/':
+            return JsonResponse({'status': 'ok'})
+        return self.get_response(request)
