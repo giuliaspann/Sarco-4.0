@@ -8,7 +8,6 @@ Su iPhone le notifiche arrivano solo se l'app è stata aggiunta alla schermata H
 import base64
 import json
 import logging
-import os
 import threading
 
 from django.conf import settings
@@ -37,7 +36,7 @@ def chiavi():
 
 
 def _mittente():
-    dominio = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+    dominio = settings.SITO_DOMINIO
     return f'https://{dominio}' if dominio else 'mailto:noreply@example.com'
 
 

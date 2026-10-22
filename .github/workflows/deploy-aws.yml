@@ -1,0 +1,64 @@
+# Pubblica l'app su AWS Lightsail (Francoforte).
+# Per ora parte solo a mano (Actions -> Deploy su AWS -> Run workflow): Railway resta il sito ufficiale
+# finché non si fa il passaggio. Dopo il passaggio si aggiunge "push: branches: [main]".
+#
+# Segreti del repository richiesti: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (utente IAM "sarco-deploy").
+# Le variabili dell'app (DATABASE_URL, DJANGO_SECRET_KEY, ...) NON stanno su GitHub: si impostano una volta
+# nel servizio container di Lightsail e ogni deploy le ricopia dalla versione attiva.
+name: Deploy su AWS
+
+on:
+  workflow_dispatch:
+
+concurrency: deploy-aws
+
+env:
+  AWS_REGION: eu-central-1
+  SERVIZIO: sarco-app
+  CONTAINER: app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Installa il plugin Lightsail
+        run: |
+          sudo curl -sSL "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" -o /usr/local/bin/lightsailctl
+          sudo chmod +x /usr/local/bin/lightsailctl
+
+      - name: Costruisce l'immagine
+        run: docker build -t sarco-app:${{ github.sha }} .
+
+      - name: Carica l'immagine su Lightsail
+        id: immagine
+        run: |
+          aws lightsail push-container-image --service-name "$SERVIZIO" --label app \
+            --image "sarco-app:${{ github.sha }}" > push.txt
+          cat push.txt
+          echo "nome=$(grep -o ':'"$SERVIZIO"'\.app\.[0-9]*' push.txt | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Pubblica la nuova versione con le variabili di quella attiva
+        run: |
+          IMMAGINE="${{ steps.immagine.outputs.nome }}"
+          test -n "$IMMAGINE"
+          aws lightsail get-container-services --service-name "$SERVIZIO" \
+            --query 'containerServices[0].currentDeployment.containers.app.environment' > variabili.json
+          if [ "$(cat variabili.json)" = "null" ]; then
+            echo "Nessuna versione attiva: imposta prima le variabili dalla console di Lightsail (vedi guida)."; exit 1
+          fi
+          jq -n --arg img "$IMMAGINE" --slurpfile env variabili.json \
+            '{app: {image: $img, ports: {"8000": "HTTP"}, environment: $env[0]}}' > containers.json
+          jq -n '{containerName: "app", containerPort: 8000,
+                  healthCheck: {path: "/health/", successCodes: "200", intervalSeconds: 10,
+                                timeoutSeconds: 5, healthyThreshold: 2, unhealthyThreshold: 3}}' > endpoint.json
+          aws lightsail create-container-service-deployment --service-name "$SERVIZIO" \
+            --containers file://containers.json --public-endpoint file://endpoint.json \
+            --query 'containerService.state'

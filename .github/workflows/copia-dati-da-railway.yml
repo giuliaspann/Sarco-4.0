@@ -1,0 +1,37 @@
+# Copia il database da Railway al database di AWS Lightsail. Parte solo a mano.
+# ATTENZIONE: cancella e sostituisce i dati nel database di AWS.
+#
+# Segreti del repository richiesti:
+#   RAILWAY_DATABASE_URL  = DATABASE_PUBLIC_URL del servizio Postgres su Railway
+#   AWS_DATABASE_URL      = indirizzo del database Lightsail (in "modalità pubblica" durante la copia)
+name: Copia dati da Railway
+
+on:
+  workflow_dispatch:
+    inputs:
+      conferma:
+        description: 'Scrivi COPIA per sostituire i dati del database AWS'
+        required: true
+
+jobs:
+  copia:
+    runs-on: ubuntu-latest
+    container: postgres:17
+    steps:
+      - name: Controlla la conferma
+        run: test "${{ inputs.conferma }}" = "COPIA"
+
+      - name: Esporta da Railway
+        env:
+          ORIGINE: ${{ secrets.RAILWAY_DATABASE_URL }}
+        run: pg_dump --format=custom --no-owner --no-acl --dbname="$ORIGINE" --file=sarco.dump
+
+      - name: Importa su AWS
+        env:
+          DESTINAZIONE: ${{ secrets.AWS_DATABASE_URL }}
+        run: |
+          # pgvector non serve ancora al codice e su Lightsail potrebbe mancare: si salta
+          pg_restore --list sarco.dump | grep -v 'EXTENSION.*vector' > elenco.txt
+          pg_restore --clean --if-exists --no-owner --no-acl --use-list=elenco.txt \
+            --dbname="$DESTINAZIONE" sarco.dump
+          psql "$DESTINAZIONE" -c "select count(*) as utenti from auth_user;"

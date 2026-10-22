@@ -28,6 +28,15 @@ Web app per telefono (installabile sulla schermata Home) che sostituisce il file
 
 Lettura dei codici del file: `1T`/`2T`/`N`/`G` = fascia; `Imp. 1`, `Imp. 2`, `Analisi`, `Superbi`, `Mulino`, `Barrotti`, `PALISTA` = postazione; `CAPO T.` = capo turno; `RIP`, `FERIE`, `FESTA`, `C.P.` = assenze. Le note a destra (ferie/richieste) le vede ciascuno per sé; il riquadro apprendisti imposta i tutor.
 
+### Su AWS Lightsail (Francoforte)
+
+In preparazione: Railway resta il sito ufficiale finché non si fa il passaggio.
+
+- Servizio container `sarco-app` (taglia Micro), database PostgreSQL gestito di Lightsail, bucket privato per le foto. Regione `eu-central-1`.
+- Immagine: `Dockerfile` (all'avvio esegue `prepara_deploy`, poi gunicorn sulla porta 8000; controllo di salute su `/health/`).
+- Pubblicazione: GitHub Actions → *Deploy su AWS* (per ora solo a mano). Su GitHub stanno solo le chiavi dell'utente IAM `sarco-deploy`; le variabili dell'app si impostano nel servizio Lightsail e ogni deploy le ricopia.
+- Variabili in più rispetto a Railway: `SITO_DOMINIO` (indirizzo pubblico, senza https://), `FOTO_BUCKET`, `FOTO_BUCKET_REGIONE` (predefinita `eu-central-1`), `AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY` della chiave del bucket. `DATABASE_URL` finisce con `?sslmode=require`.
+
 ### Su Railway
 
 Le foto servono su disco persistente: aggiungere un **Volume** al servizio montato su `/data` e la variabile `MEDIA_ROOT=/data/media`. Senza volume le foto si perdono a ogni deploy.
