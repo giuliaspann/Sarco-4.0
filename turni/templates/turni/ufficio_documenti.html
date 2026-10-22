@@ -1,0 +1,43 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Documenti{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+
+<form method="post" enctype="multipart/form-data" class="scheda doc-carica">{% csrf_token %}
+  <h2>Carica documenti</h2>
+  <p class="tenue piccolo">Per i cedolini del mese: scegli «Riconosci dal nome del file» e seleziona tutti i PDF insieme. Ogni file deve contenere cognome e nome, es. ROSSI_MARIO_09-2026.pdf. Ognuno riceve un avviso sul telefono e vede solo i suoi.</p>
+  <label>Tipo di documento
+    <select name="categoria" required>{% for v, n in categorie %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select>
+  </label>
+  <label>Per chi
+    <select name="destinatario" required>
+      <option value="auto">Riconosci dal nome del file</option>
+      <option value="tutti">Tutti i dipendenti (documento aziendale)</option>
+      {% for d in dipendenti %}<option value="{{ d.pk }}">{{ d.nome_breve }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Titolo (facoltativo, es. «Cedolino settembre 2026»)<input type="text" name="titolo" maxlength="150"></label>
+  <label>File (PDF, immagini, Word, Excel; massimo 15 MB l'uno)<input type="file" name="file" multiple required></label>
+  <label class="spunta-riga"><input type="checkbox" name="chiedi_presa_visione"> Chiedi la conferma «Ho letto»</label>
+  <button class="bottone pieno piena-larghezza">Carica</button>
+</form>
+
+<section class="scheda">
+  <h2>Ultimi caricati</h2>
+  <ul class="elenco">
+  {% for d in elenco %}
+    <li class="doc-riga">
+      <span>
+        <a class="doc-titolo" href="{% url 'turni:documento_file' d.pk %}" target="_blank">{{ d.titolo }}</a><br>
+        <span class="tenue piccolo">{% if d.dipendente %}{{ d.dipendente.nome_breve }}{% else %}Tutti{% endif %} · {{ d.get_categoria_display }} · {{ d.caricato_il|date:'d/m/Y' }}</span><br>
+        <span class="piccolo">{% if d.dipendente %}{% if d.n_aperti %}aperto{% else %}non ancora aperto{% endif %}{% else %}aperto da {{ d.n_aperti }} su {{ n_attivi }}{% endif %}{% if d.chiedi_presa_visione %} · presa visione {{ d.n_visti }}{% if not d.dipendente %} su {{ n_attivi }}{% endif %}{% endif %}</span>
+      </span>
+      <form method="post">{% csrf_token %}
+        <input type="hidden" name="documento" value="{{ d.pk }}">
+        <button class="bottone avviso-btn" name="azione" value="elimina" data-conferma="Eliminare «{{ d.titolo }}»? Non si può annullare.">Elimina</button>
+      </form>
+    </li>
+  {% empty %}<li class="tenue">Nessun documento caricato.</li>{% endfor %}
+  </ul>
+</section>
+{% endblock %}

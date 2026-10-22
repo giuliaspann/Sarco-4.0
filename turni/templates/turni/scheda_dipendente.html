@@ -1,0 +1,61 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ d.nome_breve }}{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <a class="tasto-indietro" href="{% url 'turni:dipendenti' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Dipendenti</a>
+  <h1>{{ d.nome_breve }}</h1>
+  {% if not d.attivo %}<p class="tenue">Non attivo</p>{% endif %}
+</div>
+
+<form method="post" class="scheda doc-carica">{% csrf_token %}
+  <h2>Anagrafica e contratto</h2>
+  <label>Ruolo in azienda<input type="text" name="qualifica" value="{{ d.qualifica }}" maxlength="150"></label>
+  <label>Telefono<input type="text" inputmode="tel" name="telefono" value="{{ d.telefono }}" maxlength="30"></label>
+  <label>Email<input type="text" inputmode="email" autocapitalize="off" name="email" value="{{ d.email }}"></label>
+  <label>Contratto
+    <select name="tipo_contratto"><option value="">—</option>{% for v, n in contratti %}<option value="{{ v }}" {% if d.tipo_contratto == v %}selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+  </label>
+  <label>Livello CCNL<input type="text" name="livello" value="{{ d.livello }}" maxlength="40"></label>
+  <label>Assunto il<input type="date" name="data_assunzione" value="{{ d.data_assunzione|date:'Y-m-d' }}"></label>
+  <label>Contratto fino al (solo tempo determinato)<input type="date" name="scadenza_contratto" value="{{ d.scadenza_contratto|date:'Y-m-d' }}"></label>
+  <button class="bottone pieno piena-larghezza" name="azione" value="anagrafica">Salva</button>
+</form>
+
+<section class="scheda">
+  <h2>Scadenze</h2>
+  <ul class="elenco">
+  {% for s in d.scadenze.all %}
+    <li><span><b>{{ s.nome }}</b><br><span class="piccolo {% if s.giorni < 0 %}testo-errore{% endif %}">{{ s.scade_il|date:'d/m/Y' }}{% if s.giorni < 0 %} · scaduta{% elif s.giorni <= 30 %} · tra {{ s.giorni }} giorni{% endif %}</span></span>
+      <form method="post">{% csrf_token %}<input type="hidden" name="scadenza" value="{{ s.pk }}">
+        <button class="bottone leggero" name="azione" value="togli_scadenza" data-conferma="Togliere questa scadenza?">Togli</button></form></li>
+  {% empty %}<li class="tenue">Nessuna scadenza.</li>{% endfor %}
+  </ul>
+  <form method="post" class="doc-carica">{% csrf_token %}
+    <label>Tipo<select name="tipo" required>{% for v, n in tipi_scadenza %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+    <label>Descrizione (facoltativa, es. «Corso carrellisti»)<input type="text" name="descrizione" maxlength="150"></label>
+    <label>Scade il<input type="date" name="scade_il" required></label>
+    <button class="bottone piena-larghezza" name="azione" value="scadenza">Aggiungi scadenza</button>
+  </form>
+</section>
+
+<section class="scheda">
+  <h2>Documenti</h2>
+  <ul class="elenco">
+  {% for doc in documenti %}
+    <li class="doc-riga"><span><a class="doc-titolo" href="{% url 'turni:documento_file' doc.pk %}" target="_blank">{{ doc.titolo }}</a><br>
+      <span class="tenue piccolo">{{ doc.get_categoria_display }} · {{ doc.caricato_il|date:'d/m/Y' }}{% with l=doc.letture.all|first %} · {% if l %}aperto{% if l.presa_visione_il %}, presa visione {{ l.presa_visione_il|date:'d/m/Y' }}{% endif %}{% else %}non ancora aperto{% endif %}{% endwith %}</span></span>
+      <form method="post" action="{% url 'turni:ufficio_documenti' %}">{% csrf_token %}
+        <input type="hidden" name="documento" value="{{ doc.pk }}"><input type="hidden" name="torna" value="{{ request.path }}">
+        <button class="bottone avviso-btn" name="azione" value="elimina" data-conferma="Eliminare «{{ doc.titolo }}»?">Elimina</button></form></li>
+  {% empty %}<li class="tenue">Nessun documento.</li>{% endfor %}
+  </ul>
+  <form method="post" enctype="multipart/form-data" action="{% url 'turni:ufficio_documenti' %}" class="doc-carica">{% csrf_token %}
+    <input type="hidden" name="destinatario" value="{{ d.pk }}"><input type="hidden" name="torna" value="{{ request.path }}">
+    <label>Tipo<select name="categoria" required>{% for v, n in categorie %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+    <label>Titolo (facoltativo)<input type="text" name="titolo" maxlength="150"></label>
+    <label>File<input type="file" name="file" multiple required></label>
+    <label class="spunta-riga"><input type="checkbox" name="chiedi_presa_visione"> Chiedi la conferma «Ho letto»</label>
+    <button class="bottone piena-larghezza">Carica per {{ d.nome_breve }}</button>
+  </form>
+</section>
+{% endblock %}

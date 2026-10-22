@@ -69,6 +69,14 @@ class RuoloApp(models.TextChoices):
     RESP_TURNI = 'RESP_TURNI', 'Responsabile turni'
 
 
+class TipoContratto(models.TextChoices):
+    INDETERMINATO = 'INDETERMINATO', 'Tempo indeterminato'
+    DETERMINATO = 'DETERMINATO', 'Tempo determinato'
+    APPRENDISTATO = 'APPRENDISTATO', 'Apprendistato'
+    SOMMINISTRATO = 'SOMMINISTRATO', 'Somministrato'
+    TIROCINIO = 'TIROCINIO', 'Tirocinio'
+
+
 class Dipendente(models.Model):
     nome = models.CharField('nome come nel file turni', max_length=100, unique=True)
     utente = models.OneToOneField(
@@ -87,6 +95,13 @@ class Dipendente(models.Model):
     resp_manutenzione = models.BooleanField('responsabile manutenzione', default=False)
     acquisti = models.BooleanField('ordina i ricambi (acquisti)', default=False)
     # Il PIN è corto: dopo troppi tentativi sbagliati l'accesso si blocca per un po'
+    # anagrafica (la compila l'ufficio dalla scheda del dipendente)
+    telefono = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    data_assunzione = models.DateField('assunto il', null=True, blank=True)
+    tipo_contratto = models.CharField('contratto', max_length=14, choices=TipoContratto.choices, blank=True)
+    livello = models.CharField('livello CCNL', max_length=40, blank=True)
+    scadenza_contratto = models.DateField('contratto fino al', null=True, blank=True)
     tentativi_falliti = models.PositiveSmallIntegerField(default=0, editable=False)
     bloccato_fino = models.DateTimeField(null=True, blank=True, editable=False)
 
@@ -1378,3 +1393,91 @@ class ConversazioneAssistente(models.Model):
                 if testo:
                     righe.append({'chi': 'bot', 'testo': testo})
         return righe
+
+
+# ---------------------------------------------------------------- Persone: scadenze e documenti
+
+
+class Scadenza(models.Model):
+    """Visita medica, corso sicurezza, patentino: l'ufficio vede quelle vicine."""
+
+    class Tipo(models.TextChoices):
+        VISITA = 'VISITA', 'Visita medica'
+        FORMAZIONE = 'FORMAZIONE', 'Formazione sicurezza'
+        PATENTE = 'PATENTE', 'Patente o patentino'
+        ALTRO = 'ALTRO', 'Altro'
+
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='scadenze')
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    descrizione = models.CharField(max_length=150, blank=True)
+    scade_il = models.DateField()
+
+    class Meta:
+        verbose_name_plural = 'scadenze'
+        ordering = ['scade_il']
+
+    def __str__(self):
+        return f'{self.dipendente} {self.nome} {self.scade_il:%d/%m/%Y}'
+
+    @property
+    def nome(self):
+        return self.descrizione or self.get_tipo_display()
+
+    @property
+    def giorni(self):
+        return (self.scade_il - timezone.localdate()).days
+
+
+def percorso_documento(istanza, nome):
+    # nome casuale: il file non si indovina, e si scarica solo dalla vista che controlla chi lo chiede
+    import uuid
+    from pathlib import Path
+
+    return f'documenti/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{Path(nome).suffix.lower()}'
+
+
+class Documento(models.Model):
+    """Documento per un dipendente (cedolino, contratto, attestato) o per tutti (regolamenti, procedure)."""
+
+    class Categoria(models.TextChoices):
+        CEDOLINO = 'CEDOLINO', 'Cedolino'
+        CU = 'CU', 'Certificazione Unica'
+        CONTRATTO = 'CONTRATTO', 'Contratto e lettere'
+        ATTESTATO = 'ATTESTATO', 'Attestato'
+        REGOLAMENTO = 'REGOLAMENTO', 'Regolamento o procedura'
+        ALTRO = 'ALTRO', 'Altro'
+
+    titolo = models.CharField(max_length=150)
+    categoria = models.CharField(max_length=12, choices=Categoria.choices)
+    # vuoto = documento aziendale, lo vedono tutti
+    dipendente = models.ForeignKey(Dipendente, null=True, blank=True, on_delete=models.CASCADE, related_name='documenti')
+    file = models.FileField(upload_to=percorso_documento)
+    nome_file = models.CharField(max_length=200)
+    chiedi_presa_visione = models.BooleanField('chiedi la presa visione', default=False)
+    caricato_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    caricato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'documenti'
+        ordering = ['-caricato_il']
+
+    def __str__(self):
+        return f'{self.titolo} ({self.dipendente or "tutti"})'
+
+    @property
+    def aziendale(self):
+        return self.dipendente_id is None
+
+
+class LetturaDocumento(models.Model):
+    """Chi ha aperto il documento e, se richiesta, quando ha confermato la presa visione."""
+
+    documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='letture')
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='letture_documenti')
+    aperto_il = models.DateTimeField(auto_now_add=True)
+    presa_visione_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'lettura documento'
+        verbose_name_plural = 'letture documenti'
+        constraints = [models.UniqueConstraint(fields=['documento', 'dipendente'], name='una_lettura')]

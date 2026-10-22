@@ -1,0 +1,31 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Documenti{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  <a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Area personale</a>
+  <h1>I miei documenti</h1>
+</div>
+
+<section class="scheda">
+  <h2>Personali</h2>
+  <p class="tenue piccolo">Li vedete solo tu e l'ufficio.</p>
+  <ul class="elenco">
+  {% for d in personali %}{% include 'turni/_documento_riga.html' %}
+  {% empty %}<li class="tenue">Ancora nessun documento.</li>{% endfor %}
+  </ul>
+</section>
+
+<section class="scheda">
+  <h2>Aziendali</h2>
+  <ul class="elenco">
+  {% for d in aziendali %}{% include 'turni/_documento_riga.html' %}
+  {% empty %}<li class="tenue">Ancora nessun documento.</li>{% endfor %}
+  </ul>
+</section>
+
+<section class="scheda wb-box">
+  <h2>Segnalazioni riservate (whistleblowing)</h2>
+  <p class="piccolo">Per segnalare illeciti in modo riservato c'è il canale gestito da un soggetto esterno, come previsto dalla legge. L'app non vede e non conserva le segnalazioni.</p>
+  <a class="bottone piena-larghezza" href="{{ whistleblowing_url }}" target="_blank" rel="noopener">Apri la pagina whistleblowing</a>
+</section>
+{% endblock %}

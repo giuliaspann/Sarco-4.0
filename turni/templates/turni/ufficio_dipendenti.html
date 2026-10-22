@@ -24,14 +24,27 @@
   {% else %}<p class="piccolo">✓ Tutti i dipendenti attivi hanno l'accesso.</p>{% endif %}
 </section>
 
+{% if scadenze %}
+<section class="scheda">
+  <h2>Scadenze entro 30 giorni</h2>
+  <ul class="elenco">
+  {% for s in scadenze %}
+    <li><span><a href="{% url 'turni:scheda_dipendente' s.dipendente_id %}"><b>{{ s.dipendente.nome_breve }}</b></a><br><span class="piccolo">{{ s.nome }}</span></span>
+      <span class="{% if s.giorni < 0 %}testo-errore{% endif %}">{{ s.scade_il|date:'d/m/Y' }}{% if s.giorni < 0 %} · scaduta{% endif %}</span></li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <section class="scheda">
   <h2>Dipendenti e PIN</h2>
+  <p class="tenue piccolo">Tocca un nome per aprire la sua scheda: contratto, scadenze e documenti.</p>
   <p class="tenue piccolo">«Crea accesso» genera nome utente e PIN; «Nuovo PIN» ne crea uno nuovo e quello vecchio smette subito di funzionare. «Disattiva» blocca l'accesso ma tiene lo storico; «Elimina» cancella tutto.</p>
   <ul class="elenco elenco-dipendenti">
   {% for d in elenco %}
     <li class="{% if not d.attivo %}spento{% endif %}">
       <span>
-        <b>{{ d.nome_breve }}</b>{% if d.ruolo_app != 'OPERAIO' %} <span class="chip-ruolo">{{ d.get_ruolo_app_display }}</span>{% endif %}<br>
+        <a href="{% url 'turni:scheda_dipendente' d.pk %}"><b>{{ d.nome_breve }}</b></a>{% if d.ruolo_app != 'OPERAIO' %} <span class="chip-ruolo">{{ d.get_ruolo_app_display }}</span>{% endif %}<br>
         {% if d.qualifica %}<span class="piccolo">{{ d.qualifica }}</span><br>{% endif %}
         <span class="tenue piccolo">{% if d.utente %}utente: {{ d.utente.username }}{% else %}nessun accesso{% endif %}{% if d.tutor %} · tutor: {{ d.tutor|title }}{% endif %}</span>
       </span>
