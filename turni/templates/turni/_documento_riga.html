@@ -1,0 +1,13 @@
+<li class="doc-riga">
+  <span>
+    <a class="doc-titolo" href="{% url 'turni:documento_file' d.pk %}" target="_blank">{{ d.titolo }}</a>
+    {% if not d.lettura %}<span class="doc-nuovo">nuovo</span>{% endif %}<br>
+    <span class="tenue piccolo">{{ d.get_categoria_display }} · {{ d.caricato_il|date:'d/m/Y' }}</span>
+    {% if d.chiedi_presa_visione and not d.manca_visione %}<br><span class="tenue piccolo">✓ presa visione il {{ d.lettura.presa_visione_il|date:'d/m/Y' }}</span>{% endif %}
+  </span>
+  {% if d.manca_visione %}
+  <form method="post" action="{% url 'turni:presa_visione_documento' d.pk %}">{% csrf_token %}
+    <button class="bottone pieno" data-conferma="Confermi di aver letto «{{ d.titolo }}»?">Ho letto</button>
+  </form>
+  {% endif %}
+</li>

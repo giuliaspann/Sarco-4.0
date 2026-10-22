@@ -709,6 +709,7 @@ def dipendenti(request):
         return redirect('turni:dipendenti')
     elenco = Dipendente.objects.select_related('utente').annotate(n_turni=Count('turni')).order_by('-attivo', 'nome')
     from .models import Mansione
+    from .views_documenti import scadenze_vicine
 
     return render(
         request,
@@ -718,6 +719,7 @@ def dipendenti(request):
             'mansioni': Mansione.choices,
             'senza_accesso': Dipendente.objects.filter(attivo=True, utente__isnull=True).count(),
             'email_ok': accessi.email_configurata(),
+            'scadenze': scadenze_vicine(),
         },
     )
 

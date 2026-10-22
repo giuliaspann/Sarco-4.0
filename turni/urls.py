@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import views, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente, views_documenti
 
 app_name = 'turni'
 
@@ -66,4 +66,9 @@ urlpatterns = [
     path('ufficio/importa/anteprima/', views.anteprima, name='anteprima'),
     path('ufficio/dipendenti/', views.dipendenti, name='dipendenti'),
     path('ufficio/credenziali/', views.credenziali, name='credenziali'),
+    path('ufficio/dipendenti/<int:dipendente_id>/', views_documenti.scheda_dipendente, name='scheda_dipendente'),
+    path('ufficio/documenti/', views_documenti.ufficio_documenti, name='ufficio_documenti'),
+    path('documenti/', views_documenti.documenti, name='documenti'),
+    path('documenti/<int:documento_id>/', views_documenti.documento_file, name='documento_file'),
+    path('documenti/<int:documento_id>/presa-visione/', views_documenti.presa_visione_documento, name='presa_visione_documento'),
 ]

@@ -1530,3 +1530,12 @@ form:has(input[name=luogo][value="SABBIA"]:checked) .pl-voci[data-luogo="SABBIA"
 form:has(input[name=luogo][value="MEZZI"]:checked) .pl-voci[data-luogo="MEZZI"] { display: grid; }
 form:has(input[name=luogo][value="ANALISI"]:checked) .pl-voci[data-luogo="ANALISI"] { display: grid; }
 form:has(input[name=luogo][value="ALTRO"]:checked) .pl-voci[data-luogo="ALTRO"] { display: grid; }
+
+/* Documenti */
+.testo-errore { color: var(--errore); font-weight: 600; }
+.doc-riga { align-items: flex-start !important; }
+.doc-riga a.doc-titolo { font-weight: 600; text-decoration: none; color: inherit; }
+.doc-riga .doc-nuovo { color: var(--errore); font-size: .78rem; font-weight: 600; }
+.doc-carica label:not(.spunta-riga) { display: block; margin: 10px 0 4px; }
+.doc-carica select, .doc-carica input[type=text], .doc-carica input[type=date] { width: 100%; }
+.wb-box { border-left: 4px solid var(--tenue); }

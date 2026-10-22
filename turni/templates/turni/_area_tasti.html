@@ -7,6 +7,11 @@
     <span class="home-icona">👥</span>
     <b>Con chi lavoro oggi</b>
   </a>
+  <a class="home-tasto" href="{% url 'turni:documenti' %}">
+    {% if nav_documenti %}<i class="home-badge">{{ nav_documenti }}</i>{% endif %}
+    <span class="home-icona">📄</span>
+    <b>I miei documenti</b>
+  </a>
   {% if nav_capoturno %}
   <a class="home-tasto" href="{% url 'turni:capoturno' %}">
     {% if da_verificare %}<i class="home-badge">{{ da_verificare }}</i>{% endif %}
