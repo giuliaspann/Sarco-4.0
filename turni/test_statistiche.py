@@ -67,7 +67,11 @@ class StatisticheTest(TestCase):
         RigaProduzione.objects.create(produzione=t, prodotto=p, tonnellate=Decimal('80.5'))
         r = self.client.get(reverse('turni:report'))
         self.assertIn('A Misto Imp. 1: 80.5 t (100.0%)', r.context['testo'])
-        self.assertTrue(ProdottoProduzione.objects.filter(codice='N').exists())
+        # righe dell'Impianto 2 come sul display: L-SCARTO1, M-SCARTO2, niente N
+        imp2 = ProdottoProduzione.objects.filter(impianto='IMP2', attivo=True)
+        self.assertEqual([p.codice for p in imp2], ['G', 'H', 'I', 'J', 'K', 'L', 'M'])
+        self.assertEqual(imp2.get(codice='L').nome, 'Scarto 1')
+        self.assertEqual(imp2.get(codice='M').categoria, ProdottoProduzione.Categoria.SCARTO)
 
     def test_leggi_foto(self):
         foto = lambda: SimpleUploadedFile('a.jpg', jpeg_finto(), 'image/jpeg')
