@@ -205,6 +205,9 @@ def messaggi(request):
         contesto['bacheca_ultimo'] = Annuncio.objects.order_by('-creato_il').first()
     contesto['bacheca_nuovi'] = non_letti_bacheca(request.user, stato)
     contesto['chat_nuovi'] = non_letti_chat(request.user)
+    dip = getattr(request.user, 'dipendente', None)
+    # "Da leggere": i turni cambiati dall'ufficio aspettano la presa visione qui, non più nella pagina Oggi
+    contesto['da_vedere'] = dip.modifiche_turno.filter(vista_il__isnull=True) if dip else []
     return render(request, 'turni/messaggi.html', contesto)
 
 

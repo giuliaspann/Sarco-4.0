@@ -150,8 +150,13 @@ def leggi_foto(request):
         return JsonResponse({'errore': 'La foto non è valida.'}, status=400)
     try:
         if request.POST.get('tipo') == 'produzione':
-            valori = lettura.leggi_produzione(jpeg, list(ProdottoProduzione.objects.filter(attivo=True)))
+            valori, data, ora = lettura.leggi_produzione_completa(jpeg, list(ProdottoProduzione.objects.filter(attivo=True)))
             campi = {f'p{pk}': str(v).replace('.', ',') for pk, v in valori.items()}
+            if data and ora:
+                # giorno e turno non si scrivono più: si prendono da data e ora del display
+                from .views_produzione import turno_da_ora
+
+                campi['data'], campi['fascia'] = turno_da_ora(data, ora)
         else:
             campi = {k: (v if k == 'campione' else str(v).replace('.', ',')) for k, v in lettura.leggi_analisi(jpeg).items()}
     except lettura.LetturaNonRiuscita as e:

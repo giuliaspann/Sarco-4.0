@@ -1,15 +1,3 @@
-<div class="home-griglia">
-  <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}">
-    <span class="home-icona">🔁</span><b>Cambio turno</b><small>Tocca il turno di un collega</small>
-  </a>
-  <a class="home-tasto" href="{% url 'turni:nuove_ferie' %}">
-    <span class="home-icona">⏸️</span><b>Ferie / permesso</b><small>Chiedi all'ufficio</small>
-  </a>
-  <a class="home-tasto" href="{% url 'turni:nuovo_avviso' %}">
-    <span class="home-icona">📝</span><b>Avviso assenza</b><small>Malattia, uscita, ritardo · lo vedono solo ufficio e capo turno</small>
-  </a>
-</div>
-
 {% for c in da_rispondere %}
 <section class="scheda rq-rispondi">
   <p class="extra-titolo">Devi rispondere</p>

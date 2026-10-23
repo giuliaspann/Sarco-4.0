@@ -1,20 +1,37 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Produzione del turno{% endblock %}
 {% block contenuto %}
+{% if impianto %}
+<a class="tasto-indietro" href="{% url 'turni:produzione_nuova' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia impianto</a>
+<div class="intestazione"><h1>Produzione · {{ nome_impianto }}</h1></div>
+{% else %}
 <a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Statistiche</a>
 <div class="intestazione"><h1>Inserisci produzione del turno</h1></div>
+{% endif %}
+{% if impianto and not prodotti %}
+<div class="pl-vuoto"><span class="home-icona">🕒</span><b>Le righe del display di {{ nome_impianto }} non sono ancora state definite.</b></div>
+{% else %}
 <form method="post" enctype="multipart/form-data" class="mn-form" data-lettura="produzione">{% csrf_token %}
+  {% if impianto %}<input type="hidden" name="impianto" value="{{ impianto }}">{% endif %}
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
     <span>📷 Foto del display</span>
   </label>
-  {% if leggi_foto %}<button type="button" class="bottone piena-larghezza st-leggi" data-leggi>🔎 Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
-  <label>Giorno<input type="date" name="data" value="{{ giorno|date:'Y-m-d' }}" required></label>
-  <div class="scegli tre">{% for v, n in fasce %}<label><input type="radio" name="fascia" value="{{ v }}" {% if v == fascia %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}</div>
+  {% if leggi_foto %}<button type="button" class="bottone pieno piena-larghezza st-leggi" data-leggi>🔎 Leggi i numeri dalla foto</button>{% endif %}
+  <p class="st-esito" hidden></p>
+  <div class="pr-quando" data-quando hidden>
+    <b data-giorno>{{ giorno|date:'l j F'|capfirst }}</b> <span class="cal-sigla pr-sigla {{ classe }}" data-sigla>{{ sigla }}</span>
+    <span class="avviso-rosso">⚠️ Controlla i valori prima di salvare</span>
+  </div>
+  <details class="pr-cambia">
+    <summary>Giorno e turno: {{ giorno|date:'D j M' }} · {{ sigla }} (si leggono dalla foto)</summary>
+    <label>Giorno<input type="date" name="data" value="{{ giorno|date:'Y-m-d' }}" required></label>
+    <div class="scegli tre">{% for v, n in fasce %}<label><input type="radio" name="fascia" value="{{ v }}" {% if v == fascia %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}</div>
+  </details>
   {% regroup prodotti by get_impianto_display as gruppi %}
   {% for g in gruppi %}
   <section class="scheda pr-gruppo">
-    <h2>{{ g.grouper }}</h2>
+    {% if not impianto %}<h2>{{ g.grouper }}</h2>{% endif %}
     {% for p in g.list %}
     <label class="pr-riga{% if p.categoria == 'SCARTO' %} scarto{% endif %}"><span><b>{{ p.codice }}</b> {{ p.nome }}</span>
       <input type="text" name="p{{ p.pk }}" value="{{ p.valore }}" inputmode="decimal" placeholder="0,00" autocomplete="off"><i>t</i></label>
@@ -24,4 +41,5 @@
   <label>Note (facoltative)<input type="text" name="note" maxlength="500" placeholder="Es. fermo di 20 minuti per alimentazione esterna"></label>
   <button class="bottone pieno piena-larghezza cb-invia">Salva la produzione</button>
 </form>
+{% endif %}
 {% endblock %}

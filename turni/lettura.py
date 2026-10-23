@@ -7,6 +7,7 @@ prima di salvare.
 
 import base64
 import json
+import re
 import logging
 import os
 
@@ -75,30 +76,41 @@ def _chiedi(jpeg, istruzioni, schema):
 
 def leggi_produzione(jpeg, prodotti):
     """{prodotto_id: tonnellate} letti dal display della pesa."""
+    return leggi_produzione_completa(jpeg, prodotti)[0]
+
+
+def leggi_produzione_completa(jpeg, prodotti):
+    """({prodotto_id: tonnellate}, 'AAAA-MM-GG' o None, 'HH:MM' o None): i valori e la data/ora del display."""
     elenco = '\n'.join(f'- {p.codice}: {p.nome} ({p.get_impianto_display()})' for p in prodotti)
+    testo_o_null = {'anyOf': [{'type': 'string'}, {'type': 'null'}]}
     schema = {
         'type': 'object',
         'properties': {'righe': {'type': 'array', 'items': {
             'type': 'object',
             'properties': {'codice': {'type': 'string'}, 'tonnellate': {'type': 'number'}},
             'required': ['codice', 'tonnellate'], 'additionalProperties': False,
-        }}},
-        'required': ['righe'], 'additionalProperties': False,
+        }}, 'data': testo_o_null, 'ora': testo_o_null},
+        'required': ['righe', 'data', 'ora'], 'additionalProperties': False,
     }
     istruzioni = (
         "Foto del display di una pesa di un impianto di recupero del vetro, a fine turno. Ogni riga ha un codice "
         "(lettera, a volte con + o -), il nome del prodotto e un peso. Leggi le righe e restituisci codice e peso "
         "in tonnellate (se il display mostra kg, dividi per 1000). Usa solo questi codici:\n" + elenco +
-        "\nSalta le righe che non leggi con sicurezza: è meglio un valore mancante che uno sbagliato."
+        "\nSalta le righe che non leggi con sicurezza: è meglio un valore mancante che uno sbagliato. "
+        "In alto sul display ci sono data e ora (gg/mm/aa hh:mm): restituisci la data come AAAA-MM-GG e l'ora come "
+        "HH:MM, oppure null se non si leggono."
     )
     per_codice = {p.codice.upper(): p for p in prodotti}
     valori = {}
-    for riga in _chiedi(jpeg, istruzioni, schema).get('righe', []):
+    dati = _chiedi(jpeg, istruzioni, schema)
+    for riga in dati.get('righe', []):
         p = per_codice.get(str(riga.get('codice', '')).strip().upper())
         t = riga.get('tonnellate')
         if p and isinstance(t, (int, float)) and 0 <= t <= 100000:
             valori[p.pk] = round(t, 2)
-    return valori
+    data = dati.get('data') if re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(dati.get('data') or '')) else None
+    ora = dati.get('ora') if re.fullmatch(r'\d{1,2}:\d{2}', str(dati.get('ora') or '')) else None
+    return valori, data, ora
 
 
 def leggi_analisi(jpeg):

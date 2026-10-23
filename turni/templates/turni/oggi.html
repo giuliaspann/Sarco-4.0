@@ -1,0 +1,41 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Oggi{% endblock %}
+{% block contenuto %}
+<p class="home-saluto">Buongiorno, <b>{{ dip.nome_breve }}</b></p>
+<p class="oggi-data">{{ oggi_data|date:'l j F'|capfirst }}</p>
+
+<div class="oggi-due">
+  <a class="riq-turno" href="{% url 'turni:miei_turni' %}">
+    {% if turno_oggi %}
+      <b>{{ turno_oggi.nome_postazione|default:turno_oggi.descrizione_fascia }}</b>
+      <span>{% if turno_oggi.sigla_fascia %}<span class="cal-sigla {{ turno_oggi.classe_solo_fascia }}">{{ turno_oggi.sigla_fascia }}</span>{% endif %}{% if turno_oggi.capoturno and turno_oggi.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}</span>
+    {% else %}
+      <b>Turno non pubblicato</b>
+    {% endif %}
+  </a>
+  <a class="riq-con" href="{% url 'turni:squadra' %}"><span class="ico">👥</span><b>Con chi lavoro oggi</b></a>
+</div>
+
+{% include 'turni/_capi_da_completare.html' %}
+
+<div class="tasti-agg">
+  <a class="agg" href="{% url 'turni:pulizie' %}"><span class="piu">+</span><span class="txt">Pulizia</span><span class="emo">🧹</span>{% if pulizie_da_fare %}<i class="home-badge">{{ pulizie_da_fare }}</i>{% endif %}</a>
+  <a class="agg" href="{% url 'turni:mn_scelta' %}"><span class="piu">+</span><span class="txt">Manutenzione</span><span class="emo">🔧</span></a>
+  <a class="agg" href="{% url 'turni:produzione_nuova' %}"><span class="piu">+</span><span class="txt">Dati produzione</span><span class="emo">⚖️</span></a>
+  <a class="agg" href="{% url 'turni:analisi_nuova' %}"><span class="piu">+</span><span class="txt">Dati analisi</span><span class="emo">🧪</span></a>
+</div>
+
+<h2 class="ap-sezione">Impianti</h2>
+<div class="imp-due">
+  <a class="imp-btn fermo" href="{% url 'turni:nuovo_fermo' %}">⛔<span>Fermo impianto</span></a>
+  <a class="imp-btn riparte" href="{% url 'turni:ripartenza' %}">▶️<span>Ripartenza impianto</span></a>
+</div>
+{% for f in fermi_aperti %}
+<a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>
+{% endfor %}
+
+{% for c in mezzi_non_disponibili %}
+<a class="cm-avviso" href="{% url 'turni:comunicazione' c.pk %}">{{ c.icona }} <span>{% if c.tipo == 'FERMO' %}<b>{{ c.get_luogo_display }} fermo · {{ c.get_motivo_display|lower }}</b><small>{{ c.periodo }}</small></span></a>
+{% else %}<b>{{ c.macchina.nome }}{% if c.macchina.modello %} {{ c.macchina.modello }}{% endif %} non disponibile</b><small>{% if c.attiva_ora %}Fino a {{ c.al|date:'D j M H:i' }}{% else %}Dal {{ c.dal|date:'D j M H:i' }} al {{ c.al|date:'D j M H:i' }}{% endif %}</small></span></a>
+{% endif %}{% endfor %}
+{% endblock %}

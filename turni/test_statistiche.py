@@ -31,8 +31,11 @@ class StatisticheTest(TestCase):
         self.addCleanup(patcher.stop)
 
     def test_barra_e_pagina(self):
+        # dalla schermata Oggi si inseriscono produzione e analisi; l'elenco sta in Archivio
         r = self.client.get(reverse('turni:home'))
-        self.assertContains(r, 'Statistiche')
+        for t in ('Dati produzione', 'Dati analisi', 'Archivio'):
+            self.assertContains(r, t)
+        self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:statistiche'))
         r = self.client.get(reverse('turni:statistiche'))
         for t in ('Inserisci produzione del turno', 'Inserisci analisi prodotto', 'Report'):
             self.assertContains(r, t)
@@ -85,6 +88,10 @@ class StatisticheTest(TestCase):
                 j = self.client.post(reverse('turni:leggi_foto'), {'foto': foto(), 'tipo': 'analisi'}).json()
             self.assertEqual(j['campi'], {'peso_kg': '19,5', 'csp': '0,4', 'campione': 'BIANCO'})
             a = ProdottoProduzione.objects.get(codice='A')
-            with mock.patch('turni.lettura.leggi_produzione', return_value={a.pk: 81.25}):
+            with mock.patch('turni.lettura.leggi_produzione_completa', return_value=({a.pk: 81.25}, None, None)):
                 j = self.client.post(reverse('turni:leggi_foto'), {'foto': foto(), 'tipo': 'produzione'}).json()
             self.assertEqual(j['campi'], {f'p{a.pk}': '81,25'})
+            # data e ora del display diventano giorno e turno (21:41 = 2° turno)
+            with mock.patch('turni.lettura.leggi_produzione_completa', return_value=({a.pk: 81.25}, '2026-10-21', '21:41')):
+                j = self.client.post(reverse('turni:leggi_foto'), {'foto': foto(), 'tipo': 'produzione'}).json()
+            self.assertEqual((j['campi']['data'], j['campi']['fascia']), ('2026-10-21', '2T'))

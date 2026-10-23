@@ -1,13 +1,35 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Area personale{% endblock %}
 {% block contenuto %}
-{% include 'turni/_area_oggi.html' %}
-<h2 class="ap-sezione">I miei turni</h2>
-<div class="naviga mese">
+<div class="intestazione"><h1>Area personale</h1></div>
+
+<div class="tit-riga">
+  <h2 class="ap-sezione">Turni della settimana</h2>
+  <a class="tasto-piccolo" href="{% url 'turni:settimana_tutti' %}?settimana={{ inizio|date:'Y-m-d' }}">👥 Turni di tutti ›</a>
+</div>
+<div class="naviga mese ap-naviga">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
-  <h1 class="mt-titolo">Settimana {{ inizio|date:'W' }}<small>{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</small></h1>
+  <span class="ap-settimana">{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</span>
   <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
 </div>
+{% for settimana in settimane %}
+{% if not settimana.caricata %}
+<p class="cal-vuota">Turni non ancora pubblicati</p>
+{% else %}
+<div class="sett-ap">
+  {% for c in settimana.giorni %}
+  <div class="{% if c.data == oggi %}oggi{% endif %}{% if c.data < oggi %} passato{% endif %}">
+    <span class="sett-giorno">{{ c.data|date:'D'|slice:':3' }}</span>
+    {% if c.turno %}
+      {% if c.turno.sigla_postazione %}<span class="cal-sigla sett-imp">{{ c.turno.sigla_postazione }}</span>{% endif %}
+      {% if c.turno.sigla_fascia %}<span class="cal-sigla {{ c.turno.classe_solo_fascia }}">{{ c.turno.sigla_fascia }}</span>{% endif %}
+      {% if c.turno.capoturno and c.turno.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endfor %}
 
 {% for e in extra %}
 <section class="scheda extra {% if e.mia.confermata %}extra-ok{% elif e.mia %}extra-offerto{% endif %}">
@@ -27,40 +49,28 @@
 </section>
 {% endfor %}
 
-
-<div class="calendario">
-  {% for settimana in settimane %}
-  {% if not settimana.caricata %}
-  <p class="cal-vuota">Turni non ancora pubblicati</p>
-  {% else %}
-  <div class="cal-testa">{% for c in settimana.giorni %}<span>{{ c.data|date:'D'|slice:':3' }}</span>{% endfor %}</div>
-  <div class="cal-riga">
-    {% for c in settimana.giorni %}
-      <div class="cal-giorno{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}{% if c.data < oggi %} passato{% endif %}">
-        <span class="cal-num">{{ c.data.day }}</span>
-        {% if c.turno %}<span class="cal-sigla {{ c.turno.classe_fascia }}">{{ c.turno.sigla }}</span>{% endif %}
-      </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endfor %}
-</div>
-<div class="mt-legenda">
-  <ul class="legenda">
-    <li><i class="f-mattina">1T</i>1° turno</li>
-    <li><i class="f-pomeriggio">2T</i>2° turno</li>
-    <li><i class="f-notte">N</i>Notte</li>
-    <li><i class="f-giorno">G</i>Giornaliero</li>
-  </ul>
-  <ul class="legenda">
-    <li><i class="f-capo">CT1</i>Capo turno</li>
-    <li><i class="f-riposo">R</i>Riposo</li>
-    <li><i class="f-ferie">F</i>Ferie</li>
-  </ul>
+<h2 class="ap-sezione" id="richieste">Richieste</h2>
+<div class="tre">
+  <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}"><span class="home-icona">🔄</span><b>Cambio turno</b></a>
+  <a class="home-tasto" href="{% url 'turni:nuove_ferie' %}"><span class="home-icona">🏖️</span><b>Ferie / permesso</b></a>
+  <a class="home-tasto" href="{% url 'turni:nuovo_avviso' %}"><span class="home-icona">🤒</span><b>Avviso assenza</b></a>
 </div>
 
-
-{% include 'turni/_area_tasti.html' %}
+{% if nav_capoturno or nav_responsabile %}
+<h2 class="ap-sezione">Da approvare</h2>
+{% if nav_capoturno %}
+<a class="sg-macchina" href="{% url 'turni:capoturno' %}">
+  <span class="home-icona">🧹</span><span class="rq-testo"><b>Pulizie da verificare</b><small>capo turno</small></span>
+  {% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}
+</a>
+{% endif %}
+{% if nav_responsabile %}
+<a class="sg-macchina" href="{% url 'turni:ufficio_richieste' %}">
+  <span class="home-icona">📋</span><span class="rq-testo"><b>Richieste di cambi, ferie e assenze</b><small>responsabile turni</small></span>
+  {% if nav_da_approvare %}<i class="badge-riga">{{ nav_da_approvare }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}
+</a>
+{% endif %}
+{% endif %}
 
 {% if note %}
 <section class="scheda">
@@ -69,6 +79,5 @@
 </section>
 {% endif %}
 
-<h2 class="ap-sezione" id="richieste">Richieste</h2>
 {% include 'turni/_richieste_blocco.html' %}
 {% endblock %}

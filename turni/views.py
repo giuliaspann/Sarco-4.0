@@ -71,8 +71,23 @@ def home(request):
             return redirect('turni:importa')
         return redirect('turni:miei_turni')
 
-    # la Home non c'è più: si apre direttamente l'Area personale
-    return miei_turni(request)
+    return oggi(request)
+
+
+@login_required
+def oggi(request):
+    """Schermata "Oggi": il turno, con chi lavoro, i tasti per aggiungere i dati e i fermi impianto."""
+    from .models import FermoImpianto
+
+    dip = dipendente_di(request)
+    if dip is None:
+        return redirect('turni:home')
+    return render(request, 'turni/oggi.html', {
+        **contesto_oggi(request, dip),
+        'dip': dip,
+        'fermi_aperti': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
+        'oggi_data': timezone.localdate(),
+    })
 
 
 def contesto_oggi(request, dip):
@@ -331,21 +346,22 @@ def pulizie(request, turno_id=None):
         colleghi = in_turno_oggi(escluso=dip)
         if request.method == 'POST':
             t = next((c for c in colleghi if str(c.pk) == request.POST.get('turno')), None)
+            # dove e cosa: dalla scelta guidata, oppure solo scritti nel commento
             el = elemento_da_scelta(request.POST.get('cosa') or request.POST.get('elemento'))
-            if not t or not el:
-                messages.error(request, 'Scegli chi e cosa.')
+            if not t:
+                messages.error(request, 'Scegli a chi chiedere la pulizia.')
             else:
                 try:
                     richiedi_pulizia(request.user, t, el, request.POST.get('nota', ''))
                 except ValueError as e:
                     messages.error(request, str(e))
                 else:
-                    messages.success(request, f'Pulizia chiesta a {t.dipendente.nome_breve}: {el.nome}.')
+                    messages.success(request, f'Pulizia chiesta a {t.dipendente.nome_breve}.')
                     return redirect('turni:pulizie')
         return render(request, 'turni/pulizie_richiedi.html', {'colleghi': colleghi, 'luoghi': scelte_pulizia()})
 
     if turno is None or not turno.lavora:
-        return render(request, 'turni/pulizie.html', {'turno': turno, 'recenti': recenti})
+        return render(request, 'turni/pulizia.html', {'turno': None})
 
     if request.method == 'POST':
         azione = request.POST.get('azione')
@@ -355,6 +371,22 @@ def pulizie(request, turno_id=None):
                 messages.info(request, 'Tutti i dipendenti attivi hanno già un accesso.')
                 return redirect('turni:dipendenti')
             return _consegna_credenziali(request, senza)
+        if azione == 'libera':
+            # "Aggiungi pulizia": foto prima e dopo, e dove/cosa scritti nel commento
+            nota = (request.POST.get('nota') or '').strip()
+            if not nota:
+                messages.error(request, 'Scrivi dove e cosa hai pulito.')
+                return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + '?fai=libera')
+            p = Pulizia(turno=turno, elemento=None, aggiunta_da_operaio=True, nota=nota[:300])
+            if not _foto_pulizia(request, p):
+                return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + '?fai=libera')
+            p.stato, p.fatta_il = Pulizia.Stato.FATTA, timezone.now()
+            if turno.capoturno:
+                # le pulizie del capo turno non aspettano nessuno: vanno subito in archivio
+                p.stato, p.verificata_da, p.verificata_il = Pulizia.Stato.VERIFICATA, request.user, timezone.now()
+            p.save()
+            messages.success(request, 'Pulizia salvata in archivio.' if turno.capoturno else 'Pulizia inviata al capo turno.')
+            return redirect('turni:pulizie')
         if azione == 'aggiungi':
             elemento = get_object_or_404(mezzi_aggiungibili(turno), pk=request.POST.get('elemento'))
             Pulizia.objects.get_or_create(turno=turno, elemento=elemento, defaults={'aggiunta_da_operaio': True})
@@ -392,8 +424,8 @@ def pulizie(request, turno_id=None):
                 from . import manutenzione as mn
 
                 mn.avvisa(mn.capiturno_oggi(), request.user, f'🧹 Pulizia non eseguibile · {dip.nome_breve}',
-                          f'{p.elemento.nome}: {p.nota}', reverse('turni:capoturno'))
-                messages.success(request, f'Impedimento segnalato: {p.elemento.nome}.')
+                          f'{p.titolo}: {p.nota}', reverse('turni:capoturno'))
+                messages.success(request, f'Impedimento segnalato: {p.titolo}.')
             elif azione == 'fatta':
                 if not _foto_pulizia(request, p):
                     return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=assegnata&voce={p.pk}')
@@ -401,8 +433,18 @@ def pulizie(request, turno_id=None):
                 p.stato = Pulizia.Stato.FATTA
                 p.fatta_il = timezone.now()
                 p.save()
-                messages.success(request, f'Pulizia completata: {p.elemento.nome}.')
+                messages.success(request, f'Pulizia completata: {p.titolo}.')
         return redirect('turni:pulizie_turno', turno.pk)
+
+    if request.GET.get('fai') == 'libera':
+        return render(request, 'turni/pulizia_aggiungi.html', {'turno': turno})
+    if not request.GET.get('fai'):
+        # pagina "Pulizia": i due tasti, e sopra le pulizie ancora da fare (chieste dai colleghi, da rifare
+        # o assegnate dalle regole di "Mezzi e zone", se ce ne sono)
+        genera_pulizie(turno)
+        richieste = turno.pulizie.filter(stato__in=[Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA])
+        return render(request, 'turni/pulizia.html', {
+            'turno': turno, 'richieste': richieste.select_related('elemento', 'richiesta_da__dipendente')})
 
     genera_pulizie(turno)
     voci = list(turno.pulizie.select_related('elemento', 'richiesta_da__dipendente'))
@@ -497,10 +539,57 @@ def capoturno(request):
 
 
 @login_required
+def archivio(request):
+    """Un solo posto per gli archivi: pulizie, manutenzione, produzione, analisi, fermi impianto."""
+    return render(request, 'turni/archivio.html')
+
+
+@login_required
+def archivio_pulizie(request):
+    """Pulizie approvate dal capo turno: giorno -> turno -> impianto -> foto e commenti."""
+    oggi = timezone.localdate()
+    approvate = Pulizia.objects.filter(stato=Pulizia.Stato.VERIFICATA).select_related('turno__dipendente', 'elemento')
+    giorno = leggi_data(request.GET.get('giorno'), None)
+    fascia = request.GET.get('fascia', '')
+    posto = request.GET.get('posto', '')
+    contesto = {'giorno': giorno, 'fascia': fascia, 'posto': posto}
+    if not giorno:
+        dal = oggi - timedelta(days=30)
+        conta = approvate.filter(turno__data__gte=dal).values('turno__data').annotate(n=Count('id')).order_by('-turno__data')
+        contesto['giorni'] = [(r['turno__data'], r['n']) for r in conta]
+    else:
+        del_giorno = approvate.filter(turno__data=giorno)
+        fascia_di = lambda t: Fascia.MATTINA if t.fascia == Fascia.ALTRO else t.fascia
+        if not fascia:
+            capi = {fascia_di(t): t.dipendente.nome_breve for t in Turno.objects.filter(data=giorno, capoturno=True).select_related('dipendente')}
+            conta = {}
+            for p in del_giorno:
+                conta[fascia_di(p.turno)] = conta.get(fascia_di(p.turno), 0) + 1
+            contesto['fasce'] = [(f, Turno.SIGLE[f], Turno(fascia=f).classe_fascia, Fascia(f).label, conta[f], capi.get(f))
+                                 for f in ORDINE_FASCE if f in conta]
+        else:
+            della_fascia = [p for p in del_giorno if fascia_di(p.turno) == fascia]
+            contesto['nome_fascia'] = Fascia(fascia).label if fascia in Fascia.values else fascia
+            if not posto:
+                conta = {}
+                for p in della_fascia:
+                    conta[p.turno.postazione] = conta.get(p.turno.postazione, 0) + 1
+                ordine = {x: i for i, x in enumerate(ORDINE_GRUPPI)}
+                contesto['posti'] = sorted(((k, Postazione(k).label if k else 'Senza postazione', n) for k, n in conta.items()),
+                                           key=lambda x: ordine.get(x[0], 99))
+            else:
+                contesto['nome_posto'] = Postazione(posto).label if posto in Postazione.values else 'Senza postazione'
+                contesto['pulizie'] = sorted((p for p in della_fascia if p.turno.postazione == posto), key=lambda p: p.fatta_il or p.verificata_il)
+    return render(request, 'turni/archivio_pulizie.html', contesto)
+
+
+@login_required
 def foto(request, pulizia_id):
     p = get_object_or_404(Pulizia.objects.select_related('turno__dipendente'), pk=pulizia_id)
     proprietario = p.turno.dipendente.utente_id == request.user.pk
-    if not (proprietario or e_capoturno(request.user, p.turno.data)):
+    # le pulizie approvate stanno nell'archivio: le foto le vedono tutti i dipendenti
+    in_archivio = p.stato == Pulizia.Stato.VERIFICATA and (dipendente_di(request) or request.user.is_staff)
+    if not (proprietario or in_archivio or e_capoturno(request.user, p.turno.data)):
         raise PermissionDenied
     f = p.foto_prima if request.GET.get('quale') == 'prima' else p.foto
     if not f:
@@ -537,7 +626,7 @@ def presa_visione(request):
     if dip:
         ModificaTurno.objects.filter(dipendente=dip, vista_il__isnull=True).update(vista_il=timezone.now())
         messages.success(request, 'Grazie, presa visione registrata.')
-    return redirect('turni:home')
+    return redirect('turni:messaggi')
 
 
 @staff_member_required

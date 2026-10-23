@@ -255,11 +255,22 @@ document.querySelectorAll('form[data-lettura] [data-leggi]').forEach(btn => {
       let n = 0;
       for (const [nome, valore] of Object.entries(j.campi)) {
         const radio = form.querySelector(`input[type=radio][name="${nome}"][value="${valore}"]`);
-        const campo = form.querySelector(`input[type=text][name="${nome}"]`);
+        const campo = form.querySelector(`input[type=text][name="${nome}"], input[type=date][name="${nome}"]`);
         if (radio) { radio.checked = true; n++; }
         else if (campo) { campo.value = valore; campo.classList.add('letto'); n++; }
       }
-      scrivi(`✓ Letti ${n} valori: controllali prima di salvare.`, true);
+      const quando = form.querySelector('[data-quando]');
+      if (quando) {
+        // produzione: giorno e turno letti dal display, sopra l'avviso in rosso
+        const giorno = form.querySelector('input[name=data]').value, f = form.querySelector('input[name=fascia]:checked');
+        const sigle = { '1T': ['1T', 'f-mattina'], '2T': ['2T', 'f-pomeriggio'], 'N': ['N', 'f-notte'] };
+        if (giorno) {
+          const t = new Date(giorno + 'T12:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+          quando.querySelector('[data-giorno]').textContent = t.charAt(0).toUpperCase() + t.slice(1);
+        }
+        if (f && sigle[f.value]) { const s = quando.querySelector('[data-sigla]'); s.textContent = sigle[f.value][0]; s.className = 'cal-sigla pr-sigla ' + sigle[f.value][1]; }
+        quando.hidden = false; esito.hidden = true;
+      } else scrivi(`✓ Letti ${n} valori: controllali prima di salvare.`, true);
     } catch (e) {
       scrivi('Senza rete: scrivi i numeri a mano.');
     } finally { btn.disabled = false; btn.textContent = testo; }
@@ -426,5 +437,37 @@ document.querySelectorAll('form[data-lettura]').forEach(form => {
     v.querySelector('.si').addEventListener('click', () => { form.dataset.confermato = '1'; v.remove(); form.requestSubmit(); });
     v.querySelector('.no').addEventListener('click', () => { v.remove(); form.querySelector('input.letto')?.focus(); });
     document.body.appendChild(v);
+  });
+});
+
+// Manutenzione: "Inquadra il QR code" con la fotocamera (dove il browser sa leggere i QR), altrimenti si scrive il codice
+document.querySelectorAll('form[data-qr]').forEach(form => {
+  const avvia = form.querySelector('.qr-avvia'), mirino = form.querySelector('.qr-mirino'), video = mirino.querySelector('video');
+  avvia.addEventListener('click', async () => {
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices) {
+      avvia.textContent = 'Usa la fotocamera del telefono sul QR, oppure scrivi il codice qui sotto';
+      avvia.disabled = true;
+      return;
+    }
+    try {
+      const flusso = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = flusso; await video.play();
+      mirino.hidden = false; avvia.hidden = true;
+      const lettore = new BarcodeDetector({ formats: ['qr_code'] });
+      const cerca = async () => {
+        const trovati = await lettore.detect(video).catch(() => []);
+        if (trovati.length) {
+          flusso.getTracks().forEach(t => t.stop());
+          form.querySelector('[name=c]').value = trovati[0].rawValue;
+          form.submit();
+          return;
+        }
+        requestAnimationFrame(cerca);
+      };
+      cerca();
+    } catch (e) {
+      avvia.textContent = 'Fotocamera non disponibile: scrivi il codice qui sotto';
+      avvia.disabled = true;
+    }
   });
 });

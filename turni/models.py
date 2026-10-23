@@ -261,6 +261,11 @@ class Turno(models.Model):
         return self.SIGLE_POSTAZIONE.get(self.postazione, '') if self.lavora else ''
 
     @property
+    def sigla_fascia(self):
+        """Solo il turno (1T, 2T, N, G, R, F…), senza CT: il capo turno ha un quadratino suo accanto."""
+        return '' if self.fascia == Fascia.ALTRO else self.SIGLE.get(self.fascia, '?')
+
+    @property
     def classe_solo_fascia(self):
         return Turno(fascia=Fascia.MATTINA if self.fascia == Fascia.ALTRO else self.fascia).classe_fascia
 
@@ -373,7 +378,8 @@ class Pulizia(models.Model):
     MOTIVI_IMPEDIMENTO = ['Mezzo in uso', 'Zona non accessibile', 'Mancano i prodotti', 'Guasto', 'Tempo insufficiente', 'Altro']
 
     turno = models.ForeignKey(Turno, on_delete=models.CASCADE, related_name='pulizie')
-    elemento = models.ForeignKey(ElementoPulizia, on_delete=models.PROTECT)
+    # vuoto per le pulizie scritte solo nel commento ("Aggiungi pulizia" / "Richiedi pulizia" della nuova app)
+    elemento = models.ForeignKey(ElementoPulizia, on_delete=models.PROTECT, null=True, blank=True)
     aggiunta_da_operaio = models.BooleanField(default=False, help_text='mezzo usato aggiunto a mano')
     # "Richiedi pulizia": un collega (di solito il capo turno) la chiede a chi è in turno
     richiesta_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
@@ -391,10 +397,19 @@ class Pulizia(models.Model):
     class Meta:
         verbose_name_plural = 'pulizie'
         ordering = ['elemento__tipo', 'elemento__nome']
-        constraints = [models.UniqueConstraint(fields=['turno', 'elemento'], name='una_pulizia_per_elemento')]
+        constraints = [models.UniqueConstraint(fields=['turno', 'elemento'], condition=models.Q(elemento__isnull=False),
+                                               name='una_pulizia_per_elemento')]
 
     def __str__(self):
-        return f'{self.turno} — {self.elemento} ({self.get_stato_display()})'
+        return f'{self.turno} — {self.titolo} ({self.get_stato_display()})'
+
+    @property
+    def titolo(self):
+        """Il mezzo o la zona; per le pulizie scritte a mano, l'inizio del commento."""
+        if self.elemento_id:
+            return self.elemento.nome
+        testo = (self.nota or '').strip()
+        return (testo[:40] + '…') if len(testo) > 40 else (testo or 'Pulizia')
 
 
 # ---------------------------------------------------------------- Richieste

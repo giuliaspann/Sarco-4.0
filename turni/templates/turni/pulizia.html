@@ -1,0 +1,25 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Pulizia{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Oggi</a>
+<div class="intestazione"><h1>Pulizia</h1></div>
+
+{% if richieste %}
+<h2 class="rq-sezione">Da fare per te</h2>
+{% for v in richieste %}
+<a class="pl-riga pl-{{ v.stato|lower }}" href="{% url 'turni:pulizie_turno' turno.pk %}?fai=assegnata&voce={{ v.pk }}">
+  <span class="home-icona">🧹</span>
+  <span class="rq-testo"><b>{{ v.titolo }}</b><small>{% if v.stato == 'SEGNALATA' %}Da rifare{% if v.nota_verifica %}: {{ v.nota_verifica }}{% endif %}{% elif v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
+  <span class="stato-chip {% if v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
+</a>
+{% endfor %}
+{% endif %}
+
+<div class="tasti-agg">
+  {% if turno %}
+  <a class="agg" href="{% url 'turni:pulizie_turno' turno.pk %}?fai=libera"><span class="piu">+</span><span class="txt">Aggiungi pulizia</span><span class="emo">🧹</span></a>
+  {% endif %}
+  <a class="agg" href="{% url 'turni:pulizie' %}?fai=richiedi"><span class="piu">+</span><span class="txt">Richiedi pulizia</span><span class="emo">🙋</span></a>
+</div>
+{% if not turno %}<p class="tenue piccolo">Oggi non sei in turno: puoi solo chiedere una pulizia a chi lavora.</p>{% endif %}
+{% endblock %}

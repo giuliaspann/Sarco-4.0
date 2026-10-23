@@ -221,7 +221,7 @@ def leggi(nome, dati, utente):
         return testo_report(dati_report(int(dati.get('giorni') or 7)))
     if nome == 'elenco_pulizie':
         t = _turno(utente)
-        righe = [f'id={p.pk}: {p.elemento.nome} · {p.get_stato_display()}' + (' (chiesta da un collega)' if p.richiesta_da_id else '')
+        righe = [f'id={p.pk}: {p.titolo} · {p.get_stato_display()}' + (' (chiesta da un collega)' if p.richiesta_da_id else '')
                  for p in t.pulizie.select_related('elemento')]
         cose = ', '.join(ElementoPulizia.objects.filter(attivo=True).values_list('nome', flat=True))
         return ('\n'.join(righe) or 'nessuna pulizia assegnata') + f'\nSi possono pulire: {cose}'
@@ -326,7 +326,7 @@ def _e_programma(d, u, foto):
 
 
 def _p_pulizia_fatta(d, u):
-    return f'Pulizia completata: {_pulizia(u, d["pulizia_id"]).elemento.nome}'
+    return f'Pulizia completata: {_pulizia(u, d["pulizia_id"]).titolo}'
 
 
 def _e_pulizia_fatta(d, u, foto):
@@ -338,7 +338,7 @@ def _e_pulizia_fatta(d, u, foto):
     p.nota = (d.get('nota') or '')[:300]
     p.stato, p.fatta_il = Pulizia.Stato.FATTA, timezone.now()
     p.save()
-    return f'Pulizia completata: {p.elemento.nome}.'
+    return f'Pulizia completata: {p.titolo}.'
 
 
 def _p_aggiuntiva(d, u):
@@ -394,7 +394,7 @@ def _p_impedimento(d, u):
     p = _pulizia(u, d['pulizia_id'])
     if d.get('motivo') not in Pulizia.MOTIVI_IMPEDIMENTO:
         raise Errore('Scegli il motivo.')
-    return f'Pulizia non eseguibile: {p.elemento.nome} · {d["motivo"]}'
+    return f'Pulizia non eseguibile: {p.titolo} · {d["motivo"]}'
 
 
 def _e_impedimento(d, u, foto):
@@ -407,7 +407,7 @@ def _e_impedimento(d, u, foto):
     p.stato, p.fatta_il = Pulizia.Stato.IMPEDITA, timezone.now()
     p.save()
     mn.avvisa(mn.capiturno_oggi(), u, f'🧹 Pulizia non eseguibile · {p.turno.dipendente.nome_breve}',
-              f'{p.elemento.nome}: {p.nota}', reverse('turni:capoturno'))
+              f'{p.titolo}: {p.nota}', reverse('turni:capoturno'))
     return 'Impedimento segnalato al capo turno.'
 
 

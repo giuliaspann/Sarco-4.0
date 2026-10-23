@@ -41,13 +41,13 @@
     <div class="voce stato-{{ p.stato|lower }}">
       <div class="voce-testa">
         <span class="spunta" aria-hidden="true"></span>
-        <div><strong>{{ p.elemento.nome }}</strong>
+        <div><strong>{{ p.titolo }}</strong>
           {% if p.fatta_il %}<span class="tenue piccolo">alle {{ p.fatta_il|time:'H:i' }}</span>{% endif %}
         </div>
         <span class="stato">{{ p.get_stato_display }}</span>
       </div>
       {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
-      {% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto {{ p.elemento.nome }}" loading="lazy"></a>{% endif %}
+      {% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto {{ p.titolo }}" loading="lazy"></a>{% endif %}
       {% if p.stato == 'FATTA' or p.stato == 'SEGNALATA' or p.stato == 'IMPEDITA' %}
       <form method="post" class="form-voce">{% csrf_token %}
         <input type="hidden" name="pulizia" value="{{ p.pk }}">

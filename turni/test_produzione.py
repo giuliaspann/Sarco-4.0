@@ -37,6 +37,32 @@ class ProduzioneTest(TestCase):
         self.client.login(username='estraneo', password='x')
         self.assertEqual(self.client.get(reverse('turni:statistiche')).status_code, 403)
 
+    def test_scelta_impianto_e_impianti_separati(self):
+        oggi = timezone.localdate()
+        self.client.login(username='operaio', password='123456')
+        r = self.client.get(reverse('turni:produzione_nuova'))
+        for t in ('Quale impianto?', 'Impianto 1', 'Impianto 2', 'Metalli', 'Sabbia'):
+            self.assertContains(r, t)
+        r = self.client.get(reverse('turni:produzione_nuova') + '?impianto=IMP2')
+        self.assertContains(r, 'Produzione · Impianto 2')
+        self.assertNotContains(r, 'Misto Imp. 1')
+        self.assertContains(self.client.get(reverse('turni:produzione_nuova') + '?impianto=SAB'), 'non sono ancora state definite')
+        bianco = ProdottoProduzione.objects.get(impianto='IMP2', codice='I')
+        self.client.post(reverse('turni:produzione_nuova'), {'impianto': 'IMP1', 'data': oggi.isoformat(), 'fascia': '1T',
+                                                             f"p{self.p['Misto Imp. 1'].pk}": '80'})
+        self.client.post(reverse('turni:produzione_nuova'), {'impianto': 'IMP2', 'data': oggi.isoformat(), 'fascia': '1T',
+                                                             f'p{bianco.pk}': '40'})
+        # l'Impianto 2 non cancella le righe dell'Impianto 1 dello stesso turno
+        t = ProduzioneTurno.objects.get(data=oggi, fascia='1T')
+        self.assertEqual(sorted(r.prodotto.codice for r in t.righe.all()), ['A', 'I'])
+
+    def test_turno_dal_display(self):
+        from .views_produzione import turno_da_ora
+
+        self.assertEqual(turno_da_ora('2026-10-21', '21:41'), ('2026-10-21', '2T'))
+        self.assertEqual(turno_da_ora('2026-10-21', '13:55'), ('2026-10-21', '1T'))
+        self.assertEqual(turno_da_ora('2026-10-22', '05:50'), ('2026-10-21', 'N'))
+
     def test_scarto_alto_segnalato(self):
         oggi = timezone.localdate()
         for n in range(1, 5):

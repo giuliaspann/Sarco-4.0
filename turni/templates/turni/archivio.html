@@ -1,0 +1,10 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Archivio{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Archivio</h1></div>
+<a class="sg-macchina" href="{% url 'turni:archivio_pulizie' %}"><span class="home-icona">🧹</span><span class="rq-testo"><b>Pulizie</b><small>per giorno, turno e impianto</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:interventi' %}"><span class="home-icona">🔧</span><span class="rq-testo"><b>Manutenzione</b><small>interventi fatti e richieste</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:produzione' %}"><span class="home-icona">⚖️</span><span class="rq-testo"><b>Dati produzione</b><small>per giorno e turno</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:statistiche' %}"><span class="home-icona">🧪</span><span class="rq-testo"><b>Analisi</b><small>per giorno e campione</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:fermi' %}"><span class="home-icona">⛔</span><span class="rq-testo"><b>Fermi impianto</b><small>quando, quanto e perché</small></span><span class="sg-freccia">›</span></a>
+{% endblock %}

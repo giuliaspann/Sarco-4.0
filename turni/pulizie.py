@@ -81,12 +81,15 @@ def in_turno_oggi(escluso=None):
 def richiedi_pulizia(utente, turno, elemento, nota=''):
     from . import push
 
-    if turno.pulizie.filter(elemento=elemento).exists():
+    # senza elemento: "Richiedi pulizia" della nuova app, dove e cosa sono scritti nel commento
+    if elemento and turno.pulizie.filter(elemento=elemento).exists():
         raise ValueError(f'{elemento.nome} è già nella lista di {turno.dipendente.nome_breve}.')
+    if not elemento and not nota.strip():
+        raise ValueError('Scrivi dove e cosa va pulito.')
     p = Pulizia.objects.create(turno=turno, elemento=elemento, richiesta_da=utente, nota=nota[:300])
     if turno.dipendente.utente_id:
         da = getattr(getattr(utente, 'dipendente', None), 'nome_breve', None) or utente.get_username()
-        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{elemento.nome} (da {da})', f'/turni/pulizie/{turno.pk}/')
+        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (da {da})', f'/turni/pulizie/{turno.pk}/')
     return p
 
 

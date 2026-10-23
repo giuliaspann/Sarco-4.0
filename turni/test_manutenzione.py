@@ -75,6 +75,36 @@ class ManutenzioneTest(TestCase):
         dati = {'macchina': self.pala.pk, 'descrizione': 'Perde olio', 'ferma': '1', 'foto': foto(), **extra}
         return self.client.post(reverse('turni:segnala'), dati)
 
+    def test_nuova_manutenzione_aggiungi_richiedi_e_codice(self):
+        self.entra('operaio')
+        r = self.client.get(reverse('turni:mn_scelta'))
+        for t in ('Aggiungi manutenzione', 'Richiedi manutenzione', 'Manutenzioni in arrivo'):
+            self.assertContains(r, t)
+        # richiedi: prima a chi, poi codice/QR o scelta manuale
+        r = self.client.get(reverse('turni:mn_a_chi'))
+        self.assertContains(r, 'Responsabile manutenzione')
+        self.assertContains(r, self.vito.nome_breve)
+        r = self.client.get(reverse('turni:segnala') + f'?a={self.vito.pk}')
+        self.assertContains(r, 'Inserisci codice o inquadra QR code')
+        self.assertContains(r, 'Oppure seleziona manualmente')
+        self.assertContains(r, 'Richiesta a:')
+        # il codice scritto (o letto dal QR) porta dritto alla macchina, tenendo il destinatario
+        r = self.client.get(reverse('turni:mn_codice') + f'?a={self.vito.pk}&c=pz-pala1')
+        self.assertRedirects(r, reverse('turni:segnala') + f'?a={self.vito.pk}&macchina={self.pala.pk}', fetch_redirect_response=False)
+        r = self.client.get(reverse('turni:mn_codice') + f'?c=https://x/turni/manutenzione/segnala/?macchina={self.pala.pk}')
+        self.assertRedirects(r, reverse('turni:segnala') + f'?macchina={self.pala.pk}', fetch_redirect_response=False)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from io import BytesIO
+        from PIL import Image
+        b = BytesIO()
+        Image.new('RGB', (40, 30), 'gray').save(b, 'JPEG')
+        self.webpush.reset_mock()
+        self.client.post(reverse('turni:segnala'), {'macchina': self.pala.pk, 'a': self.vito.pk, 'descrizione': 'Perde olio',
+                                                    'ferma': '0', 'foto': SimpleUploadedFile('g.jpg', b.getvalue(), 'image/jpeg')})
+        i = Intervento.objects.get(descrizione='Perde olio')
+        self.assertEqual(i.assegnata_a, self.vito)
+        self.assertIn('vito', self.avvisati())
+
     def test_flusso_completo_guasto(self):
         self.entra('operaio')
         r = self.segnala()

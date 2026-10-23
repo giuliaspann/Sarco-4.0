@@ -238,7 +238,7 @@ class PulizieTest(TestCase):
         url = reverse('turni:pulizie_turno', args=[turno.pk])
         with self.settings(MEDIA_ROOT=self._tmp()):
             r = self.client.get(url)
-            for t in ('Segnala completamento pulizia assegnata', 'Segnala completamento pulizia aggiuntiva'):
+            for t in ('Aggiungi pulizia', 'Richiedi pulizia', 'Nastro Imp. 1'):
                 self.assertContains(r, t)
             # una sola pulizia assegnata: si apre subito il modulo con foto prima e dopo
             r = self.client.get(url + '?fai=assegnata')
@@ -255,6 +255,23 @@ class PulizieTest(TestCase):
             self.client.post(url, {'azione': 'aggiuntiva', 'elemento': self.pala.pk, 'foto': jpg()})
             extra = turno.pulizie.get(elemento=self.pala)
             self.assertEqual((extra.stato, extra.aggiunta_da_operaio), (Pulizia.Stato.FATTA, True))
+            # "Aggiungi pulizia" della nuova app: solo foto prima/dopo e commento, va al capo turno
+            self.assertContains(self.client.get(url + '?fai=libera'), 'Dove e cosa hai pulito?')
+            self.client.post(url, {'azione': 'libera', 'nota': ''})
+            self.assertFalse(turno.pulizie.filter(elemento__isnull=True).exists())  # senza commento non vale
+            self.client.post(url, {'azione': 'libera', 'nota': 'Tramoggia: tolto il vetro', 'foto_prima': jpg(), 'foto': jpg()})
+            libera = turno.pulizie.get(elemento__isnull=True)
+            self.assertEqual((libera.stato, libera.titolo), (Pulizia.Stato.FATTA, 'Tramoggia: tolto il vetro'))
+            self.assertTrue(libera.foto_prima and libera.foto)
+            # se ne possono aggiungere più d'una nello stesso turno
+            self.client.post(url, {'azione': 'libera', 'nota': 'Pavimento cabina'})
+            self.assertEqual(turno.pulizie.filter(elemento__isnull=True).count(), 2)
+            # il capo turno la approva e finisce nell'archivio, con le foto visibili a tutti
+            libera.stato = Pulizia.Stato.VERIFICATA
+            libera.save()
+            r = self.client.get(reverse('turni:archivio_pulizie') + f'?giorno={LUNEDI}&fascia={turno.fascia}&posto={turno.postazione}')
+            self.assertContains(r, 'Tramoggia: tolto il vetro')
+            self.assertIn(libera, r.context['pulizie'])
 
     def test_richiedi_pulizia_a_un_collega(self):
         self.client.login(username='spano.mauro', password='123456')
@@ -273,7 +290,11 @@ class PulizieTest(TestCase):
             self.client.login(username='drame.bouba', password='654321')
             r = self.client.get(reverse('turni:pulizie'))
             self.assertContains(r, 'Chiesta da')
-            self.assertIn(p, r.context['da_fare'])
+            self.assertIn(p, r.context['richieste'])
+            # nuova app: si chiede scrivendo solo dove e cosa, senza scegliere dall'elenco
+            self.client.login(username='spano.mauro', password='123456')
+            self.client.post(reverse('turni:pulizie'), {'azione': 'richiedi', 'turno': t.pk, 'nota': 'Sotto il nastro 3'})
+            self.assertTrue(Pulizia.objects.filter(turno=t, elemento__isnull=True, nota='Sotto il nastro 3').exists())
 
     def test_impedimento_pulizia_con_foto(self):
         from PIL import Image
@@ -286,7 +307,7 @@ class PulizieTest(TestCase):
         turno = Turno.objects.get(dipendente=self.drame, data=LUNEDI)
         url = reverse('turni:pulizie_turno', args=[turno.pk])
         with self.settings(MEDIA_ROOT=self._tmp()), mock.patch('pywebpush.webpush'):
-            self.assertContains(self.client.get(url), 'Segnala impedimento pulizia')
+            self.client.get(url)
             p = turno.pulizie.get()
             self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita', 'motivo': 'Mezzo in uso'})
             p.refresh_from_db()
@@ -405,17 +426,21 @@ class HomeTest(TestCase):
         self.client.login(username='drame', password='123456')
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
-        # niente più Home: si apre l'Area personale con oggi/domani e i due tasti
-        for testo in ('Turni della settimana', 'Con chi lavoro oggi', 'home-due-turni', 'I miei turni', 'Richieste'):
+        # si apre "Oggi": turno, con chi lavoro, i quattro tasti e i fermi impianto
+        for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', 'Dati produzione', 'Dati analisi',
+                      'Fermo impianto', 'Ripartenza impianto', 'Area personale', 'Archivio'):
             self.assertContains(r, testo)
         self.assertNotContains(r, '>Home<')
+        r2 = self.client.get(reverse('turni:miei_turni'))
+        for testo in ('Turni della settimana', 'Turni di tutti', 'Cambio turno', 'Ferie / permesso', 'Avviso assenza'):
+            self.assertContains(r2, testo)
+        self.assertNotContains(r2, 'Pulizie da verificare')  # non è capo turno
         self.assertEqual(r.context['turno_oggi'].data, LUNEDI + timedelta(days=1))  # martedì: 2T Imp. 2
         self.assertEqual(r.context['domani'].fascia, Fascia.RIPOSO)
-        self.assertNotContains(r, 'Verifica pulizie')  # non è capo turno
 
     def test_capo_turno_vede_la_verifica(self):
         self.client.login(username='crimi', password='123456')  # martedì capo turno di notte
-        self.assertContains(self.client.get(reverse('turni:home')), 'Verifica pulizie')
+        self.assertContains(self.client.get(reverse('turni:miei_turni')), 'Pulizie da verificare')
 
 
 class GestioneDipendentiTest(TestCase):

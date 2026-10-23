@@ -66,6 +66,23 @@ def turno_corrente():
     return ora.date(), '1T' if ora.hour < 14 else '2T'
 
 
+def turno_da_ora(data, ora):
+    """Data e ora scritte sul display ('2026-10-21', '21:41') -> ('2026-10-21', '2T'). La notte dopo
+    mezzanotte appartiene al giorno prima, come nei turni."""
+    from datetime import date
+
+    giorno, ore = date.fromisoformat(data), int(ora.split(':')[0])
+    if ore < 6:
+        return (giorno - timedelta(days=1)).isoformat(), 'N'
+    if ore >= 22:
+        return giorno.isoformat(), 'N'
+    return giorno.isoformat(), '1T' if ore < 14 else '2T'
+
+
+# impianti della pesa: per Metalli e Sabbia le righe del display non sono ancora definite
+IMPIANTI = [('IMP1', 'Impianto 1', '🏭'), ('IMP2', 'Impianto 2', '🏭'), ('MET', 'Metalli', '🔩'), ('SAB', 'Sabbia', '⏳')]
+
+
 @login_required
 def produzione(request):
     if not puo_vedere(request.user):
@@ -88,8 +105,15 @@ def produzione(request):
 def produzione_turno(request, produzione_id=None):
     if not puo_vedere(request.user):
         raise PermissionDenied
-    prodotti = list(ProdottoProduzione.objects.filter(attivo=True))
     esistente = get_object_or_404(ProduzioneTurno, pk=produzione_id) if produzione_id else None
+    impianto = request.POST.get('impianto') or request.GET.get('impianto') or ''
+    nomi = {c: n for c, n, _ in IMPIANTI}
+    if not esistente and impianto not in nomi and request.method == 'GET':
+        # prima si sceglie l'impianto, poi la foto del suo display
+        return render(request, 'turni/produzione_impianto.html', {'impianti': IMPIANTI})
+    prodotti = list(ProdottoProduzione.objects.filter(attivo=True))
+    if impianto in nomi:
+        prodotti = [p for p in prodotti if p.impianto == impianto]
     if request.method == 'POST':
         from datetime import date
 
@@ -123,7 +147,8 @@ def produzione_turno(request, produzione_id=None):
                 except (ValueError, OSError):
                     messages.error(request, 'La foto non è valida: valori salvati senza foto.')
             t.save()
-            t.righe.exclude(prodotto__in=list(valori)).delete()
+            # si toccano solo le righe dell'impianto inserito: gli altri impianti dello stesso turno restano
+            t.righe.filter(prodotto__in=prodotti).exclude(prodotto__in=list(valori)).delete()
             for p, v in valori.items():
                 RigaProduzione.objects.update_or_create(produzione=t, prodotto=p, defaults={'tonnellate': v})
             alti = [x for x in confronto(t, medie(giorno - timedelta(days=1))) if x['alto']]
@@ -142,6 +167,9 @@ def produzione_turno(request, produzione_id=None):
         p.valore = valori.get(p.pk, '')
     return render(request, 'turni/produzione_nuova.html', {
         'prodotti': prodotti, 'giorno': giorno, 'fascia': fascia, 'fasce': ProduzioneTurno.FASCE, 'esistente': esistente,
+        'impianto': impianto, 'nome_impianto': nomi.get(impianto, ''),
+        'sigla': {'1T': '1T', '2T': '2T', 'N': 'N'}.get(fascia, ''),
+        'classe': {'1T': 'f-mattina', '2T': 'f-pomeriggio', 'N': 'f-notte'}.get(fascia, ''),
         'leggi_foto': __import__('turni.lettura', fromlist=['attiva']).attiva(),
     })
 

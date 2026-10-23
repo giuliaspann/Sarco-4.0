@@ -1,18 +1,21 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}{% if lavoro %}Completamento manutenzione{% elif programma %}Programma manutenzione{% else %}Segnala guasto o richiedi manutenzione{% endif %}{% endblock %}
+{% block titolo %}{% if lavoro %}Aggiungi manutenzione{% elif programma %}Programma manutenzione{% else %}Richiedi manutenzione{% endif %}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
   {% if macchina %}<a class="tasto-indietro" href="?{{ pre }}luogo={{ macchina.luogo }}{% if macchina.tipo == 'SEGNALETICA' %}&gruppo=segnaletica{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia macchina</a>
   {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}{% if gruppo_luogo %}gruppo={{ gruppo_luogo }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia luogo</a>
   {% elif gruppo %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Indietro</a>
-  {% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
-  <h1>{% if lavoro %}Segnala risoluzione guasto o completamento manutenzione{% elif programma %}Programma manutenzione{% else %}Segnala guasto o richiedi manutenzione{% endif %}</h1>
+  {% elif a %}<a class="tasto-indietro" href="{% url 'turni:mn_a_chi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>A chi</a>
+  {% else %}<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
+  <h1>{% if lavoro %}Aggiungi manutenzione{% elif programma %}Programma manutenzione{% else %}Richiedi manutenzione{% endif %}</h1>
+  {% if dest or a_responsabile %}<p class="tenue">Richiesta a: <b>{% if dest %}{{ dest.nome_breve }}{% else %}Responsabile manutenzione{% endif %}</b></p>{% endif %}
+  {% if gruppo or luogo or q or macchina %}
   <ol class="sg-passi">
-    <li class="{% if not macchina and not luogo and not q and not gruppo %}ora{% else %}fatto{% endif %}">Cosa</li>
-    <li class="{% if gruppo %}ora{% elif macchina or luogo or q %}fatto{% endif %}">Dove</li>
-    <li class="{% if macchina %}fatto{% elif luogo or q %}ora{% endif %}">Quale</li>
-    <li class="{% if macchina %}ora{% endif %}">{% if lavoro %}Fatto{% elif programma %}Quando{% else %}Guasto{% endif %}</li>
+    <li class="{% if gruppo %}ora{% else %}fatto{% endif %}">Dove</li>
+    <li class="{% if macchina %}fatto{% elif luogo or q %}ora{% endif %}">Cosa</li>
+    <li class="{% if macchina %}ora{% endif %}">{% if lavoro %}Descrivi il lavoro{% elif programma %}Quando{% else %}Descrivi il problema{% endif %}</li>
   </ol>
+  {% endif %}
 </div>
 
 {% if macchina %}
@@ -53,7 +56,7 @@
   </form>
   {% else %}
   <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
-    <input type="hidden" name="macchina" value="{{ macchina.pk }}">
+    <input type="hidden" name="macchina" value="{{ macchina.pk }}">{% if a %}<input type="hidden" name="a" value="{{ a }}">{% endif %}
     <label>Cosa succede
       <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="{% if macchina.tipo == 'SEGNALETICA' %}Es. cartello caduto, scritta illeggibile{% else %}Es. perde olio dal cilindro del braccio{% endif %}">{{ descrizione }}</textarea>
     </label>
@@ -75,7 +78,7 @@
 {% elif luogo or q %}
   <form class="mn-cerca" method="get">
     {% if luogo %}<input type="hidden" name="luogo" value="{{ luogo }}">{% endif %}{% if gruppo_luogo %}<input type="hidden" name="gruppo" value="{{ gruppo_luogo }}">{% endif %}
-    {% if lavoro %}<input type="hidden" name="lavoro" value="1">{% endif %}
+    {% if lavoro %}<input type="hidden" name="lavoro" value="1">{% endif %}{% if a %}<input type="hidden" name="a" value="{{ a }}">{% endif %}
     <input type="search" name="q" value="{{ q }}" placeholder="Cerca{% if nome_luogo %} in {{ nome_luogo }}{% endif %}: nome o codice">
   </form>
   <h2 class="rq-sezione">{% if nome_luogo %}{{ nome_luogo }}{% else %}Risultati{% endif %} <span class="mn-conta">{{ elenco|length }}</span></h2>
@@ -100,17 +103,14 @@
   </div>
 
 {% else %}
-  <form class="mn-cerca" method="get">
-    {% if lavoro %}<input type="hidden" name="lavoro" value="1">{% endif %}
-    <input type="search" name="q" placeholder="Sai già il nome o il codice? Cerca qui">
-  </form>
-  <h2 class="rq-sezione">{% if lavoro %}Su cosa hai lavorato?{% else %}Oggetto del guasto o della manutenzione{% endif %}</h2>
+  <a class="bottone pieno piena-larghezza qr-tasto" href="{% url 'turni:mn_codice' %}?{{ pre }}">▣ Inserisci codice o inquadra QR code</a>
+  <h2 class="rq-sezione">Oppure seleziona manualmente</h2>
   <div class="sg-gruppi">
     {% for g, nome, icona, n in gruppi %}
     <a href="?{{ pre }}gruppo={{ g }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} in elenco</small></a>
     {% endfor %}
   </div>
-  {% if not lavoro and not programma %}
+  {% if not lavoro and not programma and not a and vecchia_pagina %}
   {% if puo_programmare %}
   <a class="home-tasto tasto-programma" href="?programma=1"><span class="home-icona">🗓️</span><b>Programma una manutenzione</b></a>
   {% endif %}

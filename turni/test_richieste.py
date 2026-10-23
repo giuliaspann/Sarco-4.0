@@ -196,13 +196,14 @@ class OrariEPresaVisioneTest(RichiesteTest):
         m = ModificaTurno.objects.get()
         self.assertEqual((m.dipendente, m.data), (self.spano, self.MAR))
         self.client.login(username='spano', password='123456')
-        r = self.client.get(reverse('turni:home'))
+        # la presa visione sta in Messaggi, sotto "Da leggere"
+        r = self.client.get(reverse('turni:messaggi'))
         self.assertContains(r, 'Il tuo turno è cambiato')
         self.assertContains(r, 'Presa visione')
         self.client.post(reverse('turni:presa_visione'))
         m.refresh_from_db()
         self.assertIsNotNone(m.vista_il)
-        self.assertNotContains(self.client.get(reverse('turni:home')), 'Il tuo turno è cambiato')
+        self.assertNotContains(self.client.get(reverse('turni:messaggi')), 'Il tuo turno è cambiato')
         # l'ufficio vede chi ha preso visione
         self.client.force_login(get_user_model().objects.get(username='uff'))
         self.assertContains(self.client.get(reverse('turni:importa')), 'Presa visione dei turni cambiati')

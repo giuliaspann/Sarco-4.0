@@ -96,6 +96,16 @@
   </div>
 
 {% else %}
+  {% if da_vedere %}
+  <h2 class="ap-sezione">Da leggere</h2>
+  <form method="post" action="{% url 'turni:presa_visione' %}" class="pv-riquadro">{% csrf_token %}
+    <h2>⚠️ Il tuo turno è cambiato</h2>
+    {% for m in da_vedere %}
+    <p><b>{{ m.data|date:'l j F'|capfirst }}</b><span class="pv-prima">{{ m.prima }}</span><span class="pv-dopo">{{ m.dopo }}</span></p>
+    {% endfor %}
+    <button class="bottone pieno piena-larghezza">✓ Presa visione</button>
+  </form>
+  {% endif %}
   <div class="chat-griglia">
     <a class="chat-tasto chat-tasto-bacheca" href="?vista=bacheca">
       {% if bacheca_nuovi %}<i class="home-badge">{{ bacheca_nuovi }}</i>{% endif %}

@@ -18,7 +18,7 @@
   {% if voce %}
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ voce.pk }}">
-    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.elemento.nome }}</h2>
+    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.titolo }}</h2>
     {% if voce.elemento.istruzioni %}<p class="pl-istruzioni">{{ voce.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
     {% if voce.stato == 'SEGNALATA' and voce.nota_verifica %}<p class="pl-segnalazione">Capo turno: {{ voce.nota_verifica }}</p>{% endif %}
     <div class="pl-due-foto">
@@ -31,7 +31,7 @@
   {% elif da_fare %}
   <div class="home-griglia">
     {% for v in da_fare %}
-    <a class="home-tasto" href="?fai=assegnata&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.elemento.nome }}</b></a>
+    <a class="home-tasto" href="?fai=assegnata&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.titolo }}</b></a>
     {% endfor %}
   </div>
   {% else %}
@@ -44,7 +44,7 @@
   {% if voce %}
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ voce.pk }}">
-    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.elemento.nome }}</h2>
+    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.titolo }}</h2>
     <p class="mn-sottotitolo">Perché non si può fare?</p>
     <div class="scegli">
       {% for m in motivi %}<label><input type="radio" name="motivo" value="{{ m }}" required><span>{{ m }}</span></label>{% endfor %}
@@ -56,7 +56,7 @@
   {% elif da_fare %}
   <div class="home-griglia">
     {% for v in da_fare %}
-    <a class="home-tasto" href="?fai=impedimento&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.elemento.nome }}</b></a>
+    <a class="home-tasto" href="?fai=impedimento&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.titolo }}</b></a>
     {% endfor %}
   </div>
   {% else %}
@@ -88,7 +88,7 @@
   {% for v in da_fare %}
   <a class="pl-riga pl-{{ v.stato|lower }}" href="?fai=assegnata&voce={{ v.pk }}">
     <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
-    <span class="rq-testo"><b>{{ v.elemento.nome }}</b><small>{% if v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
+    <span class="rq-testo"><b>{{ v.titolo }}</b><small>{% if v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
     <span class="stato-chip {% if v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
   </a>
   {% empty %}
@@ -116,7 +116,7 @@
   {% for v in completate %}
   <div class="pl-riga pl-{{ v.stato|lower }}">
     <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
-    <span class="rq-testo"><b>{{ v.elemento.nome }}</b><small>{% if v.aggiunta_da_operaio %}Aggiuntiva{% elif v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
+    <span class="rq-testo"><b>{{ v.titolo }}</b><small>{% if v.aggiunta_da_operaio %}Aggiuntiva{% elif v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
     <span class="stato-chip {% if v.stato == 'IMPEDITA' %}no{% else %}ok{% endif %}">{% if v.stato == 'VERIFICATA' %}Verificata{% elif v.stato == 'IMPEDITA' %}Non eseguibile{% else %}Fatta{% endif %}</span>
     {% if v.stato == 'IMPEDITA' and v.nota %}<small class="pl-motivo">{{ v.nota }}</small>{% endif %}
     {% if v.foto_prima or v.foto %}

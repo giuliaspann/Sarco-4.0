@@ -1,0 +1,17 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Aggiungi pulizia{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizia</a>
+<div class="intestazione"><h1>Aggiungi pulizia</h1></div>
+<form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
+  <div class="pl-due-foto">
+    <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Prima</span></label>
+    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Dopo</span></label>
+  </div>
+  <label>Dove e cosa hai pulito?
+    <textarea name="nota" rows="3" maxlength="300" required placeholder="Es. nastro di carico: tolto il vetro accumulato e lavato il rullo"></textarea>
+  </label>
+  <p class="tenue piccolo">🎤 Puoi anche dettare il commento con il microfono della tastiera.</p>
+  <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="libera">{% if turno.capoturno %}Salva la pulizia{% else %}Invia al capo turno{% endif %}</button>
+</form>
+{% endblock %}

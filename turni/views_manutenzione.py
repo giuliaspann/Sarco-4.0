@@ -155,6 +155,8 @@ def segnala(request):
     scelta = request.POST.get('macchina') or request.GET.get('macchina') or ''
     macchina = macchine.filter(pk=scelta).first() if scelta.isdigit() else None
     lavoro = (request.POST.get('lavoro') or request.GET.get('lavoro')) == '1'
+    a_chi = (request.POST.get('a') or request.GET.get('a') or '').strip()
+    dest = destinatario(a_chi) if a_chi.isdigit() else None
     programma = not lavoro and (request.POST.get('programma') or request.GET.get('programma')) == '1'
     if lavoro and not mn.puo_registrare_lavoro(request.user) or programma and not mn.puo_chiedere_pezzi(request.user):
         raise PermissionDenied
@@ -210,11 +212,18 @@ def segnala(request):
             except (ValueError, OSError):
                 messages.error(request, 'La foto non è valida: riprova.')
             else:
+                if dest:
+                    # richiesta fatta direttamente a un manutentore: la riceve lui, il responsabile resta informato
+                    i.assegnata_a = dest
+                    i.save(update_fields=['assegnata_a'])
+                    mn.evento(i, request.user, f'Richiesta a {dest.nome_breve}')
+                    mn.avvisa([dest.utente_id], request.user, f'🔧 Richiesta di manutenzione · {macchina.nome}', descrizione, mn.url_intervento(i))
                 messages.success(request, 'Segnalazione inviata: il capo turno e il responsabile manutenzione la ricevono subito.')
                 return redirect('turni:intervento', i.pk)
     contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', ''),
                 'lavoro': lavoro, 'programma': programma,
-                'pre': 'lavoro=1&' if lavoro else ('programma=1&' if programma else '')}
+                'pre': ('lavoro=1&' if lavoro else ('programma=1&' if programma else '')) + (f'a={a_chi}&' if a_chi else ''),
+                'a': a_chi, 'dest': dest, 'a_responsabile': a_chi == 'resp'}
     if macchina and programma:
         contesto.update(domani=timezone.localdate() + timedelta(days=1), ripetizioni=[
             ('0', 'Una volta'), ('7', 'Ogni settimana'), ('14', 'Ogni 2 settimane'), ('30', 'Ogni mese'),
@@ -253,6 +262,44 @@ def segnala(request):
                     mn.genera_programmate()
                     contesto.update(mn.calendario_manutenzioni(), puo_programmare=mn.puo_chiedere_pezzi(request.user))
     return render(request, 'turni/mn_segnala.html', contesto)
+
+
+@login_required
+def scelta(request):
+    """Pagina "Manutenzione" della nuova app: Aggiungi (lavoro fatto) o Richiedi, e le manutenzioni in arrivo."""
+    mn.genera_programmate()
+    return render(request, 'turni/mn_scelta.html', {
+        **mn.calendario_manutenzioni(), 'puo_programmare': mn.puo_chiedere_pezzi(request.user)})
+
+
+@login_required
+def a_chi(request):
+    """Richiedi manutenzione: prima si sceglie a chi (il responsabile o un manutentore)."""
+    in_turno, altri = mn.manutentori_di_turno()
+    return render(request, 'turni/mn_a_chi.html', {'in_turno': in_turno, 'altri': altri})
+
+
+def destinatario(valore):
+    """'a' nell'indirizzo: l'id di un manutentore, oppure vuoto/'resp' per il responsabile manutenzione."""
+    return next((d for d in mn.manutentori() if str(d.pk) == str(valore)), None)
+
+
+@login_required
+def codice(request):
+    """Inserisci codice o inquadra QR code: porta dritto alla macchina."""
+    import re
+
+    pre = ''.join(f'{k}={request.GET[k]}&' for k in ('lavoro', 'a') if request.GET.get(k))
+    testo = (request.GET.get('c') or '').strip()
+    if testo:
+        # il QR delle etichette contiene l'indirizzo con ?macchina=<id>; a mano si scrive il codice o la targa
+        trovato = re.search(r'[?&]macchina=(\d+)', testo)
+        attive = Macchina.objects.filter(attiva=True)
+        m = attive.filter(pk=trovato.group(1)).first() if trovato else attive.filter(codice__iexact=testo).first()
+        if m:
+            return redirect(f"{reverse('turni:segnala')}?{pre}macchina={m.pk}")
+        return redirect(f"{reverse('turni:segnala')}?{pre}q={testo}")
+    return render(request, 'turni/mn_codice.html', {'pre': pre, 'lavoro': request.GET.get('lavoro'), 'a': request.GET.get('a', '')})
 
 
 @login_required

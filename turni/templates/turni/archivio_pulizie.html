@@ -1,0 +1,44 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Archivio pulizie{% endblock %}
+{% block contenuto %}
+{% if posto %}
+<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ fascia }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Impianti</a>
+{% elif fascia %}
+<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Turni</a>
+{% elif giorno %}
+<a class="tasto-indietro" href="{% url 'turni:archivio_pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Giorni</a>
+{% else %}
+<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Archivio</a>
+{% endif %}
+<div class="intestazione"><h1>{% if posto %}Pulizie approvate{% elif fascia %}Che impianto?{% elif giorno %}Che turno?{% else %}Archivio pulizie{% endif %}</h1></div>
+{% if giorno %}<p class="briciole">{% if giorno %}<span>{{ giorno|date:'D j F'|capfirst }}</span>{% endif %}{% if fascia %}<span>{{ nome_fascia }}</span>{% endif %}{% if posto %}<span>{{ nome_posto }}</span>{% endif %}</p>{% endif %}
+
+{% if not giorno %}
+  {% for g, n in giorni %}
+  <a class="sg-macchina" href="?giorno={{ g|date:'Y-m-d' }}"><span class="rq-testo"><b>{{ g|date:'l j F'|capfirst }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }} approvat{{ n|pluralize:'a,e' }}</small></span><span class="sg-freccia">›</span></a>
+  {% empty %}<p class="tenue piccolo">Nessuna pulizia approvata negli ultimi 30 giorni.</p>{% endfor %}
+{% elif not fascia %}
+  {% for f, sigla, classe, nome, n, capo in fasce %}
+  <a class="sg-macchina" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}"><span class="cal-sigla {{ classe }} ar-sigla">{{ sigla }}</span><span class="rq-testo"><b>{{ nome }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }}{% if capo %} · capo turno {{ capo }}{% endif %}</small></span><span class="sg-freccia">›</span></a>
+  {% empty %}<p class="tenue piccolo">Nessuna pulizia approvata in questo giorno.</p>{% endfor %}
+{% elif not posto %}
+  {% for k, nome, n in posti %}
+  <a class="sg-macchina" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ fascia }}&posto={{ k }}"><span class="rq-testo"><b>{{ nome }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }} approvat{{ n|pluralize:'a,e' }}</small></span><span class="sg-freccia">›</span></a>
+  {% empty %}<p class="tenue piccolo">Nessuna pulizia approvata in questo turno.</p>{% endfor %}
+{% else %}
+  {% for p in pulizie %}
+  <section class="scheda ar-voce">
+    <b>{{ p.titolo }}</b>
+    <p class="tenue piccolo">{{ p.turno.dipendente.nome_breve }}{% if p.fatta_il %} · {{ p.fatta_il|time:'H:i' }}{% endif %}</p>
+    {% if p.foto_prima or p.foto %}
+    <div class="pl-due-foto">
+      {% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="ar-foto" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}
+      {% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="ar-foto" src="{% url 'turni:foto' p.pk %}" alt="Dopo" loading="lazy"></a>{% endif %}
+    </div>
+    {% endif %}
+    {% if p.nota %}<p class="ar-commento">“{{ p.nota }}”</p>{% endif %}
+    <p class="ar-ok">✓ Approvata{% if p.verificata_da %} da {{ p.verificata_da.dipendente.nome_breve|default:p.verificata_da.username }}{% endif %}</p>
+  </section>
+  {% endfor %}
+{% endif %}
+{% endblock %}
