@@ -25,13 +25,19 @@ class AssistenteTest(TestCase):
 
     def setUp(self):
         test_richieste.RichiesteTest.setUp(self)
-        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij'})
+        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij', 'ASSISTENTE_ATTIVO': '1'})
         p.start()
         self.addCleanup(p.stop)
         self.client.login(username='spano', password='123456')
 
     def test_spento_senza_chiave(self):
         with mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': ''}):
+            self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'id="as-apri"')
+            self.assertEqual(self.client.get(reverse('turni:assistente')).status_code, 404)
+
+    def test_spento_se_non_attivato(self):
+        # la chiave c'è (serve alla lettura delle foto) ma l'assistente resta nascosto
+        with mock.patch.dict(os.environ, {'ASSISTENTE_ATTIVO': ''}):
             self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'id="as-apri"')
             self.assertEqual(self.client.get(reverse('turni:assistente')).status_code, 404)
 
@@ -106,7 +112,7 @@ class AssistenteAppTest(TestCase):
 
     def setUp(self):
         test_richieste.RichiesteTest.setUp(self)
-        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij'})
+        p = mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij', 'ASSISTENTE_ATTIVO': '1'})
         p.start()
         self.addCleanup(p.stop)
         w = mock.patch('pywebpush.webpush')

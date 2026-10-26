@@ -35,7 +35,8 @@ def giorno_it(d):
 
 
 def attivo():
-    return bool(os.environ.get('ANTHROPIC_API_KEY'))
+    # spento finché su Railway non si mette ASSISTENTE_ATTIVO=1 (la lettura delle foto usa la chiave anche senza)
+    return bool(os.environ.get('ANTHROPIC_API_KEY')) and os.environ.get('ASSISTENTE_ATTIVO') == '1'
 
 
 # ---------------------------------------------------------------- chi può fare cosa
