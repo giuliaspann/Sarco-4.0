@@ -742,8 +742,9 @@ p.orario { margin: 2px 0 6px; }
 .rq-testo .link-piccolo { align-self: flex-start; padding: 2px 0 0; }
 .rq-rispondi { margin-top: 14px; border: 2px solid #ff7a00; background: #fff6ec; }
 @media (prefers-color-scheme: dark) { .rq-rispondi { background: #33240f; } }
-.rq-scambio { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--bordo); }
-.rq-giorno { font-weight: 700; font-size: .85rem; }
+.rq-scambio { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--bordo); }
+/* la data sulla sua riga: con turni lunghi (es. "Capo turno · 2° turno") non si stringe più lettera per lettera */
+.rq-giorno { font-weight: 700; font-size: .85rem; grid-column: 1 / -1; white-space: nowrap; }
 .rq-freccia { color: var(--tenue); font-weight: 800; }
 .rq-da .posto, .rq-a .posto { display: none; }
 .rq-motivo { font-style: italic; color: var(--tenue); margin: 8px 0; }
