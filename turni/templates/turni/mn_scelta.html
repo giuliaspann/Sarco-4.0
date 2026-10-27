@@ -14,7 +14,7 @@
 {% for p in prossime %}
 <a class="mn-riga" href="{% if p.intervento %}{% url 'turni:intervento' p.intervento.pk %}{% else %}{% url 'turni:macchina' p.macchina.pk %}{% endif %}">
   <span class="rq-testo"><b>{{ p.macchina.nome }}</b><small>{{ p.cosa }}{% if p.ogni %} · ogni {{ p.ogni }} g{% endif %}</small></span>
-  <span class="stato-chip {% if p.giorni < 0 %}no{% elif p.giorni <= 3 %}attesa{% else %}ok{% endif %}">{% if p.giorni < 0 %}Scaduta{% elif p.giorni == 0 %}Oggi{% elif p.giorni == 1 %}Domani{% else %}{{ p.quando|date:'j M' }}{% endif %}</span>
+  <span class="stato-chip {% if p.fatta %}ok{% elif p.giorni < 0 %}no{% elif p.giorni <= 3 %}attesa{% else %}ok{% endif %}">{% if p.fatta %}Completata{% elif p.giorni < 0 %}Scaduta{% elif p.giorni == 0 %}Oggi{% elif p.giorni == 1 %}Domani{% else %}{{ p.quando|date:'j M' }}{% endif %}</span>
 </a>
 {% empty %}<p class="tenue piccolo">Nessuna manutenzione programmata.</p>{% endfor %}
 {% endblock %}

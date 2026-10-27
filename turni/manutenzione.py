@@ -539,7 +539,7 @@ def calendario_manutenzioni():
     prossime = []
     for p in ManutenzioneProgrammata.objects.filter(attiva=True, macchina__attiva=True).select_related('macchina'):
         prossime.append({'macchina': p.macchina, 'cosa': p.attivita, 'quando': p.prossima, 'giorni': (p.prossima - oggi).days,
-                         'ogni': p.ogni_giorni})
+                         'ogni': p.ogni_giorni, 'fatta': p.ultima == oggi})
     for i in Intervento.objects.filter(tipo=Intervento.Tipo.PROGRAMMATA, piano__isnull=True, stato__in=Intervento.APERTI,
                                        da_fare_il__isnull=False).select_related('macchina'):
         prossime.append({'macchina': i.macchina, 'cosa': i.descrizione.split('\n')[0], 'quando': i.da_fare_il,

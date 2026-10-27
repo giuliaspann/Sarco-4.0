@@ -46,11 +46,13 @@ def residuo(dip):
             r.dal = saldo.al + timedelta(days=1)
         (usate if r.stato == RichiestaFerie.Stato.APPROVATA else attesa)[r.tipo] += ore_richiesta(r)
     ferie = saldo.ferie_ore - usate[RichiestaFerie.Tipo.FERIE]
+    rol = saldo.rol_ore - usate[RichiestaFerie.Tipo.PERMESSO]
     return {
         'al': saldo.al,
         'ferie': ferie,
-        'rol': saldo.rol_ore - usate[RichiestaFerie.Tipo.PERMESSO],
+        'rol': rol,
         'ferie_giorni': ferie / ORE_GIORNO,
+        'rol_giorni': rol / ORE_GIORNO,
         'attesa_ferie': attesa[RichiestaFerie.Tipo.FERIE],
         'attesa_rol': attesa[RichiestaFerie.Tipo.PERMESSO],
     }

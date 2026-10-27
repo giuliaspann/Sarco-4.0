@@ -8,7 +8,7 @@
   <div class="saldo-box">
     <span>ROL residui</span>
     <b>{{ saldo.rol|floatformat:"-1" }} h</b>
-    <small>&nbsp;</small>
+    <small>{{ saldo.rol_giorni|floatformat:"-1" }} giorni</small>
   </div>
 </div>
 <p class="tenue piccolo saldo-nota">Saldo al {{ saldo.al|date:'d/m/Y' }}, meno le richieste approvate dopo.{% if saldo.attesa_ferie or saldo.attesa_rol %} In attesa dell'ufficio: {% if saldo.attesa_ferie %}{{ saldo.attesa_ferie|floatformat:"-1" }} h di ferie{% endif %}{% if saldo.attesa_ferie and saldo.attesa_rol %} e {% endif %}{% if saldo.attesa_rol %}{{ saldo.attesa_rol|floatformat:"-1" }} h di permesso{% endif %}.{% endif %}</p>
