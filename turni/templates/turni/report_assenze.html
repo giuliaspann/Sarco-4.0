@@ -1,0 +1,69 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Report assenze{% endblock %}
+{% block contenuto %}
+<div class="intestazione"><h1>Report assenze</h1></div>
+
+<div class="filtri tre-filtri">
+  {% for k, nome, d, a in scelte %}<a href="?periodo={{ k }}" class="{% if k == chiave %}attivo{% endif %}">{{ nome }}</a>{% endfor %}
+</div>
+<p class="tenue piccolo">Dal {{ dal|date:'d/m/Y' }} al {{ al|date:'d/m/Y' }}</p>
+
+<div class="rp-griglia">
+  <div class="rp-box"><span>Tasso di assenza</span><b>{{ tasso|floatformat:1 }}%</b><small>su {{ tot_previsti }} giornate previste</small></div>
+  <div class="rp-box"><span>Malattia</span><b>{{ totali.malattia }}</b><small>giornate</small></div>
+  <div class="rp-box"><span>Ferie</span><b>{{ totali.ferie }}</b><small>giornate</small></div>
+  <div class="rp-box"><span>Permessi</span><b>{{ totali.permessi_ore|floatformat:"-1" }}</b><small>ore</small></div>
+  <div class="rp-box"><span>Ritardi</span><b>{{ totali.ritardi }}</b><small>volte</small></div>
+  <div class="rp-box"><span>Uscite anticipate</span><b>{{ totali.uscite }}</b><small>volte</small></div>
+</div>
+<p class="tenue piccolo">Tasso di assenza = giornate di malattia, ferie e permessi diviso giornate previste dai turni. Una giornata vale 8 ore.</p>
+
+{% if impianti %}
+<h2 class="ap-sezione">Per impianto</h2>
+{% for i in impianti %}
+<div class="rp-riga"><span>{{ i.nome }}<small>{{ i.assenze|floatformat:"-1" }} giornate di assenza su {{ i.previsti }}</small></span><b>{{ i.tasso|floatformat:1 }}%</b></div>
+{% endfor %}
+{% endif %}
+
+<h2 class="ap-sezione">Per persona</h2>
+{% for p in persone %}
+<a class="rp-riga" href="{% url 'turni:storico_assenze' %}?dip={{ p.dip.pk }}">
+  <span>{{ p.dip.nome_breve }}
+    <small>{{ p.voci|join:' · ' }}</small>
+  </span><span class="sg-freccia">›</span>
+</a>
+{% empty %}
+<p class="tenue">Nessuna assenza nel periodo.</p>
+{% endfor %}
+
+<h2 class="ap-sezione">Ferie e ROL residui</h2>
+{% if residui %}
+<div class="rp-griglia due-col">
+  <div class="rp-box"><span>Ferie residue (tutti)</span><b>{{ tot_ferie|floatformat:0 }} h</b></div>
+  <div class="rp-box"><span>ROL residui (tutti)</span><b>{{ tot_rol|floatformat:0 }} h</b></div>
+</div>
+{% if accumulate %}
+<div class="rp-avviso">⚠️ {{ accumulate|length }} person{{ accumulate|length|pluralize:'a,e' }} con più di {{ soglia|floatformat:0 }} ore (20 giorni) di ferie da smaltire. La legge chiede di godere 2 settimane nell'anno e le altre 2 entro i 18 mesi successivi.</div>
+{% endif %}
+{% for r in residui %}
+<a class="rp-riga{% if r.ferie > soglia %} rp-alto{% endif %}" href="{% url 'turni:storico_assenze' %}?dip={{ r.dip.pk }}">
+  <span>{{ r.dip.nome_breve }}<small>saldo al {{ r.al|date:'d/m' }}</small></span>
+  <b>{{ r.ferie|floatformat:"-1" }} h ferie · {{ r.rol|floatformat:"-1" }} h ROL</b>
+</a>
+{% endfor %}
+{% else %}
+<p class="tenue">Nessun saldo caricato.</p>
+{% endif %}
+
+<h2 class="ap-sezione">Turni</h2>
+<div class="rp-griglia due-col">
+  <div class="rp-box"><span>Turni extra coperti</span><b>{{ extra }}</b></div>
+  <div class="rp-box"><span>Turni di notte</span><b>{{ tot_notti }}</b></div>
+</div>
+{% if notti %}
+<p class="tenue piccolo">Chi fa più notti</p>
+{% for dip, n in notti %}
+<div class="rp-riga"><span>{{ dip.nome_breve }}</span><b>{{ n }} nott{{ n|pluralize:'e,i' }}</b></div>
+{% endfor %}
+{% endif %}
+{% endblock %}

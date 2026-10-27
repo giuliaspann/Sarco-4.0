@@ -1,0 +1,29 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Storico assenze{% endblock %}
+{% block contenuto %}
+<div class="intestazione">
+  {% if mio %}<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}#richieste"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Area personale</a>
+  {% else %}<a class="tasto-indietro" href="{% url 'turni:report_assenze' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Report assenze</a>{% endif %}
+  <h1>{% if mio %}Le mie assenze{% else %}{{ dip.nome_breve }}{% endif %}</h1>
+</div>
+
+<div class="filtri due">
+  {% for a in anni %}<a href="?anno={{ a }}{% if not mio %}&dip={{ dip.pk }}{% endif %}" class="{% if a == anno %}attivo{% endif %}">{{ a }}</a>{% endfor %}
+</div>
+
+{% include 'turni/_saldo.html' %}
+
+<div class="rp-griglia quattro">
+  {% for icona, nome, n in riquadri %}<div class="rp-box"><span>{{ icona }} {{ nome }}</span><b>{{ n }}</b></div>{% endfor %}
+</div>
+
+<h2 class="ap-sezione">Storico {{ anno }}</h2>
+{% for v in voci %}
+<div class="rq-riga">
+  <span class="home-icona">{{ v.icona }}</span>
+  <span class="rq-testo"><b>{{ v.titolo }}</b><small>{{ v.data|date:'D j M'|capfirst }}{% if v.nota %} · {{ v.nota }}{% endif %}</small></span>
+</div>
+{% empty %}
+<div class="vuoto"><p>Nessuna assenza nel {{ anno }}.</p></div>
+{% endfor %}
+{% endblock %}

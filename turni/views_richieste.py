@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import richieste as svc
+from . import richieste as svc, saldi
 from .models import AvvisoAssenza, CambioTurno, Dipendente, Disponibilita, Postazione, RichiestaFerie, Turno, TurnoExtra
 from .views import dipendente_di
 
@@ -201,7 +201,8 @@ def nuove_ferie(request):
     return render(
         request,
         'turni/ferie_nuove.html',
-        {'tipi': RichiestaFerie.Tipo.choices, 'domani': timezone.localdate() + timedelta(days=1), 'dati': request.POST},
+        {'tipi': RichiestaFerie.Tipo.choices, 'domani': timezone.localdate() + timedelta(days=1), 'dati': request.POST,
+         'saldo': saldi.residuo(dip)},
     )
 
 

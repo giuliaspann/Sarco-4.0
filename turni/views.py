@@ -17,7 +17,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
 from django.views.decorators.http import require_POST
 
-from . import accessi, importa
+from . import accessi, importa, saldi
 from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
 from .pulizie import (aggiungibili, elemento_da_scelta, genera_pulizie, in_turno_oggi, mezzi_aggiungibili, richiedi_pulizia,
@@ -202,6 +202,7 @@ def miei_turni(request):
             'prec': inizio - timedelta(days=7),
             'succ': inizio + timedelta(days=7),
             'extra': extra_per(dip),
+            'saldo': saldi.residuo(dip),
             **contesto_oggi(request, dip),
             **__import__('turni.views_richieste', fromlist=['contesto_richieste']).contesto_richieste(dip),
         },

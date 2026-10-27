@@ -1608,3 +1608,24 @@ form:has(input[name=luogo][value="ALTRO"]:checked) .pl-voci[data-luogo="ALTRO"] 
 .tre .home-tasto .home-icona { margin: 0; }
 .tit-riga { margin: 26px 2px 10px; padding-top: 16px; border-top: 2px solid var(--bordo); }
 .tit-riga .ap-sezione { margin: 0; padding: 0; border: 0; font-size: 1.1rem; }
+
+/* Saldo ferie e ROL, report assenze */
+.saldo-due { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin: 6px 0 4px; }
+.saldo-box, .rp-box { display: flex; flex-direction: column; align-items: center; text-align: center; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: 12px 8px; }
+.saldo-box span, .rp-box span { font-size: .85rem; color: var(--tenue); }
+.saldo-box b { font-size: 1.6rem; color: var(--primario-scuro); }
+.saldo-box small, .rp-box small { font-size: .78rem; color: var(--tenue); }
+.saldo-nota { margin: 0 0 12px; text-align: center; }
+.rp-griglia { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 8px 0; }
+.rp-griglia.due-col { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.rp-griglia.quattro { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rp-box b { font-size: 1.35rem; }
+.filtri.tre-filtri { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.rp-riga.rp-alto { border-color: var(--attenzione); }
+.rp-riga.rp-alto b { color: var(--attenzione); }
+.rp-riga { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--carta); border: 1px solid var(--bordo);
+  border-radius: var(--raggio); padding: 10px 14px; margin-bottom: 6px; text-decoration: none; color: var(--testo); }
+.rp-riga span { min-width: 0; }
+.rp-riga small { display: block; color: var(--tenue); font-size: .78rem; }
+.rp-riga b { white-space: nowrap; }
+.rp-avviso { background: #fff4e5; border: 1px solid #f5c98a; border-radius: var(--raggio); padding: 10px 12px; font-size: .9rem; margin: 10px 0; }

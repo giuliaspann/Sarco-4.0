@@ -50,11 +50,20 @@
 {% endfor %}
 
 <h2 class="ap-sezione" id="richieste">Richieste</h2>
+{% include 'turni/_saldo.html' %}
 <div class="tre">
   <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}"><span class="home-icona">🔄</span><b>Cambio turno</b></a>
   <a class="home-tasto" href="{% url 'turni:nuove_ferie' %}"><span class="home-icona">🏖️</span><b>Ferie / permesso</b></a>
   <a class="home-tasto" href="{% url 'turni:nuovo_avviso' %}"><span class="home-icona">🤒</span><b>Avviso assenza</b></a>
 </div>
+<a class="sg-macchina" href="{% url 'turni:storico_assenze' %}">
+  <span class="home-icona">📒</span><span class="rq-testo"><b>Le mie assenze</b><small>ritardi, malattie, uscite anticipate, ferie e permessi</small></span><span class="sg-freccia">›</span>
+</a>
+{% if nav_report %}
+<a class="sg-macchina" href="{% url 'turni:report_assenze' %}">
+  <span class="home-icona">📊</span><span class="rq-testo"><b>Report assenze</b><small>direzione</small></span><span class="sg-freccia">›</span>
+</a>
+{% endif %}
 
 {% if nav_capoturno or nav_responsabile %}
 <h2 class="ap-sezione">Da approvare</h2>

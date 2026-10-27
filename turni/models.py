@@ -548,6 +548,26 @@ class RichiestaFerie(models.Model):
         return ''
 
 
+class SaldoFerie(models.Model):
+    """Ferie e ROL residui di una persona a una data (dal file dell'ufficio o dal cedolino).
+    Le richieste approvate dopo quella data si tolgono da sole: vedi saldi.py."""
+
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='saldi')
+    al = models.DateField('saldo al')
+    ferie_ore = models.DecimalField('ferie residue (ore)', max_digits=6, decimal_places=2)
+    rol_ore = models.DecimalField('ROL residui (ore)', max_digits=6, decimal_places=2)
+    caricato_il = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'saldo ferie e ROL'
+        verbose_name_plural = 'saldi ferie e ROL'
+        ordering = ['-al', 'dipendente__nome']
+        constraints = [models.UniqueConstraint(fields=['dipendente', 'al'], name='un_saldo_per_data')]
+
+    def __str__(self):
+        return f'{self.dipendente} al {self.al:%d/%m/%Y}'
+
+
 class TurnoExtra(models.Model):
     """L'ufficio cerca volontari (es. "domenica serve un 1° turno in più"): gli operai si
     offrono dall'app, l'ufficio sceglie e il turno compare nel calendario dei confermati."""

@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import views, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
 
 app_name = 'turni'
 
@@ -68,6 +68,8 @@ urlpatterns = [
     path('manutenzione/foto/<str:tipo>/<int:oggetto_id>/', views_manutenzione.foto, name='foto_mn'),
     path('manutenzione/video/<str:tipo>/<int:oggetto_id>/', views_manutenzione.video, name='video_mn'),
     path('ufficio/richieste/', views_richieste.ufficio_richieste, name='ufficio_richieste'),
+    path('report/assenze/', views_report.report_assenze, name='report_assenze'),
+    path('assenze/', views_report.storico_assenze, name='storico_assenze'),
     path('ufficio/importa/', views.importa_turni, name='importa'),
     path('ufficio/importa/anteprima/', views.anteprima, name='anteprima'),
     path('ufficio/dipendenti/', views.dipendenti, name='dipendenti'),

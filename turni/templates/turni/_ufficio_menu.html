@@ -5,6 +5,7 @@
   {% if user.is_staff %}
   <a href="{% url 'turni:importa' %}" class="{% if n == 'importa' or n == 'anteprima' %}attivo{% endif %}">Carica turni</a>
   <a href="{% url 'turni:dipendenti' %}" class="{% if n == 'dipendenti' %}attivo{% endif %}">Dipendenti</a>
+  <a href="{% url 'turni:report_assenze' %}">Report assenze</a>
   <a href="{% url 'admin:turni_elementopulizia_changelist' %}">Mezzi e zone</a>
   {% endif %}
 </div>
