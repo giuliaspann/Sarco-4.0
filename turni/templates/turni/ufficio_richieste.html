@@ -35,7 +35,7 @@
 {% for c in cambi %}
 <section class="scheda">
   <h2>Cambio: {{ c.richiedente.nome_breve }} ↔ {{ c.collega.nome_breve }}</h2>
-  <p class="tenue piccolo">Chiesto il {{ c.creato_il|date:'d/m H:i' }} · {% if c.risposta_collega_il %}accettato da {{ c.collega.nome_breve }} il {{ c.risposta_collega_il|date:'d/m H:i' }}{% else %}<b>{{ c.collega.nome_breve }} non ha l'app: sentilo prima di approvare</b>{% endif %}</p>
+  <p class="tenue piccolo">Chiesto il {{ c.creato_il|date:'d/m H:i' }} · accettato da {{ c.collega.nome_breve }} il {{ c.risposta_collega_il|date:'d/m H:i' }}</p>
   <table class="scambio">
     <tr><th>Giorno</th><th>{{ c.richiedente.nome_breve }}</th><th>{{ c.collega.nome_breve }}</th></tr>
     {% for r in c.righe %}

@@ -69,8 +69,6 @@ def crea_cambio(richiedente, collega, giorno1, giorno2=None, motivo=''):
         giorno2=giorno2,
         motivo=motivo[:300],
         situazione={_chiave(t): _stato_turno(t) for t in turni.values()},
-        # chi non ha ancora l'app non può accettare: decide l'ufficio dopo averlo sentito
-        stato=CambioTurno.Stato.ATTESA_COLLEGA if collega.utente_id else CambioTurno.Stato.ATTESA_UFFICIO,
     )
 
 
