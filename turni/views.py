@@ -908,3 +908,17 @@ self.addEventListener('fetch', e => {
 
 def service_worker(request):
     return HttpResponse(SERVICE_WORKER, content_type='application/javascript')
+
+
+@login_required
+def archivio_analisi(request):
+    """Archivio: le analisi degli ultimi 60 giorni, per giorno."""
+    from itertools import groupby
+
+    from .models import AnalisiProdotto
+
+    da = timezone.localdate() - timedelta(days=60)
+    analisi = AnalisiProdotto.objects.filter(data__gte=da).order_by('-data', '-pk')
+    giorni = [(g, list(r)) for g, r in groupby(analisi, key=lambda a: a.data)]
+    return render(request, 'turni/archivio_analisi.html', {'giorni': giorni})
+

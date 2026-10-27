@@ -41,7 +41,7 @@ class SaldoReportTest(TestCase):
         self.client.login(username='rossi', password='x')
         pagina = self.client.get(reverse('turni:miei_turni'))
         self.assertContains(pagina, 'Ferie residue')
-        self.assertContains(pagina, '52 h')
+        self.assertContains(pagina, '6,5 giorni')
 
     def test_storico_solo_il_proprio(self):
         AvvisoAssenza.objects.create(dipendente=self.op, data=date(2026, 10, 1), tipo='RITARDO', alle=time(6, 30))

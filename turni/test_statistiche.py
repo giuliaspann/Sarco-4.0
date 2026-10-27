@@ -35,7 +35,7 @@ class StatisticheTest(TestCase):
         r = self.client.get(reverse('turni:home'))
         for t in ('Dati produzione', 'Dati analisi', 'Archivio'):
             self.assertContains(r, t)
-        self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:statistiche'))
+        self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:archivio_analisi'))
         r = self.client.get(reverse('turni:statistiche'))
         for t in ('Inserisci produzione del turno', 'Inserisci analisi prodotto', 'Report'):
             self.assertContains(r, t)

@@ -121,7 +121,7 @@ def analisi(request, analisi_id):
     if request.method == 'POST' and request.POST.get('azione') == 'elimina' and (mn.e_resp(request.user) or a.inserita_da_id == request.user.pk):
         a.delete()
         messages.success(request, 'Analisi eliminata.')
-        return redirect('turni:statistiche')
+        return redirect('turni:archivio_analisi' if getattr(request.user, 'dipendente', None) else 'turni:statistiche')
     return render(request, 'turni/analisi.html', {'a': a})
 
 

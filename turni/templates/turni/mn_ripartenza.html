@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Ripartenza impianto{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
+{% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Oggi</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
 <div class="intestazione"><h1>Segnala ripartenza impianto</h1></div>
 {% if in_corso %}
 <h2 class="rq-sezione">Quale impianto è ripartito?</h2>

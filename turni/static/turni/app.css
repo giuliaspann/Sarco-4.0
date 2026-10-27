@@ -1608,7 +1608,9 @@ form:has(input[name=luogo][value="ALTRO"]:checked) .pl-voci[data-luogo="ALTRO"] 
 .tre .home-tasto .home-icona { margin: 0; flex: none; }
 /* icone tutte alla stessa altezza; il testo (una o due righe) sta centrato nello stesso spazio */
 .tre .home-tasto { justify-content: flex-start; padding-top: 14px; }
-.tre .home-tasto b { min-height: 2.5em; display: flex; align-items: center; justify-content: center; line-height: 1.25; }
+.tre .home-tasto b { min-height: 2.5em; display: flex; align-items: center; justify-content: center; line-height: 1.25;
+  align-self: stretch; text-align: center; grid-column: auto; }
+.tre .home-tasto .home-icona { align-self: center; }
 .tit-riga { margin: 26px 2px 10px; padding-top: 16px; border-top: 2px solid var(--bordo); }
 .tit-riga .ap-sezione { margin: 0; padding: 0; border: 0; font-size: 1.1rem; }
 
