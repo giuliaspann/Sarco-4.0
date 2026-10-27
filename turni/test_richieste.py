@@ -114,6 +114,15 @@ class RichiesteTest(TestCase):
         with self.assertRaises(svc.RichiestaNonValida):  # c'è già una richiesta aperta
             svc.crea_cambio(self.drame, self.spano, self.MAR)
 
+    def test_collega_senza_app_va_all_ufficio(self):
+        self.drame.utente = None
+        self.drame.save()
+        suo = self.turno(self.drame, self.MAR).fascia
+        cambio = self.chiedi()  # niente risposta del collega: va subito all'ufficio
+        self.assertEqual(cambio.stato, CambioTurno.Stato.ATTESA_UFFICIO)
+        svc.decisione_ufficio_cambio(cambio, self.resp, True)
+        self.assertEqual(self.turno(self.spano, self.MAR).fascia, suo)
+
     def test_rifiuto_del_collega(self):
         cambio = self.chiedi()
         self.client.login(username='drame', password='123456')

@@ -67,7 +67,8 @@
 
     <label class="cb-motivo">Motivo (facoltativo)<textarea name="motivo" rows="2" maxlength="300" placeholder="Es. visita medica"></textarea></label>
     {% if senza_account %}
-      <div class="avviso avviso-warning">{{ collega.nome_breve }} non ha ancora l'accesso all'app: non potrebbe accettare. Scegli un altro collega o chiedi all'ufficio.</div>
+      <button class="bottone pieno piena-larghezza cb-invia">Invia la richiesta all'ufficio</button>
+      <p class="tenue piccolo centrato">{{ collega.nome_breve }} non ha ancora l'app: l'ufficio lo sente e poi decide.<br>Fino ad allora i turni non cambiano.</p>
     {% else %}
       <button class="bottone pieno piena-larghezza cb-invia">Invia la richiesta a {{ collega.nome_breve }}</button>
       <p class="tenue piccolo centrato">Prima accetta {{ collega.nome_breve }}, poi approva l'ufficio.<br>Fino ad allora i turni non cambiano.</p>

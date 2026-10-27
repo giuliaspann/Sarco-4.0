@@ -129,7 +129,8 @@ def nuovo_cambio(request):
         except svc.RichiestaNonValida as e:
             messages.error(request, str(e))
         else:
-            messages.success(request, f'Richiesta inviata a {cambio.collega.nome_breve}.')
+            a_chi = f'a {cambio.collega.nome_breve}' if cambio.collega.utente_id else "all'ufficio"
+            messages.success(request, f'Richiesta inviata {a_chi}.')
             return redirect('turni:richieste')
 
     contesto = {'giorno': giorno, 'collega': collega}
