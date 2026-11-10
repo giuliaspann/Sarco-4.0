@@ -1,0 +1,19 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richieste{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+<div class="intestazione"><h1>Richieste</h1></div>
+
+{# i due tasti che prima stavano in cima all'Area personale (Giulia, 10/11) #}
+<div class="ig-azioni grandi due">
+  <a href="{% url 'turni:settimana_tutti' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></span>Cambio turno</a>
+  <a href="{% url 'turni:nuovo_avviso' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Ritardo / uscita</a>
+</div>
+<p class="tenue piccolo">Per un cambio turno scegli il turno del collega in «Turni di tutti».</p>
+
+{% include 'turni/_richieste_blocco.html' %}
+
+<a class="sg-macchina" href="{% url 'turni:storico_assenze' %}">
+  <span class="home-icona">📒</span><span class="rq-testo"><b>Le mie assenze</b><small>ritardi e uscite anticipate</small></span><span class="sg-freccia">›</span>
+</a>
+{% endblock %}

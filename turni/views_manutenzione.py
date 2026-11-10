@@ -268,9 +268,15 @@ def segnala(request):
 @login_required
 def scelta(request):
     """Pagina "Manutenzione" della nuova app: Aggiungi (lavoro fatto) o Richiedi, e le manutenzioni in arrivo."""
+    from .pulizie import turno_attuale
+
     mn.genera_programmate()
+    dip = getattr(request.user, 'dipendente', None)
+    turno = turno_attuale(dip) if dip else None
     return render(request, 'turni/mn_scelta.html', {
-        **mn.calendario_manutenzioni(), 'puo_programmare': mn.puo_chiedere_pezzi(request.user)})
+        **mn.calendario_manutenzioni(), 'puo_programmare': mn.puo_chiedere_pezzi(request.user),
+        # il Capo Turno in servizio ha tre tasti: in corso (fermo), conclusa (ripartenza), richiedi (fermo programmato)
+        'capo_in_servizio': bool(turno and turno.lavora and turno.capoturno)})
 
 
 @login_required

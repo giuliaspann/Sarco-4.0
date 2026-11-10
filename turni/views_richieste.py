@@ -43,7 +43,7 @@ def _serve_dipendente(request):
 
 @login_required
 def richieste(request):
-    """Le richieste stanno nell'Area personale (sotto i turni): qui arrivano solo le risposte e gli annullamenti."""
+    """Pagina "Richieste": Cambio turno e Ritardo / uscita, lo stato delle richieste; in POST risposte e annullamenti."""
     dip = _serve_dipendente(request)
     if request.method == 'POST':
         azione = request.POST.get('azione')
@@ -65,7 +65,7 @@ def richieste(request):
                 altro = cambio.collega if cambio.richiedente_id == dip.pk else cambio.richiedente
                 if altro.utente_id:
                     push.invia([altro.utente_id], '🔁 Cambio annullato', f'{dip.nome_breve} ha annullato il cambio del '
-                               f'{cambio.giorno1:%d/%m}.', reverse('turni:miei_turni') + '#richieste')
+                               f'{cambio.giorno1:%d/%m}.', reverse('turni:richieste'))
                 messages.success(request, 'Richiesta di cambio annullata.')
             elif azione == 'annulla_ferie':
                 f = get_object_or_404(
@@ -82,7 +82,9 @@ def richieste(request):
                 messages.success(request, 'Avviso annullato.')
         except svc.RichiestaNonValida as e:
             messages.error(request, str(e))
-    return redirect(reverse('turni:miei_turni') + '#richieste')
+        return redirect(reverse('turni:richieste'))
+    # la pagina "Richieste" (tasto in fondo all'Area personale): cambio turno, ritardo / uscita, lo stato delle richieste
+    return render(request, 'turni/richieste.html', {'dip': dip, **contesto_richieste(dip)})
 
 
 @login_required
@@ -341,7 +343,7 @@ def nuovo_avviso(request):
                     dipendente=dip, data=giorno, tipo=tipo, nota=request.POST.get('nota', '')[:300], dalle=dalle, alle=alle
                 )
                 messages.success(request, "Avviso inviato all'ufficio e al Capo Turno.")
-                return redirect(reverse('turni:miei_turni') + '#richieste')
+                return redirect(reverse('turni:richieste'))
     return render(
         request, 'turni/avviso_nuovo.html',
         {'tipi': [(v, l) for v, l in AvvisoAssenza.Tipo.choices if v in TIPI_AVVISO], 'oggi': oggi, 'dati': request.POST}

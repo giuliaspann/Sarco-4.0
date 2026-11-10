@@ -64,6 +64,7 @@ class Mansione(models.TextChoices):
     AUTISTA = 'AUTISTA', 'Autista'
     PIAZZALE = 'PIAZZALE', 'Piazzale'
     UFFICIO = 'UFFICIO', 'Ufficio'
+    ANALISTA = 'ANALISTA', 'Analista laboratorio'  # vede il tasto "Analisi"
 
 
 class RuoloApp(models.TextChoices):
@@ -900,6 +901,26 @@ class LetturaChat(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['utente', 'chat'], name='una_lettura_per_chat')]
+
+
+class Notifica(models.Model):
+    """Il centro notifiche (il cuore in alto a destra): una riga per ogni avviso mandato a una persona
+    (richieste, approvazioni, cambi turno, menzioni in chat…). I semplici messaggi di chat non ci finiscono."""
+
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifiche')
+    titolo = models.CharField(max_length=120)
+    testo = models.CharField(max_length=300, blank=True)
+    url = models.CharField(max_length=300, blank=True)
+    creata_il = models.DateTimeField(auto_now_add=True)
+    letta_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = 'notifiche'
+        ordering = ['-creata_il']
+        indexes = [models.Index(fields=['utente', 'letta_il'])]
+
+    def __str__(self):
+        return f'{self.utente} · {self.titolo}'
 
 
 class IscrizionePush(models.Model):

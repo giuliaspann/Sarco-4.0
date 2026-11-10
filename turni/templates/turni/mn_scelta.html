@@ -3,10 +3,19 @@
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
 <div class="intestazione"><h1>Manutenzione</h1></div>
+{% if capo_in_servizio %}
+{# Capo Turno in servizio: tre tasti (Giulia, 10/11) #}
+<div class="mn-capo">
+  <a class="mn-capo-tasto fermo" href="{% url 'turni:nuovo_fermo' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></span><span><b>Manutenzione in corso</b><small>Segnala fermo impianto</small></span></a>
+  <a class="mn-capo-tasto riparte" href="{% url 'turni:ripartenza' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg></span><span><b>Manutenzione conclusa</b><small>Segnala ripartenza impianto</small></span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:nuova_comunicazione' %}?tipo=FERMO"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span><b>Richiedi manutenzione</b><small>Programma fermo impianto</small></span></a>
+</div>
+{% else %}
 <div class="tasti-agg">
   <a class="agg" href="{% url 'turni:segnala' %}?lavoro=1"><span class="piu">+</span><span class="txt">Aggiungi manutenzione</span><span class="emo">🔧</span></a>
   <a class="agg" href="{% url 'turni:mn_a_chi' %}"><span class="piu">+</span><span class="txt">Richiedi manutenzione</span><span class="emo">🙋</span></a>
 </div>
+{% endif %}
 {% if puo_programmare %}
 <a class="home-tasto tasto-programma" href="{% url 'turni:segnala' %}?programma=1"><span class="home-icona">🗓️</span><b>Programma una manutenzione</b></a>
 {% endif %}

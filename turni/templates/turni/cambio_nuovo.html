@@ -4,7 +4,7 @@
 <div class="intestazione">
   {% if collega %}<a class="tasto-indietro" href="{% url 'turni:settimana_tutti' %}?settimana={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Turni della settimana</a>
   {% elif mio %}<a class="tasto-indietro" href="{% url 'turni:settimana_tutti' %}?settimana={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Turni della settimana</a>
-  {% else %}<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}#richieste"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>{% endif %}
+  {% else %}<a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Richieste</a>{% endif %}
   <h1>Cambio turno</h1>
   <ol class="sg-passi tre">
     <li class="{% if mio %}fatto{% else %}ora{% endif %}">Giorno</li>

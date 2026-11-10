@@ -2,7 +2,7 @@
 {% block titolo %}Storico assenze{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  {% if mio %}<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}#richieste"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+  {% if mio %}<a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Richieste</a>
   {% else %}<a class="tasto-indietro" href="{% url 'turni:report_assenze' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Report assenze</a>{% endif %}
   <h1>{% if mio %}Le mie assenze{% else %}{{ dip.nome_breve }}{% endif %}</h1>
 </div>

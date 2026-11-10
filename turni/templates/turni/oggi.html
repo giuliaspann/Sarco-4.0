@@ -1,17 +1,16 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Oggi{% endblock %}
 {% block contenuto %}
-<div class="ig-saluto">
-  <h1>Ciao {{ dip.nome_breve.split|last }}</h1>
-  <span>{{ oggi_data|date:'D j M' }}</span>
-</div>
-
-<div class="oggi-due ig-turno-riga">
-  <a class="riq-turno ig-turno" href="{% url 'turni:miei_turni' %}">
+{# stile Instagram (Giulia, 10/11): in alto a sinistra il tondino con la propria foto, accanto il turno di oggi e la posizione #}
+<div class="ig-io">
+  <a class="ig-io-foto{% if turno_oggi and turno_oggi.lavora %} {{ turno_oggi.classe_solo_fascia }}-anello{% endif %}" href="{% url 'turni:miei_turni' %}" aria-label="Il mio profilo">
+    {% if dip.foto %}<img src="{% url 'turni:foto_profilo_img' dip.pk %}?v={{ dip.foto.name|slice:'-12:' }}" alt="">{% else %}<span>{{ dip.nome_breve|slice:':1' }}{{ dip.nome_breve.split|last|slice:':1' }}</span>{% endif %}
+  </a>
+  <a class="ig-io-turno" href="{% url 'turni:miei_turni' %}">
+    <small>{{ oggi_data|date:'l j F'|capfirst }}</small>
     {% if turno_oggi %}
       {% if turno_oggi.lavora and turno_oggi.posti %}
         {% with p=turno_oggi.posti %}
-        {# "Capo Turno" non si scrive: c'è già il badge CT ("Capo Turno e Palista" → "Palista") #}
         {% with ruolo=p.0.1|cut:'Capo Turno e '|cut:'Capo Turno' %}
         <b>{{ p.0.0 }}</b>{% if ruolo %}<span class="riq-ruolo">{{ ruolo }}</span>{% endif %}
         {% endwith %}
@@ -20,13 +19,14 @@
       {% else %}
       <b>{{ turno_oggi.nome_postazione|default:turno_oggi.descrizione_fascia }}</b>
       {% endif %}
-      <span>{% if turno_oggi.sigla_fascia %}<span class="cal-sigla {{ turno_oggi.classe_solo_fascia }}">{{ turno_oggi.sigla_fascia }}</span>{% endif %}{% if turno_oggi.capoturno and turno_oggi.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}</span>
+      <span class="ig-io-sigle">{% if turno_oggi.sigla_fascia %}<span class="cal-sigla {{ turno_oggi.classe_solo_fascia }}">{{ turno_oggi.sigla_fascia }}</span>{% endif %}{% if turno_oggi.capoturno and turno_oggi.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}</span>
     {% else %}
       <b>Turno non pubblicato</b>
     {% endif %}
   </a>
-  <a class="riq-con" href="{% url 'turni:squadra' %}"><span class="ico">👥</span><b>Con chi lavoro oggi</b></a>
 </div>
+<a class="riq-con ig-con" href="{% url 'turni:squadra' %}"><span class="ico">👥</span><b>Con chi lavoro oggi</b></a>
+
 
 {% include 'turni/_capi_da_completare.html' %}
 
@@ -45,17 +45,24 @@
 {% endwith %}
 {% endfor %}
 
-<div class="ig-azioni">
+{# il Capo Turno in servizio: riquadri grandi; fermo e ripartenza stanno dentro Manutenzione (Giulia, 10/11) #}
+{% with capo=turno_oggi.capoturno|default:False %}
+<div class="ig-azioni{% if not vede_analisi %} tre{% endif %}{% if capo and turno_oggi.lavora %} grandi{% endif %}">
   <a href="{% url 'turni:pulizie' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/></svg></span>Pulizia{% if badge_pulizia %}<i class="home-badge">{{ badge_pulizia }}</i>{% endif %}</a>
   <a href="{% url 'turni:mn_scelta' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/></svg></span>Manutenzione</a>
   <a href="{% url 'turni:produzione_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg></span>Produzione</a>
+{% if vede_analisi %}
   <a href="{% url 'turni:analisi_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg></span>Analisi</a>
+  {% endif %}
 </div>
 
+{% if not capo or not turno_oggi.lavora %}
 <div class="ig-impianti">
   <a class="fermo" href="{% url 'turni:nuovo_fermo' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Fermo</a>
   <a class="riparte" href="{% url 'turni:ripartenza' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Ripartenza</a>
 </div>
+{% endif %}
+{% endwith %}
 {% for f in fermi_aperti %}
 <a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>
 {% endfor %}
@@ -64,4 +71,6 @@
 <a class="cm-avviso" href="{% url 'turni:comunicazione' c.pk %}">{{ c.icona }} <span>{% if c.tipo == 'FERMO' %}<b>{{ c.get_luogo_display }} fermo · {{ c.get_motivo_display|lower }}</b><small>{{ c.periodo }}</small></span></a>
 {% else %}<b>{{ c.macchina.nome }}{% if c.macchina.modello %} {{ c.macchina.modello }}{% endif %} non disponibile</b><small>{% if c.attiva_ora %}Fino a {{ c.al|date:'D j M H:i' }}{% else %}Dal {{ c.dal|date:'D j M H:i' }} al {{ c.al|date:'D j M H:i' }}{% endif %}</small></span></a>
 {% endif %}{% endfor %}
+{# il quadrato del Menu non è più nella barra: tutte le funzioni si aprono da qui (Giulia, 10/11) #}
+<a class="ig-tutte" href="{% url 'turni:menu' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><b>Tutte le funzioni</b>{% if nav_ufficio_badge %}<i class="badge-riga">{{ nav_ufficio_badge }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}</a>
 {% endblock %}

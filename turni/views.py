@@ -158,7 +158,20 @@ def contesto_oggi(request, dip):
         # il tasto "Pulizia" conta le mie da fare e, per il Capo Turno, quelle da verificare
         'badge_pulizia': (pulizie_da_fare or 0) + da_verificare,
         'piazzale': _per_resp_piazzale(request.user),
+        'vede_analisi': vede_analisi(dip, turno),
     }
+
+
+def vede_analisi(dip, turno=None):
+    """Il tasto "Analisi" solo per chi lavora in laboratorio: mansione "Analista laboratorio"
+    o di turno oggi al Laboratorio Analisi (Giulia, 10/11/2026)."""
+    from .models import Mansione, Postazione
+
+    if dip is None:
+        return False
+    if Mansione.ANALISTA in dip.mansioni:
+        return True
+    return bool(turno and turno.lavora and any(p == Postazione.ANALISI for p, _ in turno.lista_incarichi))
 
 
 def pulizie_da_verificare(utente):
@@ -852,8 +865,15 @@ def pulizie_piazzale(request):
 
 @login_required
 def archivio(request):
-    """Un solo posto per gli archivi: pulizie, manutenzione, produzione, analisi, fermi impianto."""
-    return render(request, 'turni/archivio.html')
+    """Un solo posto per gli archivi: pulizie, manutenzione, produzione, analisi, fermi impianto.
+    In cima, come su Instagram, le ultime foto delle pulizie approvate (le vedono tutti i dipendenti)."""
+    foto = []
+    if dipendente_di(request) or request.user.is_staff:
+        foto = (
+            Pulizia.objects.filter(stato=Pulizia.Stato.VERIFICATA).exclude(foto='')
+            .select_related('turno').order_by('-verificata_il')[:9]
+        )
+    return render(request, 'turni/archivio.html', {'foto_recenti': foto})
 
 
 @login_required

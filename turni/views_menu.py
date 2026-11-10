@@ -60,8 +60,12 @@ def sezioni_per(request):
     if dip:
         lavoro += [voce('Pulizia', r('turni:pulizie'), 'pulizia'),
                    voce('Manutenzione', r('turni:mn_scelta'), 'manutenzione'),
-                   voce('Produzione', r('turni:produzione_nuova'), 'produzione'),
-                   voce('Analisi', r('turni:analisi_nuova'), 'analisi')]
+                   voce('Produzione', r('turni:produzione_nuova'), 'produzione')]
+        from .pulizie import turno_attuale
+        from .views import vede_analisi
+
+        if vede_analisi(dip, turno_attuale(dip)):  # solo chi lavora in laboratorio
+            lavoro.append(voce('Analisi', r('turni:analisi_nuova'), 'analisi'))
     if dip or u.is_staff:
         lavoro += [voce('Fermo', r('turni:nuovo_fermo'), 'fermo'), voce('Ripartenza', r('turni:ripartenza'), 'riparti')]
     if e_capoturno(u, timezone.localdate()):
@@ -169,3 +173,48 @@ def profilo(request):
         'iniziali': ''.join(p[0] for p in nome.split()[:2]).upper() or '?',
         'ruoli': ' · '.join(ruoli),
     })
+
+
+def da_fare(request, nav=None):
+    """Le cose che aspettano la persona adesso (in cima al centro notifiche), con il link per farle."""
+    from .context import navigazione
+    from .views import pulizie_da_verificare
+
+    u = request.user
+    nav = nav if nav is not None else navigazione(request)
+    dip = getattr(u, 'dipendente', None)
+    r = reverse
+    voci = []
+
+    def aggiungi(n, testo, url, icona):
+        if n:
+            voci.append({'n': n, 'testo': testo, 'url': url, 'icona': ICONE[icona]})
+
+    if dip:
+        aggiungi(nav.get('nav_da_rispondere', 0), 'Cambi turno a cui rispondere', r('turni:richieste'), 'cambio')
+        aggiungi(dip.modifiche_turno.filter(vista_il__isnull=True).count(), 'Turni cambiati da vedere', r('turni:messaggi'), 'calendario')
+        aggiungi(nav.get('nav_extra', 0), 'Turni extra: cercasi volontari', r('turni:miei_turni'), 'extra')
+    aggiungi(pulizie_da_verificare(u), 'Pulizie da verificare', r('turni:capoturno'), 'verifica')
+    if nav.get('nav_responsabile'):
+        aggiungi(nav.get('nav_da_approvare', 0), 'Richieste da approvare', r('turni:ufficio_richieste'), 'richieste')
+        aggiungi(nav.get('nav_volontari', 0), 'Volontari da confermare', r('turni:ufficio_extra'), 'extra')
+    aggiungi(nav.get('nav_manutenzione', 0), 'Manutenzioni da seguire', r('turni:manutenzione'), 'manutenzione')
+    return voci
+
+
+def conta_notifiche(request, nav):
+    """Il numero sul cuore: cose da fare + avvisi non letti."""
+    from .models import Notifica
+
+    return sum(v['n'] for v in da_fare(request, nav)) + Notifica.objects.filter(utente=request.user, letta_il__isnull=True).count()
+
+
+@login_required
+def notifiche(request):
+    """Il centro notifiche (il cuore in alto a destra): da fare adesso, poi gli avvisi ricevuti."""
+    from .models import Notifica
+
+    avvisi = list(Notifica.objects.filter(utente=request.user)[:60])
+    nuove = {n.pk for n in avvisi if n.letta_il is None}
+    Notifica.objects.filter(utente=request.user, letta_il__isnull=True).update(letta_il=timezone.now())
+    return render(request, 'turni/notifiche.html', {'da_fare': da_fare(request), 'avvisi': avvisi, 'nuove': nuove})

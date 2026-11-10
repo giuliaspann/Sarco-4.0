@@ -155,9 +155,13 @@ POSTAZIONI_AREA = {
 
 
 def puo_richiedere(utente):
-    """Le pulizie le chiedono il responsabile impianto e il responsabile piazzale (e l'ufficio)."""
+    """Le pulizie le chiedono il responsabile impianto, il responsabile piazzale, l'ufficio
+    e il Capo Turno in servizio ("Pulizia richiesta", Giulia 10/11)."""
+    from .views import e_capoturno
+
     dip = getattr(utente, 'dipendente', None)
-    return utente.is_staff or bool(dip and (dip.resp_impianto or dip.resp_piazzale))
+    return (utente.is_staff or bool(dip and (dip.resp_impianto or dip.resp_piazzale))
+            or e_capoturno(utente, timezone.localdate()))
 
 
 def in_turno(giorno, fascia, area):

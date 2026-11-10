@@ -72,10 +72,18 @@ def _invia_ora(utenti_ids, titolo, testo, url):
         close_old_connections()
 
 
-def invia(utenti_ids, titolo, testo, url='/turni/'):
+def invia(utenti_ids, titolo, testo, url='/turni/', notifica=True):
+    """Notifica sul telefono e, se notifica=True, una riga nel centro notifiche (il cuore in alto a destra).
+    I messaggi di chat e della bacheca passano notifica=False: stanno nella chat (l'aeroplanino)."""
     utenti_ids = list(utenti_ids)
     if not utenti_ids:
         return
+    if notifica:
+        from .models import Notifica
+
+        Notifica.objects.bulk_create(
+            Notifica(utente_id=u, titolo=titolo[:120], testo=(testo or '')[:300], url=(url or '')[:300]) for u in set(utenti_ids)
+        )
     if getattr(settings, 'PUSH_SINCRONO', False):
         _invia_ora(utenti_ids, titolo, testo, url)
     else:

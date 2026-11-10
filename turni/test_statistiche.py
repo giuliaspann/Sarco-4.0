@@ -33,8 +33,10 @@ class StatisticheTest(TestCase):
     def test_barra_e_pagina(self):
         # dalla schermata Oggi si inseriscono produzione e analisi; l'elenco sta in Archivio
         r = self.client.get(reverse('turni:home'))
-        for t in (reverse('turni:produzione_nuova'), reverse('turni:analisi_nuova'), 'aria-label="Menu'):
+        for t in (reverse('turni:produzione_nuova'), 'aria-label="Chat'):
             self.assertContains(r, t)
+        # il tasto Analisi solo per chi lavora in laboratorio
+        self.assertNotContains(r, reverse('turni:analisi_nuova'))
         self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:archivio_analisi'))
         r = self.client.get(reverse('turni:statistiche'))
         for t in ('Inserisci produzione del turno', 'Inserisci analisi prodotto', 'Report'):

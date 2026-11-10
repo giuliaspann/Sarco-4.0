@@ -1,8 +1,9 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Menu{% endblock %}
+{% block titolo %}Tutte le funzioni{% endblock %}
 {% block contenuto %}
 {# il quadrato centrale della barra: tutte le funzioni, divise per sezione (stile Instagram) #}
-<div class="ig-saluto"><h1>Menu</h1></div>
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Tutte le funzioni</h1></div>
 {% for titolo, voci in sezioni %}
 <h2 class="ig-sezione">{{ titolo }}</h2>
 <div class="ig-azioni">

@@ -1908,3 +1908,93 @@ a.rq-riga { color: inherit; text-decoration: none; }
 .tasto-indietro svg { width: 26px; height: 26px; stroke-width: 2.6; }
 .tasto-indietro:active { background: var(--altro); border-radius: 99px; }
 .ha-indietro { display: flex; align-items: center; gap: 0; }
+
+/* Messaggi come i messaggi diretti di Instagram */
+.ig-titolo { font-size: 1.6rem; margin: 2px 0 12px; }
+.ig-da-leggere { margin-bottom: 14px; }
+.ig-chat { display: flex; flex-direction: column; margin: 0 -16px; }
+.ig-chat-riga { position: relative; display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-height: 76px; color: var(--testo); text-decoration: none; }
+.ig-chat-riga:active { background: var(--altro); }
+.ig-chat-cerchio { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 99px; background: var(--altro); color: var(--testo); }
+.ig-chat-cerchio.bacheca { background: color-mix(in srgb, var(--primario) 18%, var(--carta)); color: var(--primario); }
+.ig-chat-cerchio svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ig-chat-testi { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ig-chat-testi b { font-weight: 400; font-size: 1rem; }
+.ig-chat-testi small { color: var(--tenue); font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ig-chat-riga.nuova b, .ig-chat-riga.nuova small { font-weight: 700; color: var(--testo); }
+.ig-pallino { flex: none; width: 10px; height: 10px; border-radius: 99px; background: #2a72b0; }
+
+/* Archivio: griglia di foto come il profilo Instagram, poi le sezioni a riquadri */
+.ig-griglia-foto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; margin: 0 -16px 16px; }
+.ig-griglia-foto a { position: relative; aspect-ratio: 1; display: block; background: var(--altro); overflow: hidden; }
+.ig-griglia-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ig-griglia-foto span { position: absolute; left: 6px; bottom: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(0, 56, 79, .82); color: #fff; font-size: .7rem; font-weight: 600; }
+.ig-archivio { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Barra in alto fissa e piena (Giulia, 10/11): su iPhone Safari sfuma il bordo alto della pagina;
+   così la sfumatura cade sullo sfondo della barra e non sul logo */
+.barra { position: sticky; top: 0; z-index: 20; background: var(--carta);
+  padding-top: calc(12px + env(safe-area-inset-top)); box-shadow: 0 1px 0 var(--bordo); border-bottom: 0; }
+.ig-azioni.tre { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Capo Turno in servizio (Giulia, 10/11): riquadri più grandi in Oggi e Pulizia, tre tasti in Manutenzione */
+.ig-azioni.grandi { gap: 10px; }
+.ig-azioni.grandi a { min-height: 128px; justify-content: center; gap: 10px; font-size: .9rem; border-radius: 18px; }
+.ig-azioni.grandi .ig-ico { width: 60px; height: 60px; }
+.ig-azioni.grandi .ig-ico svg { width: 30px; height: 30px; }
+.ig-azioni.due { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ig-azioni.grandi.due a { min-height: 150px; font-size: 1rem; }
+.mn-capo { display: grid; gap: 10px; margin-bottom: 16px; }
+.mn-capo-tasto { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 16px; border-radius: 18px;
+  background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); color: var(--testo); text-decoration: none; }
+.mn-capo-tasto b { display: block; font-size: 1.02rem; }
+.mn-capo-tasto small { display: block; color: var(--tenue); font-size: .82rem; margin-top: 2px; }
+.mn-capo-tasto .ig-ico { flex: none; width: 50px; height: 50px; background: color-mix(in srgb, var(--primario) 14%, var(--carta)); color: var(--primario); }
+.mn-capo-tasto.fermo { border-color: var(--attenzione); }
+.mn-capo-tasto.fermo .ig-ico { background: color-mix(in srgb, var(--attenzione) 14%, var(--carta)); color: var(--attenzione); }
+.mn-capo-tasto.riparte { border-color: var(--primario); }
+.mn-capo-tasto .ig-ico svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Area personale: tasto "Richieste" in fondo (Cambio turno e Ritardo / uscita) */
+.ig-richieste { display: flex; align-items: center; gap: 14px; min-height: 72px; margin: 16px 0; padding: 12px 16px; border-radius: 18px;
+  background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); color: var(--testo); text-decoration: none; }
+.ig-richieste .ig-ico { flex: none; width: 48px; height: 48px; background: color-mix(in srgb, var(--primario) 14%, var(--carta)); color: var(--primario); }
+.ig-richieste b { display: block; font-size: 1.05rem; }
+.ig-richieste small { color: var(--tenue); }
+.ig-richieste .sg-freccia, .ig-richieste .badge-riga { margin-left: auto; }
+
+/* Struttura Instagram (Giulia, 10/11): logo al centro e cuore delle notifiche a destra; in home il proprio tondino */
+.ig-barra { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; justify-content: initial; }
+.ig-barra .ws-logo { justify-self: center; }
+.ig-barra-lato { display: flex; align-items: center; }
+.ig-barra-lato.destra { justify-content: flex-end; }
+.ig-barra .ig-icona svg { fill: none; }
+.ig-io { display: flex; align-items: center; gap: 14px; margin: 4px 0 12px; }
+.ig-io-foto { flex: none; width: 76px; height: 76px; border-radius: 99px; padding: 3px; box-sizing: border-box; background: var(--bordo); text-decoration: none; }
+.ig-io-foto > img, .ig-io-foto > span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 99px; border: 3px solid var(--carta);
+  box-sizing: border-box; object-fit: cover; background: var(--primario-chiaro); color: var(--testo); font-size: 1.5rem; font-weight: 600; }
+.ig-io-foto.f-mattina-anello { background: #ffd60a; }
+.ig-io-foto.f-pomeriggio-anello { background: #ff7a00; }
+.ig-io-foto.f-notte-anello { background: #1e3a8a; }
+.ig-io-foto.f-giorno-anello { background: #16a34a; }
+.ig-io-turno { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--testo); text-decoration: none; }
+.ig-io-turno small { color: var(--tenue); font-weight: 600; }
+.ig-io-turno b { font-family: var(--font-titoli); font-size: 1.35rem; line-height: 1.15; }
+.ig-io-sigle { display: flex; gap: 6px; margin-top: 4px; }
+.ig-io-sigle .cal-sigla { margin: 0; min-width: 0; padding: 4px 10px; }
+.ig-con { min-height: 52px; flex-direction: row; gap: 10px; padding: 10px 14px; margin-bottom: 12px; }
+.ig-con .ico { font-size: 1.25rem; }
+.ig-tutte { display: flex; align-items: center; gap: 12px; min-height: 56px; margin: 14px 0; padding: 8px 14px; border-radius: 16px;
+  background: var(--carta); border: 1px solid var(--bordo); color: var(--testo); text-decoration: none; }
+.ig-tutte .ig-ico { width: 40px; height: 40px; background: var(--altro); }
+.ig-tutte .sg-freccia, .ig-tutte .badge-riga { margin-left: auto; }
+.ig-esci { margin: 18px 0 8px; }
+/* centro notifiche */
+.nt-riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; border-radius: 16px; background: var(--carta);
+  border: 1px solid var(--bordo); color: var(--testo); text-decoration: none; }
+.nt-riga.nuova { border-color: var(--primario); background: var(--primario-chiaro); }
+.nt-testo { display: flex; flex-direction: column; min-width: 0; }
+.nt-testo small { color: var(--tenue); }
+.nt-ora { margin-left: auto; flex: none; font-size: .78rem; color: var(--tenue); white-space: nowrap; }
+.nt-dafare .ig-ico { width: 40px; height: 40px; flex: none; background: var(--primario-chiaro); color: var(--primario); }
+.nt-dafare .badge-riga { margin-left: auto; }

@@ -455,14 +455,19 @@ class HomeTest(TestCase):
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
         # si apre "Oggi" (stile Instagram): storie di chi lavora con me, turno, quattro tasti e i fermi impianto
-        for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', '>Produzione<', '>Analisi<',
-                      '>Fermo<', '>Ripartenza<', 'Area personale', 'aria-label="Menu'):
+        for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', '>Produzione<',
+                      '>Fermo<', '>Ripartenza<', 'Area personale', 'aria-label="Chat'):
             self.assertContains(r, testo)
         self.assertNotContains(r, '>Home<')
+        self.assertNotContains(r, '>Analisi<')  # solo chi lavora in laboratorio
         r2 = self.client.get(reverse('turni:miei_turni'))
         # Area personale come un profilo: niente ferie, permessi né malattia (10/11/2026)
-        for testo in ('Turni di tutti', 'Cambio turno', 'Ritardo / uscita'):
+        for testo in ('I miei turni', 'Turni di tutti', reverse('turni:richieste')):
             self.assertContains(r2, testo)
+        self.assertNotContains(r2, 'Pulizie da verificare')  # sta solo nella home, dentro Pulizia
+        r3 = self.client.get(reverse('turni:richieste'))  # Cambio turno e Ritardo / uscita nella pagina Richieste
+        for testo in ('Cambio turno', 'Ritardo / uscita', reverse('turni:nuovo_avviso')):
+            self.assertContains(r3, testo)
         for testo in ('Ferie', 'Ferie residue', 'Avviso assenza'):
             self.assertNotContains(r2, testo)
         self.assertNotContains(r2, 'Pulizie da verificare')  # non è Capo Turno
@@ -471,7 +476,9 @@ class HomeTest(TestCase):
 
     def test_capo_turno_vede_la_verifica(self):
         self.client.login(username='crimi', password='123456')  # martedì Capo Turno di notte
-        self.assertContains(self.client.get(reverse('turni:miei_turni')), 'Pulizie da verificare')
+        # la verifica sta nella home, dentro Pulizia; nel profilo non c'è più (Giulia, 10/11)
+        self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'Pulizie da verificare')
+        self.assertContains(self.client.get(reverse('turni:pulizie')), reverse('turni:capoturno'))
 
 
 class GestioneDipendentiTest(TestCase):

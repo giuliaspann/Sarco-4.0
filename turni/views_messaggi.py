@@ -60,6 +60,24 @@ def membri_di(chat):
     return utenti.filter(Q(pk__in=chat.membri.values('pk')) | direzione).distinct()
 
 
+def avvisa_menzioni(messaggio, autore):
+    """"@Cognome" (o "@Nome") in un messaggio: la persona della chat riceve una notifica nel centro notifiche."""
+    import re
+
+    parole = {p.upper() for p in re.findall(r"@([A-Za-zÀ-ÿ']{3,})", messaggio.testo)}
+    if not parole:
+        return
+    menzionati = []
+    for u in membri_di(messaggio.chat).exclude(pk=autore.pk).select_related('dipendente'):
+        dip = getattr(u, 'dipendente', None)
+        nomi = set(re.sub(r"[’'`.]", ' ', (dip.nome if dip else u.username)).upper().split())
+        if nomi & parole:
+            menzionati.append(u.pk)
+    if menzionati:
+        push.invia(menzionati, f'{nome_di(autore)} ti ha menzionato', f'{messaggio.chat.nome}: {messaggio.testo}',
+                   _url_chat(messaggio.chat))
+
+
 def destinatari(escluso, chat=None):
     """Chi riceve la notifica (chi scrive escluso). Per le chat solo chi non ha spento le notifiche."""
     utenti = (membri_di(chat) if chat else get_user_model().objects.filter(is_active=True)).exclude(pk=escluso.pk)
@@ -150,6 +168,7 @@ def messaggi(request):
                 'Bacheca Sarco' if not a.importante else 'Avviso importante',
                 a.testo,
                 reverse('turni:messaggi') + '?vista=bacheca',
+                notifica=False,  # la bacheca sta nella chat
             )
             messages.success(request, 'Avviso pubblicato in bacheca.')
         elif azione == 'elimina_annuncio' and responsabile:
@@ -160,7 +179,9 @@ def messaggi(request):
             messages.error(request, 'Stai scrivendo troppi messaggi di seguito: aspetta un minuto.')
         elif azione == 'chat' and chat and testo:
             m = MessaggioChat.objects.create(chat=chat, autore=request.user, testo=testo[:1000])
-            push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}', m.testo, _url_chat(chat))
+            push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}', m.testo, _url_chat(chat),
+                       notifica=False)
+            avvisa_menzioni(m, request.user)
         elif azione == 'elimina_chat' and chat:
             m = get_object_or_404(MessaggioChat, pk=request.POST.get('messaggio'), chat=chat)
             if m.autore_id == request.user.pk or responsabile:

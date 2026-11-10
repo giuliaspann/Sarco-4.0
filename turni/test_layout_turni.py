@@ -1,6 +1,6 @@
 """Caricamento del file del responsabile turni: foglio "Layout Turni" + "Collegamento Nomi"."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from io import BytesIO
 
 import openpyxl
@@ -175,3 +175,73 @@ class ProfiloUfficioTest(TestCase):
         d.save()
         self.client.force_login(d.utente)
         self.assertRedirects(self.client.get(reverse('turni:profilo')), reverse('turni:miei_turni'))
+
+
+class TastoAnalisiTest(TestCase):
+    def entra(self, nome, mansione='OPERAIO', postazione='IMP1'):
+        from django.utils import timezone
+
+        from .models import Settimana
+
+        d = Dipendente.objects.create(nome=nome, mansione=mansione)
+        d.utente = get_user_model().objects.create_user(nome.lower().replace(' ', '.'))
+        d.save()
+        oggi = timezone.localdate()
+        sett, _ = Settimana.objects.get_or_create(lunedi=oggi - timedelta(days=oggi.weekday()))
+        Turno.objects.create(settimana=sett, dipendente=d, data=oggi, fascia='1T', postazione=postazione)
+        self.client.force_login(d.utente)
+        return self.client.get(reverse('turni:oggi'))
+
+    def test_capo_turno_in_impianto_non_vede_analisi(self):
+        self.assertNotContains(self.entra('CAPO PROVA'), reverse('turni:analisi_nuova'))
+
+    def test_analista_e_chi_e_in_laboratorio_la_vedono(self):
+        self.assertContains(self.entra('GALASSI MARIO', mansione='OPERAIO,ANALISTA'), reverse('turni:analisi_nuova'))
+        self.assertContains(self.entra('LAB PROVA', postazione='ANALISI'), reverse('turni:analisi_nuova'))
+
+
+class CentroNotificheTest(TestCase):
+    """Il cuore in alto a destra: avvisi (non i semplici messaggi di chat) e menzioni @Cognome."""
+
+    def setUp(self):
+        from .models import Chat
+
+        self.chat = Chat.objects.get(nome='Turni')  # creata dalla migrazione 0012
+        self.utenti = {}
+        for nome in ('ROSSI MARIO', 'BIANCHI LUCA'):
+            d = Dipendente.objects.create(nome=nome)
+            d.utente = get_user_model().objects.create_user(nome.split()[0].lower())
+            d.save()
+            self.chat.membri.add(d.utente)
+            self.utenti[nome.split()[0]] = d.utente
+
+    def test_gli_avvisi_vanno_nel_centro_notifiche_e_si_leggono(self):
+        from . import push
+        from .models import Notifica
+
+        push.invia([self.utenti['ROSSI'].pk], 'Cambio approvato', 'Il tuo cambio del 12/11 è approvato', '/turni/richieste/')
+        self.client.force_login(self.utenti['ROSSI'])
+        r = self.client.get(reverse('turni:home'))
+        self.assertContains(r, reverse('turni:notifiche'))
+        r = self.client.get(reverse('turni:notifiche'))
+        self.assertContains(r, 'Cambio approvato')
+        self.assertFalse(Notifica.objects.filter(utente=self.utenti['ROSSI'], letta_il__isnull=True).exists())
+
+    def test_messaggi_di_chat_no_menzioni_si(self):
+        from .models import Notifica
+
+        self.client.force_login(self.utenti['BIANCHI'])
+        self.client.post(reverse('turni:messaggi'), {'vista': 'chat', 'chat': self.chat.pk, 'azione': 'chat', 'testo': 'Buongiorno a tutti'})
+        self.assertFalse(Notifica.objects.filter(utente=self.utenti['ROSSI']).exists())
+        self.client.post(reverse('turni:messaggi'), {'vista': 'chat', 'chat': self.chat.pk, 'azione': 'chat', 'testo': '@Rossi mi passi la pala?'})
+        n = Notifica.objects.get(utente=self.utenti['ROSSI'])
+        self.assertIn('ti ha menzionato', n.titolo)
+        self.assertFalse(Notifica.objects.filter(utente=self.utenti['BIANCHI']).exists())
+
+    def test_barra_logo_al_centro_chat_in_basso_esci_nel_profilo(self):
+        self.client.force_login(self.utenti['ROSSI'])
+        r = self.client.get(reverse('turni:home'))
+        self.assertContains(r, 'aria-label="Chat')
+        self.assertContains(r, reverse('turni:menu'))  # "Tutte le funzioni" in home
+        self.assertNotContains(r, 'aria-label="Esci"')
+        self.assertContains(self.client.get(reverse('turni:miei_turni')), reverse('turni:logout'))

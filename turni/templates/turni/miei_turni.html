@@ -14,13 +14,9 @@
   </form>
   <h1>{{ dip.nome_breve }}</h1>
 </div>
-<div class="ig-tasti">
-  <a href="{% url 'turni:settimana_tutti' %}">Cambio turno</a>
-  <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita</a>
-</div>
 
 <div class="ig-schede">
-  <span class="attiva">Settimana</span>
+  <span class="attiva">I miei turni</span>
   <a href="{% url 'turni:settimana_tutti' %}?settimana={{ inizio|date:'Y-m-d' }}">Turni di tutti</a>
 </div>
 <div class="naviga mese ap-naviga">
@@ -66,29 +62,18 @@
 {% endfor %}
 
 {# ferie, permessi, saldo e malattia tolti dall'app su richiesta di Giulia (10/11/2026): i dati vecchi restano nel database #}
-<a class="sg-macchina" id="richieste" href="{% url 'turni:storico_assenze' %}">
-  <span class="home-icona">📒</span><span class="rq-testo"><b>Le mie assenze</b><small>ritardi e uscite anticipate</small></span><span class="sg-freccia">›</span>
-</a>
 {% if nav_report %}
 <a class="sg-macchina" href="{% url 'turni:report_assenze' %}">
   <span class="home-icona">📊</span><span class="rq-testo"><b>Report assenze</b><small>direzione</small></span><span class="sg-freccia">›</span>
 </a>
 {% endif %}
 
-{% if nav_capoturno or nav_responsabile %}
-<h2 class="ap-sezione">Da approvare</h2>
-{% if nav_capoturno %}
-<a class="sg-macchina" href="{% url 'turni:capoturno' %}">
-  <span class="home-icona">🧹</span><span class="rq-testo"><b>Pulizie da verificare</b><small>Capo Turno</small></span>
-  {% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}
-</a>
-{% endif %}
 {% if nav_responsabile %}
+<h2 class="ap-sezione">Da approvare</h2>
 <a class="sg-macchina" href="{% url 'turni:ufficio_richieste' %}">
   <span class="home-icona">📋</span><span class="rq-testo"><b>Richieste di cambi, ferie e assenze</b><small>responsabile turni</small></span>
   {% if nav_da_approvare %}<i class="badge-riga">{{ nav_da_approvare }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}
 </a>
-{% endif %}
 {% endif %}
 
 {% if note %}
@@ -98,5 +83,15 @@
 </section>
 {% endif %}
 
-{% include 'turni/_richieste_blocco.html' %}
+{# Cambio turno e Ritardo / uscita, con lo stato delle richieste, stanno nella pagina "Richieste" (Giulia, 10/11) #}
+<a class="ig-richieste" id="richieste" href="{% url 'turni:richieste' %}">
+  <span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+  <span class="rq-testo"><b>Richieste</b><small>Cambio turno · Ritardo / uscita</small></span>
+  {% if da_rispondere %}<i class="badge-riga">{{ da_rispondere|length }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}
+</a>
+
+{# Esci sta nel profilo, come su Instagram (Giulia, 10/11) #}
+<form method="post" action="{% url 'turni:logout' %}" class="ig-esci">{% csrf_token %}
+  <button class="bottone avviso-btn piena-larghezza" type="submit">Esci</button>
+</form>
 {% endblock %}

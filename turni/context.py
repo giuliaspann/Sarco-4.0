@@ -45,4 +45,8 @@ def navigazione(request):
         from .views import capi_da_completare
 
         contesto['nav_ufficio_badge'] = contesto['nav_da_approvare'] + contesto['nav_volontari'] + capi_da_completare(user).count()
+    # il cuore in alto a destra: cose da fare + avvisi non letti
+    from .views_menu import conta_notifiche
+
+    contesto['nav_notifiche'] = conta_notifiche(request, contesto)
     return contesto

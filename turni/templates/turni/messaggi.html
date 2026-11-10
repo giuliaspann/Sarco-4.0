@@ -63,14 +63,14 @@
         <div class="wa-menu-voci">
           <form method="post">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}">
             <button name="azione" value="notifiche_chat">{% if stato.notifiche_chat %}Disattiva notifiche chat{% else %}Attiva notifiche chat{% endif %}</button></form>
-          <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza (privato)</a>
+          <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita (privato)</a>
           <a href="?vista=bacheca">Bacheca dell'ufficio</a>
         </div>
       </details>
     </div>
 
     <div class="wa-sfondo" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}?chat={{ chat_aperta.pk }}" data-direzione="{{ direzione|yesno:'1,' }}">
-      <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e Capo Turno.</p>
+      <p class="wa-info">Per ritardi e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita</a>: lo vedono solo ufficio e Capo Turno.</p>
       {% for m in chat %}
         {% if m.nuovo_giorno %}<div class="wa-data" data-giorno="{{ m.giorno }}"><span>{{ m.etichetta_giorno }}</span></div>{% endif %}
         <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}">
@@ -96,32 +96,33 @@
   </div>
 
 {% else %}
+  {# stile Instagram: elenco delle chat come i messaggi diretti #}
+  <h1 class="ig-titolo">Messaggi</h1>
   {% if da_vedere %}
-  <h2 class="ap-sezione">Da leggere</h2>
-  <form method="post" action="{% url 'turni:presa_visione' %}" class="pv-riquadro">{% csrf_token %}
-    <h2>⚠️ Il tuo turno è cambiato</h2>
+  <form method="post" action="{% url 'turni:presa_visione' %}" class="pv-riquadro ig-da-leggere">{% csrf_token %}
+    <h2>Il tuo turno è cambiato</h2>
     {% for m in da_vedere %}
     <p><b>{{ m.data|date:'l j F'|capfirst }}</b><span class="pv-prima">{{ m.prima }}</span><span class="pv-dopo">{{ m.dopo }}</span></p>
     {% endfor %}
-    <button class="bottone pieno piena-larghezza">✓ Presa visione</button>
+    <button class="bottone pieno piena-larghezza">Presa visione</button>
   </form>
   {% endif %}
-  <div class="chat-griglia">
-    <a class="chat-tasto chat-tasto-bacheca" href="?vista=bacheca">
-      {% if bacheca_nuovi %}<i class="home-badge">{{ bacheca_nuovi }}</i>{% endif %}
-      <span class="chat-emoji">📢</span>
-      <span class="chat-testi"><b>Bacheca</b><small>{% if bacheca_ultimo %}{{ bacheca_ultimo.testo|truncatechars:70 }}{% else %}Avvisi dell'ufficio{% endif %}</small></span>
+  <div class="ig-chat">
+    <a class="ig-chat-riga{% if bacheca_nuovi %} nuova{% endif %}" href="?vista=bacheca">
+      <span class="ig-chat-cerchio bacheca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l7 4V6L7 10H4z"/><path d="M17.5 9a4 4 0 010 6"/></svg></span>
+      <span class="ig-chat-testi"><b>Bacheca</b><small>{% if bacheca_ultimo %}{{ bacheca_ultimo.testo|truncatechars:60 }}{% else %}Avvisi dell'ufficio{% endif %}</small></span>
+      {% if bacheca_nuovi %}<i class="ig-pallino" aria-label="{{ bacheca_nuovi }} da leggere"></i>{% endif %}
     </a>
     {% for c in elenco %}
-    <a class="chat-tasto" href="?vista=chat&chat={{ c.chat.pk }}#fondo">
-      {% if c.nuovi %}<i class="home-badge">{{ c.nuovi }}</i>{% endif %}
-      <span class="chat-emoji">{{ c.chat.emoji|default:'💬' }}</span>
-      <span class="chat-testi"><b>{{ c.chat.nome }}</b>
-      <small>{% if c.ultimo %}{{ c.autore }}: {{ c.ultimo.testo|truncatechars:60 }}{% else %}Nessun messaggio{% endif %}</small></span>
-      {% if c.quando %}<time>{% if c.quando|date:'Ymd' == oggi %}{{ c.quando|time:'H:i' }}{% else %}{{ c.quando|date:'d/m' }}{% endif %}</time>{% endif %}
+    {% with n=c.chat.nome|lower %}
+    <a class="ig-chat-riga{% if c.nuovi %} nuova{% endif %}" href="?vista=chat&chat={{ c.chat.pk }}#fondo">
+      <span class="ig-chat-cerchio"><svg viewBox="0 0 24 24" aria-hidden="true">{% if 'pulizi' in n %}<path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/>{% elif 'manutenz' in n %}<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/>{% elif 'analisi' in n or 'laborator' in n %}<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/>{% elif 'produzion' in n %}<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>{% elif 'turni' in n %}<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>{% else %}<path d="M4 5h16v11H9l-5 4z"/>{% endif %}</svg></span>
+      <span class="ig-chat-testi"><b>{{ c.chat.nome }}</b>
+      <small>{% if c.ultimo %}{{ c.autore }}: {{ c.ultimo.testo|truncatechars:50 }}{% else %}Nessun messaggio{% endif %}{% if c.quando %} · {% if c.quando|date:'Ymd' == oggi %}{{ c.quando|time:'H:i' }}{% else %}{{ c.quando|date:'d/m' }}{% endif %}{% endif %}</small></span>
+      {% if c.nuovi %}<i class="ig-pallino" aria-label="{{ c.nuovi }} da leggere"></i>{% endif %}
     </a>
+    {% endwith %}
     {% endfor %}
   </div>
-  <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e Capo Turno.</p>
 {% endif %}
 {% endblock %}

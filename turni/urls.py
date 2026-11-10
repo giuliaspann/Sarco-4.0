@@ -9,6 +9,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('menu/', views_menu.menu, name='menu'),
     path('profilo/', views_menu.profilo, name='profilo'),
+    path('notifiche/', views_menu.notifiche, name='notifiche'),
     path('profilo/password/', PasswordChangeView.as_view(
         template_name='turni/password.html', success_url=reverse_lazy('turni:profilo')), name='password'),
     path('accesso/', views.Accesso.as_view(), name='login'),

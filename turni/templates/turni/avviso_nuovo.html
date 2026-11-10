@@ -2,7 +2,7 @@
 {% block titolo %}Ritardo o uscita{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  <a class="tasto-indietro" href="{% url 'turni:miei_turni' %}#richieste"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+  <a class="tasto-indietro" href="{% url 'turni:richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Richieste</a>
   <h1>Ritardo o uscita</h1>
 </div>
 <form method="post" class="scheda">{% csrf_token %}
