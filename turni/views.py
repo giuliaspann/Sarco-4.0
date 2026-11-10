@@ -247,12 +247,16 @@ def miei_turni(request):
 
     turni = {t.data: t for t in dip.turni.filter(data__range=(inizio, fine), settimana__pubblicata=True)}
     lunedi_oggi = oggi - timedelta(days=oggi.weekday())
+    from .views_riunioni import riunioni_della_settimana
+    riunioni = riunioni_della_settimana(dip, inizio, fine)  # riquadri tipo calendario (Giulia, 10/11)
     settimane = []
     for lun in (inizio,):
         distanza = (lun - lunedi_oggi).days // 7
         quale = {0: 'questa', 1: 'prossima', -1: 'scorsa'}.get(distanza, '')
         nome = f'Settimana {lun.isocalendar()[1]}' + (f' · {quale}' if quale else '')
-        giorni = [{'data': lun + timedelta(days=i), 'turno': turni.get(lun + timedelta(days=i))} for i in range(7)]
+        giorni = [{'data': lun + timedelta(days=i), 'turno': turni.get(lun + timedelta(days=i)),
+                   'riunione': any(timezone.localtime(x.riunione.inizio).date() == lun + timedelta(days=i) for x in riunioni)}
+                  for i in range(7)]
         settimane.append({'nome': nome, 'giorni': giorni, 'caricata': any(c['turno'] for c in giorni)})
 
     turno = turni.get(scelto)
@@ -278,6 +282,7 @@ def miei_turni(request):
             'inizio': inizio,
             'fine': fine,
             'settimane': settimane,
+            'riunioni': riunioni,
             'oggi': oggi,
             'scelto': scelto,
             'turno': turno,
@@ -566,7 +571,7 @@ def pulizie(request, turno_id=None):
                     from . import manutenzione as mn
 
                     mn.avvisa(resp_piazzale(), request.user, f'✅ {el.tasto or p.titolo} · {dip.nome_breve}', 'Da convalidare',
-                              reverse('turni:pulizie_piazzale'))
+                              reverse('turni:pulizie_piazzale'), tipo='pulizia_rp', oggetto_id=p.pk)
                     messages.success(request, f'{p.titolo}: inviato al responsabile piazzale.')
                 else:
                     messages.success(request, f'{"Controllo fatto" if el and el.controllo else "Pulizia completata"}: {p.titolo}.')
@@ -625,6 +630,7 @@ def pulizie(request, turno_id=None):
         return render(request, 'turni/pulizia.html', {
             'turno': turno, 'richieste': richieste.select_related('elemento', 'richiesta_da__dipendente'),
             'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
+            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user),
             'e_capo': e_capoturno(request.user, timezone.localdate()), 'da_verificare': pulizie_da_verificare(request.user)})
 
     genera_pulizie(turno)
@@ -696,7 +702,7 @@ def capoturno(request):
             from . import manutenzione as mn
 
             mn.avvisa(resp_piazzale(), request.user, f'✅ {p.titolo} · {p.turno.dipendente.nome_breve}',
-                      'Ok del Capo Turno: da convalidare', reverse('turni:pulizie_piazzale'))
+                      'Ok del Capo Turno: da convalidare', reverse('turni:pulizie_piazzale'), tipo='pulizia_rp', oggetto_id=p.pk)
             messages.success(request, f'{p.titolo}: ok, inviata al responsabile piazzale.')
         else:
             ok = request.POST.get('azione') == 'verifica'
@@ -805,7 +811,7 @@ def richiedi_pulizia_vista(request):
                 if t.dipendente.utente_id:
                     da = getattr(getattr(request.user, 'dipendente', None), 'nome_breve', None) or request.user.get_username()
                     push.invia([t.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (da {da})',
-                               f'/turni/pulizie/{t.pk}/')
+                               f'/turni/pulizie/{t.pk}/', mittente=request.user, tipo='pulizia', oggetto_id=p.pk)
                 messages.success(request, f'Pulizia assegnata a {t.dipendente.nome_breve} · {giorno:%d/%m} {Fascia(fascia).label}.')
                 return redirect('turni:pulizie_piazzale' if torna == 'piazzale' else 'turni:pulizie')
         contesto['vicini'] = vicini
@@ -1341,8 +1347,9 @@ def service_worker(request):
 
 @login_required
 def archivio_analisi(request):
-    """Archivio: le analisi degli ultimi 60 giorni, per giorno."""
-    from itertools import groupby
+    """Archivio delle analisi: ora è la schermata dei filtri (Giulia, 10/11)."""
+    return redirect('turni:archivio_cerca', 'analisi')
+    from itertools import groupby  # noqa: vecchia pagina per giorno, non più usata
 
     from .models import AnalisiProdotto
 

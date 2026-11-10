@@ -141,7 +141,8 @@ def richiedi_pulizia(utente, turno, elemento, nota=''):
     p = Pulizia.objects.create(turno=turno, elemento=elemento, richiesta_da=utente, nota=nota[:300])
     if turno.dipendente.utente_id:
         da = getattr(getattr(utente, 'dipendente', None), 'nome_breve', None) or utente.get_username()
-        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (da {da})', f'/turni/pulizie/{turno.pk}/')
+        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (da {da})', f'/turni/pulizie/{turno.pk}/',
+                   mittente=utente, tipo='pulizia', oggetto_id=p.pk)
     return p
 
 
@@ -256,7 +257,8 @@ def passa_pulizia(utente, p, turno):
     p.turno, p.richiesta_da = turno, utente
     p.save()
     if turno.dipendente.utente_id:
-        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (dal Capo Turno)', f'/turni/pulizie/{turno.pk}/')
+        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (dal Capo Turno)', f'/turni/pulizie/{turno.pk}/',
+                   mittente=utente, tipo='pulizia', oggetto_id=p.pk)
 
 
 def pulizia_generale_in_attesa():

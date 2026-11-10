@@ -1,9 +1,10 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Produzione{% endblock %}
 {% block contenuto %}
 {% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Archivio</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Statistiche</a>{% endif %}
 <div class="intestazione"><h1>Storico produzione e scarti</h1></div>
-<a class="bottone pieno piena-larghezza cb-invia" href="{% url 'turni:produzione_nuova' %}">📊 Inserisci la produzione del turno</a>
+<a class="bottone pieno piena-larghezza cb-invia" href="{% url 'turni:produzione_nuova' %}">{% icona 'statistiche' %} Inserisci la produzione del turno</a>
 {% include 'turni/_archivio_cerca_link.html' with sezione='produzione' %}
 
 {% if media %}
@@ -14,12 +15,12 @@
 <h2 class="rq-sezione">Ultimi turni</h2>
 {% for t in turni %}
 <a class="mn-riga{% for x in t.scarti %}{% if x.alto %} ferma{% endif %}{% endfor %}" href="{% url 'turni:produzione_turno' t.pk %}">
-  <span class="home-icona">📊</span>
+  <span class="home-icona">{% icona 'statistiche' %}</span>
   <span class="rq-testo">
     <b>{{ t.data|date:'D j M'|capfirst }} · {{ t.get_fascia_display }}</b>
     <small>{{ t.totale|floatformat:1 }} t in tutto</small>
     <small class="mn-chi">{% for x in t.scarti %}{% if x.perc is not None %}<span class="{% if x.alto %}pr-alto{% endif %}">{{ x.p.nome|capfirst }} {{ x.perc|floatformat:1 }}%</span>{% endif %}{% endfor %}</small>
-  </span>
+</span>
 </a>
 {% empty %}
 <p class="tenue piccolo">Nessun turno inserito negli ultimi 14 giorni.</p>

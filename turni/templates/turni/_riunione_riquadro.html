@@ -1,0 +1,11 @@
+{# riquadro "calendar" di una riunione: data a sinistra come un foglio di calendario, orario e titolo a destra #}
+<a class="rn-riquadro{% if r.annullata %} annullata{% endif %}{% if inv and not inv.risposta %} attesa{% endif %}" href="{% url 'turni:riunione' r.pk %}">
+  <span class="rn-foglio"><small>{{ r.inizio|date:'D'|slice:':3' }}</small><b>{{ r.inizio|date:'j' }}</b><small>{{ r.inizio|date:'M' }}</small></span>
+  <span class="rn-corpo">
+    <span class="rn-ora">{{ r.inizio|time:'H:i' }} – {{ r.fine|time:'H:i' }} · {{ r.luogo }}</span>
+    <b>{{ r.titolo }}</b>
+    {% if inv %}<span class="rn-stato {% if inv.risposta == 'si' %}si{% else %}attesa{% endif %}">{% if inv.risposta == 'si' %}Partecipi{% else %}Da confermare{% endif %}</span>
+    {% elif url_dettaglio %}{% with tot=r.inviti.all|length %}<span class="rn-stato neutro">{% if r.annullata %}Annullata{% else %}{{ tot }} invitat{{ tot|pluralize:'o,i' }}{% endif %}</span>{% endwith %}{% endif %}
+  </span>
+  <span class="sg-freccia">›</span>
+</a>

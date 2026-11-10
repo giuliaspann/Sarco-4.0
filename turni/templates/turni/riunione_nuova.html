@@ -1,0 +1,32 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Programma riunione{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:riunioni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Riunioni</a>
+<div class="intestazione"><h1>Programma riunione</h1></div>
+
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <label class="mc-campo">Titolo<input type="text" name="titolo" maxlength="120" required placeholder="Es. Riunione sicurezza" value="{{ request.POST.titolo }}"></label>
+  <div class="mc-due">
+    <label class="mc-campo">Giorno<input type="date" name="giorno" min="{{ oggi }}" value="{{ request.POST.giorno|default:oggi }}" required></label>
+    <label class="mc-campo">Dove<input type="text" name="luogo" maxlength="80" value="{{ request.POST.luogo|default:'Ufficio' }}"></label>
+  </div>
+  <div class="mc-due">
+    <label class="mc-campo">Dalle<input type="time" name="dalle" value="{{ request.POST.dalle|default:'10:00' }}" required></label>
+    <label class="mc-campo">Alle<input type="time" name="alle" value="{{ request.POST.alle|default:'11:00' }}" required></label>
+  </div>
+  <label class="mc-campo">Note (facoltative)<textarea name="note" rows="2" maxlength="2000" placeholder="Argomenti, cosa portare…">{{ request.POST.note }}</textarea></label>
+
+  <p class="mc-passo rn-chi">Chi inviti? <span id="rn-conta" class="tenue piccolo"></span></p>
+  <div class="rn-cerca">
+    <input type="search" id="rn-filtro" placeholder="Cerca un nome" aria-label="Cerca un nome">
+    <button type="button" class="bottone leggero" id="rn-tutti">Tutti</button>
+  </div>
+  <div class="scegli lista rn-persone">
+    {% for d in dipendenti %}
+    <label data-nome="{{ d.nome_breve|lower }}"><input type="checkbox" name="invitati" value="{{ d.pk }}"{% if d.pk|stringformat:'s' in scelti %} checked{% endif %}><span>{{ d.nome_breve }}{% if d.qualifica %} <small class="tenue">· {{ d.qualifica }}</small>{% endif %}</span></label>
+    {% empty %}<p class="tenue piccolo">Nessun dipendente con accesso all'app.</p>{% endfor %}
+  </div>
+  <p class="tenue piccolo">Ogni invitato riceve una notifica e deve confermare la partecipazione. La riunione compare nei suoi turni della settimana.</p>
+  <button class="bottone pieno piena-larghezza mc-invia">Programma riunione</button>
+</form>
+{% endblock %}

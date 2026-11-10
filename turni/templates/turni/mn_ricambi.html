@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Ricambi{% endblock %}
 {% block contenuto %}
 {% include 'turni/_mn_menu.html' with titolo_pagina='Lista ricambi' %}
@@ -16,7 +17,7 @@
     <b>{{ r.nome }}</b>
     <small>{% if r.codice %}{{ r.codice }} · {% endif %}{{ r.ubicazione|default:'posto non indicato' }}{% if r.fornitore %} · {{ r.fornitore }}{% endif %}</small>
     {% if r.macchine.all %}<small class="mn-meta">Per: {% for m in r.macchine.all %}{{ m.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>{% endif %}
-  </span>
+</span>
   <span class="mn-scorta">
     <span class="stato-chip {% if r.sotto_scorta %}no{% else %}ok{% endif %}">{{ r.scorta }} {{ r.unita }}</span>
     <small>min {{ r.scorta_minima }}</small>
@@ -26,7 +27,7 @@
     </form>
     <a class="link-piccolo" href="{% url 'turni:nuovo_ordine' %}?ricambio={{ r.pk }}">Ordina</a>
     {% endif %}
-  </span>
+</span>
 </div>
 {% empty %}
 <p class="tenue piccolo">Nessun ricambio{% if sotto %} sotto scorta{% endif %}.</p>
@@ -34,7 +35,7 @@
 
 {% if chiede_pezzi %}
 <details class="scheda">
-  <summary><b>➕ Aggiungi ricambio</b></summary>
+  <summary><b>{% icona 'extra' %} Aggiungi ricambio</b></summary>
   <form method="post" class="mn-form">{% csrf_token %}{{ form.as_p }}<button class="bottone pieno piena-larghezza">Aggiungi</button></form>
 </details>
 {% endif %}

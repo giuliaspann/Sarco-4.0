@@ -419,7 +419,7 @@ class CalendarioTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI])  # una settimana per volta
         sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
-        self.assertEqual(sigle, ['N', 'CTN', 'N', 'N', 'G', 'G', '1T'])  # il Capo Turno di notte è CTN
+        self.assertEqual(sigle, ['N', 'CT | N', 'N', 'N', 'G', 'G', '1T'])  # il Capo Turno di notte è CT | N
         posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
         self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2', '', 'ANAL.', 'MUL.', 'PALA'])
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
@@ -455,18 +455,18 @@ class HomeTest(TestCase):
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
         # si apre "Oggi" (stile Instagram): storie di chi lavora con me, turno, quattro tasti e i fermi impianto
-        for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', '>Produzione<',
+        for testo in ('Pulizia', 'Manutenzione', '>Produzione<',
                       '>Fermo<', '>Ripartenza<', 'Area personale', 'aria-label="Chat'):
             self.assertContains(r, testo)
         self.assertNotContains(r, '>Home<')
         self.assertNotContains(r, '>Analisi<')  # solo chi lavora in laboratorio
         r2 = self.client.get(reverse('turni:miei_turni'))
         # Area personale come un profilo: niente ferie, permessi né malattia (10/11/2026)
-        for testo in ('I miei turni', 'Turni di tutti', reverse('turni:richieste')):
+        for testo in ('I miei turni', 'Turni di tutti', reverse('turni:archivio_richieste')):
             self.assertContains(r2, testo)
         self.assertNotContains(r2, 'Pulizie da verificare')  # sta solo nella home, dentro Pulizia
-        r3 = self.client.get(reverse('turni:richieste'))  # Cambio turno e Ritardo / uscita nella pagina Richieste
-        for testo in ('Cambio turno', 'Ritardo / uscita', reverse('turni:nuovo_avviso')):
+        r3 = self.client.get(reverse('turni:richieste'), follow=True)  # Cambio turno e Ritardo / uscita nella pagina Richieste
+        for testo in ('Cambio turno', 'Ritardo / Uscita', 'Archivio Richieste', reverse('turni:nuovo_avviso')):
             self.assertContains(r3, testo)
         for testo in ('Ferie', 'Ferie residue', 'Avviso assenza'):
             self.assertNotContains(r2, testo)
@@ -527,7 +527,7 @@ class TurniProvaTest(TestCase):
         self.assertEqual(len(turni), 14)
         lunedi = timezone.localdate() - timedelta(days=timezone.localdate().weekday())
         self.assertEqual(turni[0].data, lunedi)
-        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT1', 'N', 'G', 'R', 'F'})
+        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT | 1T', 'N', 'G', 'R', 'F'})
         # una seconda volta non fa nulla
         self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
         self.assertEqual(dip.turni.count(), 14)
@@ -632,7 +632,7 @@ class CapoTurnoSenzaFasciaTest(TestCase):
         self.assertContains(self.client.get(reverse('turni:home')), 'In quale turno?')
         self.client.post(reverse('turni:fascia_capo'), {'turno': self.t.pk, 'fascia': Fascia.MATTINA, 'dopo': 'https://evil.example/'})
         self.t.refresh_from_db()
-        self.assertEqual((self.t.fascia, self.t.sigla, self.t.classe_fascia), (Fascia.MATTINA, 'CT1', 'f-capo'))
+        self.assertEqual((self.t.fascia, self.t.sigla, self.t.classe_fascia), (Fascia.MATTINA, 'CT | 1T', 'f-capo'))
         # un collega qualsiasi non può cambiarlo
         altro = get_user_model().objects.create_user('altro', password='123456')
         Dipendente.objects.create(nome='ROSSI MARCO', utente=altro)

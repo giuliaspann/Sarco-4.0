@@ -60,7 +60,7 @@
     <div class="scegli lista">
       {% for t in squadra %}<label><input type="radio" name="a" value="{{ t.pk }}" required><span>{{ t.dipendente.nome_breve }}{% if t.postazione %} · {{ t.get_postazione_display }}{% endif %}</span></label>{% endfor %}
     </div>
-    <button class="bottone leggero piena-larghezza" name="azione" value="passa">👷 Passa la pulizia</button>
+    <button class="bottone leggero piena-larghezza" name="azione" value="passa">Passa la pulizia</button>
   </form>
   {% endif %}
   {% elif da_fare %}

@@ -82,9 +82,19 @@ def richieste(request):
                 messages.success(request, 'Avviso annullato.')
         except svc.RichiestaNonValida as e:
             messages.error(request, str(e))
-        return redirect(reverse('turni:richieste'))
-    # la pagina "Richieste" (tasto in fondo all'Area personale): cambio turno, ritardo / uscita, lo stato delle richieste
-    return render(request, 'turni/richieste.html', {'dip': dip, **contesto_richieste(dip)})
+        return redirect(reverse('turni:miei_turni'))
+    # le richieste ora stanno negli Avvisi dell'Area personale, una per riquadro (Giulia, 10/11)
+    return redirect('turni:miei_turni')
+
+
+@login_required
+def archivio_richieste(request):
+    """Le richieste risolte: cambi turno, assenze, ritardi e uscite anticipate."""
+    dip = _serve_dipendente(request)
+    c = contesto_richieste(dip)
+    return render(request, 'turni/archivio_richieste.html', {
+        'dip': dip, 'cambi': c['risolte_cambi'], 'ferie': c['risolte_ferie'], 'avvisi': c['risolti_avvisi'],
+    })
 
 
 @login_required
@@ -128,11 +138,25 @@ def contesto_richieste(dip):
     for c in cambi:
         c.altro = c.collega if c.richiedente_id == dip.pk else c.richiedente
         c.mio = c.richiedente_id == dip.pk
+    oggi = timezone.localdate()
+    ferie = list(dip.richieste_ferie.all()[:40])
+    avvisi = list(dip.avvisi.all()[:40])
+    for c in cambi:
+        c.aperta = c.stato in CambioTurno.IN_CORSO and not c.scaduto
+    for f in ferie:
+        f.aperta = f.stato == RichiestaFerie.Stato.ATTESA
+    for a in avvisi:
+        a.aperta = not a.annullato_il and not a.visto_il and a.data >= oggi
     return {
         'da_rispondere': da_rispondere,
         'cambi': cambi,
-        'ferie': dip.richieste_ferie.all()[:20],
-        'avvisi': dip.avvisi.all()[:10],
+        'ferie': ferie,
+        'avvisi': avvisi,
+        # Area personale (Giulia, 10/11): un riquadro per ogni richiesta aperta; quelle risolte vanno in "Archivio Richieste"
+        'aperte_cambi': [c for c in cambi if c.aperta], 'aperte_ferie': [f for f in ferie if f.aperta],
+        'aperti_avvisi': [a for a in avvisi if a.aperta],
+        'risolte_cambi': [c for c in cambi if not c.aperta], 'risolte_ferie': [f for f in ferie if not f.aperta],
+        'risolti_avvisi': [a for a in avvisi if not a.aperta],
     }
 
 

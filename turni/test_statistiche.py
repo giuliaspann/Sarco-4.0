@@ -37,7 +37,7 @@ class StatisticheTest(TestCase):
             self.assertContains(r, t)
         # il tasto Analisi solo per chi lavora in laboratorio
         self.assertNotContains(r, reverse('turni:analisi_nuova'))
-        self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:archivio_analisi'))
+        self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:archivio_cerca', args=['analisi']))
         r = self.client.get(reverse('turni:statistiche'))
         for t in ('Inserisci produzione del turno', 'Inserisci analisi prodotto', 'Report'):
             self.assertContains(r, t)
@@ -85,7 +85,7 @@ class StatisticheTest(TestCase):
             self.assertNotContains(self.client.get(reverse('turni:analisi_nuova')), 'Leggi i numeri')
             self.assertEqual(self.client.post(reverse('turni:leggi_foto'), {'foto': foto()}).status_code, 503)
         with mock.patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'sk-ant-prova-0123456789abcdefghij'}):
-            self.assertContains(self.client.get(reverse('turni:analisi_nuova')), 'Leggi i numeri')
+            self.assertContains(self.client.get(reverse('turni:analisi_nuova') + '?campione=MISTO_IMP1&modo=foto'), 'Leggi i numeri')
             with mock.patch('turni.lettura.leggi_analisi', return_value={'peso_kg': 19.5, 'csp': 0.4, 'campione': 'BIANCO'}):
                 j = self.client.post(reverse('turni:leggi_foto'), {'foto': foto(), 'tipo': 'analisi'}).json()
             self.assertEqual(j['campi'], {'peso_kg': '19,5', 'csp': '0,4', 'campione': 'BIANCO'})
@@ -97,3 +97,33 @@ class StatisticheTest(TestCase):
             with mock.patch('turni.lettura.leggi_produzione_completa', return_value=({a.pk: 81.25}, '2026-10-21', '21:41')):
                 j = self.client.post(reverse('turni:leggi_foto'), {'foto': foto(), 'tipo': 'produzione'}).json()
             self.assertEqual((j['campi']['data'], j['campi']['fascia']), ('2026-10-21', '2T'))
+
+
+class AnalisiDuePassaggiTest(TestCase):
+    """Analisi (Giulia, 10/11): prima il campione e Foto / Manuale, poi campione, inquinanti, note e Conferma."""
+
+    def setUp(self):
+        self.op = get_user_model().objects.create_user('lab')
+        Dipendente.objects.create(nome='GALASSI MARIO', utente=self.op, mansione='Addetto Laboratorio Analisi')
+        self.client.force_login(self.op)
+
+    def test_primo_passaggio_solo_campioni_e_due_tasti(self):
+        r = self.client.get(reverse('turni:analisi_nuova'))
+        pagina = r.content.decode()
+        for n in ('Misto', 'Mezzobianco Imp. 1', 'Mezzobianco Picvisa', 'Mezzobianco Redwave', 'Bianco Picvisa', 'Bianco Redwave',
+                  'Foto dell', 'Analisi manuale'):
+            self.assertIn(n, pagina)
+        for no in ('1° turno', 'Notturno', 'PCV impianto', 'Inquinanti trovati'):
+            self.assertNotIn(no, pagina)
+
+    def test_secondo_passaggio_e_conferma(self):
+        url = reverse('turni:analisi_nuova')
+        r = self.client.get(url + '?campione=MEZZO_RW&modo=manuale')
+        self.assertContains(r, 'Inquinanti trovati')
+        self.assertContains(r, 'Conferma analisi')
+        self.assertContains(r, 'Mezzobianco Redwave')
+        self.assertNotContains(r, 'name="foto"')
+        self.client.post(url, {'campione': 'MEZZO_RW', 'modo': 'manuale', 'data': timezone.localdate().isoformat(),
+                               'peso_kg': '2', 'plastica': '1,5'})
+        a = AnalisiProdotto.objects.get()
+        self.assertEqual((a.campione, a.fascia), ('MEZZO_RW', ''))

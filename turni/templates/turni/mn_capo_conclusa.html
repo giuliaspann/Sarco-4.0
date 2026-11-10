@@ -1,0 +1,23 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Manutenzione conclusa{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>
+<div class="intestazione"><h1>Manutenzione conclusa</h1></div>
+<p class="tenue">Le manutenzioni in corso, da concludere.</p>
+
+<div class="nt-elenco">
+{% for i in aperte %}
+<a class="mc-aperta" href="{% url 'turni:mn_concludi' i.pk %}">
+  <span class="mc-aperta-testo">
+    <b>{{ i.macchina.nome }}</b>
+    <span>{{ i.descrizione|truncatechars:90 }}</span>
+    <small>Dalle {{ i.iniziata_il|date:'H:i' }} del {{ i.iniziata_il|date:'j/m' }}{% if i.segnalata_da.dipendente %} · {{ i.segnalata_da.dipendente.nome_breve }}{% endif %}</small>
+  </span>
+  {% if i.fermo_aperto %}<span class="mc-fermo-chip">{{ i.fermo_aperto.get_impianto_display }} fermo</span>{% endif %}
+  <span class="sg-freccia">›</span>
+</a>
+{% empty %}
+<p class="tenue piccolo">Nessuna manutenzione in corso.</p>
+{% endfor %}
+</div>
+{% endblock %}

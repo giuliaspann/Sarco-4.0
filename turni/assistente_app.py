@@ -506,7 +506,7 @@ def _e_messaggio(d, u, foto):
 
     c = _chat(u, d['chat'])
     m = MessaggioChat.objects.create(chat=c, autore=u, testo=d['testo'][:1000])
-    push.invia(destinatari(u, c), f'{c.nome} · {nome_di(u)}', m.testo, _url_chat(c))
+    push.invia(destinatari(u, c), f'{c.nome} · {nome_di(u)}', m.testo, _url_chat(c), notifica=False)
     return f'Messaggio inviato in {c.nome}.'
 
 
@@ -522,7 +522,8 @@ def _e_annuncio(d, u, foto):
     from .views_messaggi import destinatari
 
     a = Annuncio.objects.create(testo=d['testo'][:2000], importante=bool(d.get('importante')), autore=u)
-    push.invia(destinatari(u), 'Avviso importante' if a.importante else 'Bacheca Sarco', a.testo, reverse('turni:messaggi') + '?vista=bacheca')
+    push.invia(destinatari(u), 'Avviso importante' if a.importante else 'Bacheca Sarco', a.testo, reverse('turni:messaggi') + '?vista=bacheca',
+               notifica=False)
     return 'Avviso pubblicato in bacheca.'
 
 

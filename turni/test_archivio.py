@@ -58,16 +58,35 @@ class ArchivioTest(TestCase):
 
     def test_filtri_e_foto_nel_pdf(self):
         url = reverse('turni:archivio_cerca', args=['pulizie'])
-        self.assertContains(self.client.get(url), 'Nastro pulito')
-        self.assertNotContains(self.client.get(url, {'impianto': 'IMP2'}), 'Nastro pulito')
-        self.assertNotContains(self.client.get(url, {'turno': '2T'}), 'Nastro pulito')
+        # senza filtri si vede tutto l'archivio; la riga porta alla pulizia
+        r = self.client.get(url)
+        self.assertContains(r, reverse('turni:archivio_voce', args=['pulizie', self.p.pk]))
+        self.assertNotContains(self.client.get(url, {'filtro': 'MEZZI'}), reverse('turni:archivio_voce', args=['pulizie', self.p.pk]))
+        self.assertContains(self.client.get(url, {'filtro': 'IMPIANTI'}), reverse('turni:archivio_voce', args=['pulizie', self.p.pk]))
+        self.assertNotContains(self.client.get(url, {'turno': '2T'}), reverse('turni:archivio_voce', args=['pulizie', self.p.pk]))
         ieri = self.oggi - timedelta(days=1)
-        self.assertNotContains(self.client.get(url, {'dal': ieri - timedelta(days=5), 'al': ieri}), 'Nastro pulito')
-        pdf = self.client.get(reverse('turni:archivio_pdf', args=['pulizie'])).content
+        self.assertNotContains(self.client.get(url, {'dal': ieri - timedelta(days=5), 'al': ieri}), 'archivio/pulizie/%d/' % self.p.pk)
+        # la singola pulizia: tutte le info e il PDF con la foto
+        self.assertContains(self.client.get(reverse('turni:archivio_voce', args=['pulizie', self.p.pk])), 'Nastro pulito')
+        pdf = self.client.get(reverse('turni:archivio_voce_pdf', args=['pulizie', self.p.pk])).content
         self.assertIn(b'/Subtype /Image', pdf)
         self.assertIn(b'Nastro pulito', pdf)
-        man = self.client.get(reverse('turni:archivio_cerca', args=['manutenzione']), {'impianto': 'IMP2'})
-        self.assertContains(man, 'Rumore strano')
+        # il PDF elenco
+        elenco = self.client.get(reverse('turni:archivio_pdf', args=['pulizie'])).content
+        self.assertIn(b'elenco', elenco)
+
+    def test_manutenzione_solo_chiuse_con_tasti_area(self):
+        url = reverse('turni:archivio_cerca', args=['manutenzione'])
+        voce = reverse('turni:archivio_voce', args=['manutenzione', self.i.pk])
+        self.assertNotContains(self.client.get(url), voce)  # ancora aperta: non è in archivio
+        self.assertEqual(self.client.get(voce).status_code, 404)
+        self.i.stato, self.i.completata_il, self.i.lavoro_svolto = 'COMPLETATA', timezone.now(), 'Cuscinetto sostituito'
+        self.i.save()
+        r = self.client.get(url)
+        for t in ('Tutti', 'Impianti', 'Mezzi', 'Piazzale', voce):
+            self.assertContains(r, t)
+        self.assertNotContains(self.client.get(url, {'filtro': 'MEZZI'}), voce)
+        self.assertContains(self.client.get(voce), 'Cuscinetto sostituito')
 
     def test_periodo_massimo_tre_mesi(self):
         r = self.client.get(reverse('turni:archivio_cerca', args=['fermi']), {'dal': '2020-01-01', 'al': self.oggi})

@@ -1,0 +1,20 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Riunioni{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
+<div class="intestazione"><h1>Riunioni</h1></div>
+
+<a class="bottone pieno piena-larghezza" href="{% url 'turni:riunione_nuova' %}">+ Programma riunione</a>
+
+<h2 class="rq-sezione">In programma</h2>
+{% for r in prossime %}
+{% include 'turni/_riunione_riquadro.html' with r=r url_dettaglio=True %}
+{% empty %}<p class="tenue piccolo">Nessuna riunione in programma.</p>{% endfor %}
+
+{% if passate %}
+<h2 class="rq-sezione">Passate</h2>
+{% for r in passate %}
+<a class="mn-riga" href="{% url 'turni:riunione' r.pk %}"><span class="rq-testo"><b>{{ r.titolo }}</b><small>{{ r.inizio|date:'D j M · H:i' }}{% if r.annullata %} · annullata{% endif %}</small></span><span class="sg-freccia">›</span></a>
+{% endfor %}
+{% endif %}
+{% endblock %}

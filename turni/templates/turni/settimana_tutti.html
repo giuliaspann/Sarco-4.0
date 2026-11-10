@@ -1,48 +1,26 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Turni della settimana{% endblock %}
+{% block titolo %}Turni di tutti{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
-<p class="occhiello centrato">Settimana {{ lunedi|date:'W' }}</p>
-<div class="naviga mese">
-  <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
-  <h1>{{ lunedi|date:'j' }} – {{ giorni.6|date:'j F' }}</h1>
-  <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
+
+<div class="intestazione"><h1>Turni di tutti</h1></div>
+{# testa fissa (Giulia, 10/11): settimana su una riga piccola, la frase del cambio e i giorni restano in vista mentre si scorre #}
+<div class="st-testa" id="st-testa">
+  <div class="st-settimana">
+    <a class="st-freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
+    <span>Sett. {{ lunedi|date:'W' }} | {{ lunedi|date:'j' }}{% if lunedi.month != giorni.6.month %} {{ lunedi|date:'F' }}{% endif %} – {{ giorni.6|date:'j F' }}</span>
+    <a class="st-freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
+  </div>
+  {% if mio %}<p class="st-aiuto">Per un cambio turno tocca il turno di un collega</p>{% endif %}
+  <div class="gt-riga gt-testa">
+    <span class="gt-nome"></span>
+    {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}
+  </div>
 </div>
 
-<ul class="legenda legenda-due-righe">
-  <li><i class="f-mattina">1T</i>1° turno</li>
-  <li><i class="f-pomeriggio">2T</i>2° turno</li>
-  <li><i class="f-notte">N</i>Notturno</li>
-  <li><i class="f-giorno">G</i>Giornaliero</li>
-  <li><i class="f-capo">CT1</i>Capo Turno</li>
-  <li><i class="f-riposo">R</i>Riposo</li>
-  <li><i class="f-ferie">F</i>Ferie</li>
-</ul>
-
-{% if mia_riga %}
-<section class="scheda griglia-tutti gt-mio">
-  <h2>Il tuo turno</h2>
-  <div class="gt-riga gt-testa">
-    <span class="gt-nome"></span>
-    {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}
-  </div>
-  <div class="gt-riga">
-    <span class="gt-nome">{{ mia_riga.nome }}</span>
-    {% for c in mia_riga.celle %}
-      {% if c.turno %}<span class="gt-cella {{ c.turno.classe_fascia }}" title="{{ c.turno.descrizione }}">{{ c.turno.sigla }}</span>{% else %}<span class="gt-cella vuota">–</span>{% endif %}
-    {% endfor %}
-  </div>
-  <p class="gt-aiuto">🔁 Per un cambio tocca il turno di un collega qui sotto.</p>
-</section>
-{% endif %}
-
+<div class="st-tabella">
 {% for titolo, righe in gruppi %}
-<section class="scheda griglia-tutti">
-  <h2><span class="posto">{{ titolo }}</span></h2>
-  <div class="gt-riga gt-testa">
-    <span class="gt-nome"></span>
-    {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}
-  </div>
+  <p class="st-area">{{ titolo }}</p>
   {% for r in righe %}
   <div class="gt-riga {% if r.io %}io{% endif %}">
     <span class="gt-nome" title="{{ r.dip.nome_breve }}">{{ r.nome }}</span>
@@ -58,8 +36,8 @@
     {% endfor %}
   </div>
   {% endfor %}
-</section>
 {% empty %}
   <div class="vuoto"><p>I turni di questa settimana non sono ancora pubblicati.</p></div>
 {% endfor %}
+</div>
 {% endblock %}

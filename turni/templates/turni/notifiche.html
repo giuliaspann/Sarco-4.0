@@ -1,26 +1,31 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Notifiche{% endblock %}
 {% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
 <div class="intestazione"><h1>Notifiche</h1></div>
 
-{% if da_fare %}
-<h2 class="ig-sezione">Da fare</h2>
-{% for v in da_fare %}
-<a class="nt-riga nt-dafare" href="{{ v.url }}">
-  <span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span>
-  <span class="nt-testo"><b>{{ v.testo }}</b></span>
-  <i class="badge-riga">{{ v.n }}</i>
-</a>
+{% comment %}Come Instagram (Giulia, 10/11): una riga per ogni cosa, separate da una linea sottile, divise per periodo;
+tondino di chi l'ha generata; Conferma / Rifiuta per quello che aspetta una risposta.{% endcomment %}
+{% for titolo, righe in sezioni %}
+<h2 class="nt-sezione">{{ titolo }}</h2>
+<div class="nt-elenco">
+{% for r in righe %}
+<div class="nt-ig{% if r.nuova %} nuova{% endif %}">
+  <span class="nt-tondo">{% if r.tondino.foto %}<img src="{{ r.tondino.foto }}" alt="" loading="lazy">{% else %}<span>{{ r.tondino.iniziali }}</span>{% endif %}</span>
+  <a class="nt-corpo" href="{{ r.url|default:'#' }}">
+    <b>{{ r.titolo }}</b>{% if r.testo %} <span>{{ r.testo|truncatechars:110 }}</span>{% endif %}
+    <small>{{ r.quando }}{% if r.esito %} · {{ r.esito }}{% endif %}</small>
+  </a>
+  {% if r.azioni %}
+  <span class="nt-tasti">
+    <a class="nt-conferma" href="{% url 'turni:notifica_scelta' r.tipo r.oggetto_id 'conferma' %}">Conferma</a>
+    <a class="nt-rifiuta" href="{% url 'turni:notifica_scelta' r.tipo r.oggetto_id 'rifiuta' %}">Rifiuta</a>
+  </span>
+  {% endif %}
+</div>
 {% endfor %}
-{% endif %}
-
-<h2 class="ig-sezione">Avvisi</h2>
-{% for n in avvisi %}
-<a class="nt-riga{% if n.pk in nuove %} nuova{% endif %}" href="{{ n.url|default:'#' }}">
-  <span class="nt-testo"><b>{{ n.titolo }}</b>{% if n.testo %}<small>{{ n.testo|truncatechars:120 }}</small>{% endif %}</span>
-  <span class="nt-ora">{{ n.creata_il|date:'j M H:i' }}</span>
-</a>
+</div>
 {% empty %}
-<p class="tenue piccolo">Ancora nessun avviso. Qui arrivano richieste, approvazioni, cambi turno e menzioni in chat (@Cognome).</p>
+<p class="tenue piccolo">Nessuna notifica. Qui arrivano richieste di cambio turno, manutenzioni, pulizie da verificare, approvazioni e menzioni in chat (@Cognome).</p>
 {% endfor %}
 {% endblock %}

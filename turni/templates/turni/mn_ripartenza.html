@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Ripartenza impianto{% endblock %}
 {% block contenuto %}
 {% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
@@ -7,10 +8,10 @@
 <h2 class="rq-sezione">Quale impianto è ripartito?</h2>
 <div class="sg-gruppi">
   {% for f in in_corso %}
-  <a href="{% url 'turni:fermo' f.pk %}#riparti"><span>⛔</span><b>{{ f.get_impianto_display }}</b><small>Fermo da {{ f.durata }} · {{ f.get_causa_display }}</small></a>
+  <a href="{% url 'turni:fermo' f.pk %}#riparti"><span>{% icona 'fermo' %}</span><b>{{ f.get_impianto_display }}</b><small>Fermo da {{ f.durata }} · {{ f.get_causa_display }}</small></a>
   {% endfor %}
 </div>
 {% else %}
-<div class="scheda centrato"><p class="mn-descrizione">✅ Nessun impianto risulta fermo.</p></div>
+<div class="scheda centrato"><p class="mn-descrizione">{% icona 'ok' %} Nessun impianto risulta fermo.</p></div>
 {% endif %}
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Fermo {{ f.get_impianto_display }}{% endblock %}
 {% block contenuto %}
 {% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
@@ -12,11 +13,11 @@
   <p class="mn-descrizione"><b>{{ f.get_causa_display }}</b>{% if f.macchina %} · <a href="{% url 'turni:macchina' f.macchina.pk %}">{{ f.macchina.nome }}</a>{% endif %}</p>
   {% if f.descrizione %}<p>{{ f.descrizione }}</p>{% endif %}
   <dl class="mn-chi-scheda">
-    <div><dt>⛔ Fermo dalle</dt><dd>{{ f.fermo_dal|date:'H:i' }} <small>{{ f.fermo_dal|date:'D j M' }}</small></dd></div>
-    <div><dt>📣 Segnalato da</dt><dd>{{ f.chi_ha_segnalato|default:'—' }}</dd></div>
+    <div><dt>{% icona 'fermo' %} Fermo dalle</dt><dd>{{ f.fermo_dal|date:'H:i' }} <small>{{ f.fermo_dal|date:'D j M' }}</small></dd></div>
+    <div><dt>{% icona 'avvisi' %} Segnalato da</dt><dd>{{ f.chi_ha_segnalato|default:'—' }}</dd></div>
     {% if not f.in_corso %}
-    <div><dt>✅ Ripartito alle</dt><dd>{{ f.ripartito_il|date:'H:i' }} <small>{{ f.ripartito_il|date:'D j M' }}</small></dd></div>
-    <div><dt>🔧 Fatto ripartire da</dt><dd>{{ f.chi_ha_fatto_ripartire }}</dd></div>
+    <div><dt>{% icona 'ok' %} Ripartito alle</dt><dd>{{ f.ripartito_il|date:'H:i' }} <small>{{ f.ripartito_il|date:'D j M' }}</small></dd></div>
+    <div><dt>{% icona 'manutenzione' %} Fatto ripartire da</dt><dd>{{ f.chi_ha_fatto_ripartire }}</dd></div>
     {% endif %}
   </dl>
   {% if f.sistemazione %}<div class="mn-fatto"><b>Cosa è stato sistemato</b><p>{{ f.sistemazione }}</p></div>{% endif %}
@@ -26,7 +27,7 @@
     {% if f.foto_ripartenza %}<figure><img src="{% url 'turni:foto_fermo' f.pk 'ripartenza' %}" alt="Foto dopo la sistemazione" loading="lazy"><figcaption>Sistemato</figcaption></figure>{% endif %}
   </div>
   {% endif %}
-  {% if f.intervento %}<a class="cb-link" href="{% url 'turni:intervento' f.intervento.pk %}">🛠️ Intervento sulla macchina: {{ f.intervento.etichetta_stato|lower }}</a>{% endif %}
+  {% if f.intervento %}<a class="cb-link" href="{% url 'turni:intervento' f.intervento.pk %}">{% icona 'manutenzione' %} Intervento sulla macchina: {{ f.intervento.etichetta_stato|lower }}</a>{% endif %}
 </section>
 
 {% if f.in_corso and puo %}
@@ -36,9 +37,9 @@
   <label>Cosa è stato sistemato (facoltativo)<textarea name="sistemazione" rows="2" maxlength="500" placeholder="Es. giuntato il nastro, sbloccata la tramoggia"></textarea></label>
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-    <span>📷 Foto (facoltativa)</span>
-  </label>
-  <button class="bottone pieno piena-larghezza">✅ Sì, è ripartito</button>
+    <span>{% icona 'foto' %} Foto (facoltativa)</span>
+</label>
+  <button class="bottone pieno piena-larghezza">{% icona 'ok' %} Sì, è ripartito</button>
 </form>
 {% endif %}
 {% endblock %}

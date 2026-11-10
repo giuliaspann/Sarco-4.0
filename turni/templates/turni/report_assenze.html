@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Report assenze{% endblock %}
 {% block contenuto %}
 <div class="intestazione"><h1>Report assenze</h1></div>
@@ -30,7 +31,7 @@
 <a class="rp-riga" href="{% url 'turni:storico_assenze' %}?dip={{ p.dip.pk }}">
   <span>{{ p.dip.nome_breve }}
     <small>{{ p.voci|join:' · ' }}</small>
-  </span><span class="sg-freccia">›</span>
+</span><span class="sg-freccia">›</span>
 </a>
 {% empty %}
 <p class="tenue">Nessuna assenza nel periodo.</p>
@@ -43,7 +44,7 @@
   <div class="rp-box"><span>ROL residui (tutti)</span><b>{{ tot_rol|floatformat:0 }} h</b></div>
 </div>
 {% if accumulate %}
-<div class="rp-avviso">⚠️ {{ accumulate|length }} person{{ accumulate|length|pluralize:'a,e' }} con più di {{ soglia|floatformat:0 }} ore (20 giorni) di ferie da smaltire. La legge chiede di godere 2 settimane nell'anno e le altre 2 entro i 18 mesi successivi.</div>
+<div class="rp-avviso">{% icona 'attenzione' %} {{ accumulate|length }} person{{ accumulate|length|pluralize:'a,e' }} con più di {{ soglia|floatformat:0 }} ore (20 giorni) di ferie da smaltire. La legge chiede di godere 2 settimane nell'anno e le altre 2 entro i 18 mesi successivi.</div>
 {% endif %}
 {% for r in residui %}
 <a class="rp-riga{% if r.ferie > soglia %} rp-alto{% endif %}" href="{% url 'turni:storico_assenze' %}?dip={{ r.dip.pk }}">

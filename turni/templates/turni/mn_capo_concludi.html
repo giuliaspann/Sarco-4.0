@@ -1,0 +1,28 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Concludi manutenzione{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:mn_conclusa' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione conclusa</a>
+<div class="intestazione"><h1>{{ i.macchina.nome }}</h1></div>
+<p class="tenue">{{ i.descrizione }} · in corso dalle {{ i.iniziata_il|date:'H:i' }} del {{ i.iniziata_il|date:'j/m' }}</p>
+
+<form method="post" enctype="multipart/form-data" class="scheda mc-form">{% csrf_token %}
+  <label class="mc-campo">Cosa è stato fatto (facoltativo)
+    <textarea name="lavoro" rows="3" maxlength="1000" placeholder="Es. cuscinetto sostituito, nastro ritensionato"></textarea>
+  </label>
+  <label class="bottone foto-btn mc-foto"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>Foto (facoltativa)</span></label>
+
+  {% if fermo %}
+  {# la manutenzione aveva fermato l'impianto: si segna la ripartenza con l'ora #}
+  <div class="mc-fermo">
+    <p class="mc-passo">{{ fermo.get_impianto_display }} fermo dalle {{ fermo.fermo_dal|date:'H:i' }}</p>
+    <label class="mc-spunta"><input type="checkbox" name="riparte" value="1" checked> Ripartenza impianto</label>
+    <label class="mc-campo">Ripartito alle
+      <input type="datetime-local" name="ripartito" value="{{ adesso }}">
+      <small class="tenue">È l'ora attuale: cambiala se l'impianto è ripartito prima.</small>
+    </label>
+  </div>
+  {% endif %}
+
+  <button class="bottone pieno piena-larghezza mc-invia">Manutenzione conclusa</button>
+</form>
+{% endblock %}

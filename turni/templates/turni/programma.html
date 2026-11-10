@@ -1,0 +1,53 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Programma {{ cosa }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% if passo == 'cosa' %}?{% else %}{{ indietro }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if passo == 'cosa' %}Dove{% elif cosa == 'manutenzione' %}Manutenzione{% else %}Pulizia{% endif %}</a>
+<div class="intestazione"><h1>Programma {{ cosa }}</h1></div>
+
+{% if passo == 'dove' %}
+<p class="tenue">Dove va fatta la {{ cosa }}?</p>
+<div class="mn-capo">
+  {% for v, nome in luoghi %}<a class="mn-capo-tasto" href="?luogo={{ v }}"><span><b>{{ nome }}</b></span></a>{% endfor %}
+</div>
+{% else %}
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <input type="hidden" name="luogo" value="{{ luogo }}">
+  {% if macchine is not None %}
+  <p class="mc-passo">{{ nome_luogo }} · su cosa?</p>
+  <div class="scegli lista mc-macchine">
+    {% for m in macchine %}<label><input type="radio" name="macchina" value="{{ m.pk }}" required{% if request.POST.macchina == m.pk|stringformat:'s' %} checked{% endif %}><span>{{ m.nome }}{% if m.modello %} · {{ m.modello }}{% endif %}</span></label>
+    {% empty %}<p class="tenue piccolo">Nessuna macchina in elenco per questo luogo.</p>{% endfor %}
+  </div>
+  {% else %}
+  <p class="mc-passo">{{ nome_luogo }}</p>
+  {% endif %}
+
+  <label class="mc-campo">Cosa va fatto?
+    <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="{% if cosa == 'manutenzione' %}Es. sostituzione rulli del nastro{% else %}Es. pulizia straordinaria tramoggia e nastri{% endif %}">{{ request.POST.descrizione }}</textarea>
+  </label>
+  <div class="mc-due">
+    <label class="mc-campo">Giorno<input type="date" name="giorno" min="{{ oggi }}" value="{{ request.POST.giorno|default:domani }}" required></label>
+    <label class="mc-campo">Turno
+      <select name="turno" required>{% for v, n in turni %}<option value="{{ v }}"{% if request.POST.turno == v %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+    </label>
+  </div>
+
+  {# il fermo impianto è facoltativo #}
+  <label class="mc-spunta"><input type="checkbox" name="fermo" value="1" id="mc-fermo"{% if request.POST.fermo %} checked{% endif %}> Programma anche fermo {% if impianto_proposto %}{{ nome_luogo }}{% else %}impianto{% endif %}</label>
+  <div class="mc-fermo" id="mc-fermo-dati"{% if not request.POST.fermo %} hidden{% endif %}>
+    {% if impianto_proposto %}<input type="hidden" name="impianto" value="{{ impianto_proposto }}">
+    {% else %}<label class="mc-campo">Quale impianto
+      <select name="impianto">{% for v, n in impianti %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select>
+    </label>{% endif %}
+    <p class="tenue piccolo">Se il fermo non occupa tutto il turno, scrivi la fascia oraria; vuoto = tutto il turno.</p>
+    <div class="mc-due">
+      <label class="mc-campo">Dalle<input type="time" name="dalle" value="{{ request.POST.dalle }}"></label>
+      <label class="mc-campo">Alle<input type="time" name="alle" value="{{ request.POST.alle }}"></label>
+    </div>
+    <p class="tenue piccolo">Ricevono l'avviso chi lavora in quel turno sull'impianto, i Capi Turno, i manutentori e i responsabili.</p>
+  </div>
+
+  <button class="bottone pieno piena-larghezza mc-invia">Programma {{ cosa }}</button>
+</form>
+{% endif %}
+{% endblock %}

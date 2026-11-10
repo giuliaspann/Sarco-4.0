@@ -242,6 +242,170 @@ class CentroNotificheTest(TestCase):
         self.client.force_login(self.utenti['ROSSI'])
         r = self.client.get(reverse('turni:home'))
         self.assertContains(r, 'aria-label="Chat')
-        self.assertContains(r, reverse('turni:menu'))  # "Tutte le funzioni" in home
+        self.assertContains(r, reverse('turni:archivio'))  # riquadro Archivio in home (al posto di Tutte le funzioni)
         self.assertNotContains(r, 'aria-label="Esci"')
         self.assertContains(self.client.get(reverse('turni:miei_turni')), reverse('turni:logout'))
+
+
+class NotificheConConfermaTest(TestCase):
+    """Centro notifiche come Instagram: Conferma / Rifiuta con riepilogo e convalida."""
+
+    def setUp(self):
+        from django.utils import timezone
+
+        from .models import Settimana
+
+        self.domani = timezone.localdate() + timedelta(days=1)
+        sett, _ = Settimana.objects.get_or_create(lunedi=self.domani - timedelta(days=self.domani.weekday()))
+        self.dip = {}
+        for nome, fascia in (('ROSSI MARIO', '1T'), ('BIANCHI LUCA', '2T')):
+            d = Dipendente.objects.create(nome=nome)
+            d.utente = get_user_model().objects.create_user(nome.split()[0].lower())
+            d.save()
+            Turno.objects.create(settimana=sett, dipendente=d, data=self.domani, fascia=fascia, postazione='IMP1',
+                                 ruolo='OdL', posto='Impianto 1 · Operatore di Linea', incarichi='IMP1/OdL')
+            self.dip[nome.split()[0]] = d
+
+    def test_cambio_turno_conferma_dalla_notifica(self):
+        from . import richieste as svc
+        from .models import CambioTurno, Notifica
+
+        c = svc.crea_cambio(self.dip['ROSSI'], self.dip['BIANCHI'], self.domani)
+        self.client.force_login(self.dip['BIANCHI'].utente)
+        r = self.client.get(reverse('turni:notifiche'))
+        self.assertContains(r, 'Rossi Mario ti chiede un cambio turno')
+        self.assertContains(r, 'Conferma')
+        self.assertContains(r, 'Oggi')
+        n = Notifica.objects.get(utente=self.dip['BIANCHI'].utente, tipo='cambio')
+        url = reverse('turni:notifica_scelta', args=[n.tipo, n.oggetto_id, 'conferma'])
+        self.assertContains(self.client.get(url), 'Se lo approva, i tuoi turni diventano')
+        self.client.post(url)
+        c.refresh_from_db()
+        self.assertEqual(c.stato, CambioTurno.Stato.ATTESA_UFFICIO)
+        self.assertTrue(Notifica.objects.filter(utente=self.dip['ROSSI'].utente, titolo__contains='ha accettato').exists())
+        self.assertContains(self.client.get(reverse('turni:notifiche')), 'Hai confermato')
+
+    def test_manutenzione_presa_in_carico_o_rifiutata(self):
+        from . import manutenzione as mn
+        from .models import Intervento, Macchina, Notifica
+
+        pala = Macchina.objects.create(codice='P-T1', nome='Pala prova', luogo='PIAZZALE')
+        richiedente = self.dip['ROSSI'].utente
+        for scelta, stato_atteso in (('conferma', Intervento.Stato.ASSEGNATA), ('rifiuta', Intervento.Stato.SEGNALATA)):
+            i = Intervento.objects.create(macchina=pala, descrizione='Gomma a terra', segnalata_da=richiedente,
+                                          assegnata_a=self.dip['BIANCHI'])
+            mn.avvisa([self.dip['BIANCHI'].utente_id], richiedente, 'Richiesta di manutenzione', 'Gomma a terra', '/',
+                      tipo='manutenzione', oggetto_id=i.pk)
+            n = Notifica.objects.filter(utente=self.dip['BIANCHI'].utente, oggetto_id=i.pk).get()
+            self.client.force_login(self.dip['BIANCHI'].utente)
+            self.client.post(reverse('turni:notifica_scelta', args=[n.tipo, n.oggetto_id, scelta]))
+            i.refresh_from_db()
+            self.assertEqual(i.stato, stato_atteso)
+            if scelta == 'rifiuta':
+                self.assertIsNone(i.assegnata_a)
+
+
+class NotificheUnaPerRigaTest(TestCase):
+    def test_pulizia_completata_si_conferma_dalla_notifica_del_capo_turno(self):
+        from django.utils import timezone
+
+        from .models import ElementoPulizia, Pulizia, Settimana
+
+        oggi = timezone.localdate()
+        sett, _ = Settimana.objects.get_or_create(lunedi=oggi - timedelta(days=oggi.weekday()))
+        persone = {}
+        for nome, capo in (('CAPO PROVA', True), ('OPERAIO PROVA', False)):
+            d = Dipendente.objects.create(nome=nome)
+            d.utente = get_user_model().objects.create_user(nome.split()[0].lower())
+            d.save()
+            persone[nome.split()[0]] = Turno.objects.create(settimana=sett, dipendente=d, data=oggi, fascia='1T',
+                                                            postazione='IMP1', capoturno=capo)
+        el = ElementoPulizia.objects.create(nome='Prova pavimento', tipo='ZONA', convalida='CT')
+        p = Pulizia.objects.create(turno=persone['OPERAIO'], elemento=el, stato=Pulizia.Stato.FATTA, fatta_il=timezone.now())
+        self.client.force_login(persone['CAPO'].dipendente.utente)
+        r = self.client.get(reverse('turni:notifiche'))
+        self.assertContains(r, 'Operaio Prova ha completato una pulizia')
+        self.assertNotContains(r, 'Da fare')
+        url = reverse('turni:notifica_scelta', args=['pulizia_ct', p.pk, 'conferma'])
+        self.assertContains(self.client.get(url), 'va in archivio')
+        self.client.post(url)
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.VERIFICATA)
+
+
+class ManutenzioneCapoTurnoTest(TestCase):
+    def test_in_corso_con_fermo_e_conclusa_con_ripartenza(self):
+        from datetime import datetime
+
+        from django.utils import timezone
+
+        from .models import FermoImpianto, Intervento, Macchina
+
+        u = get_user_model().objects.create_user('capo', is_staff=True)
+        self.client.force_login(u)
+        nastro = Macchina.objects.create(codice='N-T1', nome='Nastro prova', luogo='IMP1')
+        self.assertContains(self.client.get(reverse('turni:mn_in_corso') + '?luogo=IMP1'), 'Nastro prova')
+        # senza fermo: solo la manutenzione in corso
+        self.client.post(reverse('turni:mn_in_corso'), {'luogo': 'IMP1', 'macchina': nastro.pk, 'descrizione': 'Ingrassaggio'})
+        self.assertFalse(FermoImpianto.objects.exists())
+        # con fermo dalle 10:05 di oggi
+        dal = timezone.localtime().replace(hour=0, minute=5, second=0, microsecond=0)
+        self.client.post(reverse('turni:mn_in_corso'), {'luogo': 'IMP1', 'macchina': nastro.pk, 'descrizione': 'Cambio cuscinetto',
+                                                         'fermo': '1', 'impianto': 'IMP1', 'dal': dal.strftime('%Y-%m-%dT%H:%M')})
+        f = FermoImpianto.objects.get()
+        self.assertEqual((f.causa, f.intervento.descrizione, timezone.localtime(f.fermo_dal).strftime('%H:%M')),
+                         ('MANUTENZ', 'Cambio cuscinetto', '00:05'))
+        r = self.client.get(reverse('turni:mn_conclusa'))
+        self.assertContains(r, 'Ingrassaggio')
+        self.assertContains(r, 'Impianto 1 fermo')
+        self.assertContains(self.client.get(reverse('turni:mn_concludi', args=[f.intervento.pk])), 'Ripartenza impianto')
+        self.client.post(reverse('turni:mn_concludi', args=[f.intervento.pk]), {'lavoro': 'Cuscinetto nuovo', 'riparte': '1',
+                                                                                'ripartito': timezone.localtime().strftime('%Y-%m-%dT%H:%M')})
+        f.refresh_from_db()
+        self.assertIsNotNone(f.ripartito_il)
+        self.assertEqual(f.intervento.stato, Intervento.Stato.COMPLETATA)
+
+
+class ProgrammaTest(TestCase):
+    def setUp(self):
+        from django.utils import timezone
+
+        from .models import Settimana
+
+        self.giorno = timezone.localdate() + timedelta(days=1)
+        sett, _ = Settimana.objects.get_or_create(lunedi=self.giorno - timedelta(days=self.giorno.weekday()))
+        self.persone = {}
+        for nome, capo in (('CAPO DOMANI', True), ('OPERAIO DOMANI', False)):
+            d = Dipendente.objects.create(nome=nome)
+            d.utente = get_user_model().objects.create_user(nome.split()[0].lower())
+            d.save()
+            Turno.objects.create(settimana=sett, dipendente=d, data=self.giorno, fascia='2T', postazione='IMP1', capoturno=capo)
+            self.persone[nome.split()[0]] = d
+        self.uff = get_user_model().objects.create_user('uff', is_staff=True)
+        self.client.force_login(self.uff)
+
+    def test_manutenzione_senza_fermo(self):
+        from .models import Comunicazione, Intervento, Macchina
+
+        m = Macchina.objects.create(codice='V-T1', nome='Vaglio prova', luogo='IMP1')
+        self.client.post(reverse('turni:programma', args=['manutenzione']),
+                         {'luogo': 'IMP1', 'macchina': m.pk, 'descrizione': 'Rulli', 'giorno': self.giorno.isoformat(), 'turno': '2T'})
+        i = Intervento.objects.get(macchina=m)
+        self.assertEqual((i.tipo, i.da_fare_il), ('PROGRAMMATA', self.giorno))
+        self.assertFalse(Comunicazione.objects.filter(tipo='FERMO', macchina=m).exists())
+
+    def test_pulizia_con_fermo_in_una_fascia_avvisa_gli_interessati(self):
+        from django.utils import timezone
+
+        from .models import Comunicazione, Notifica, Pulizia
+
+        self.client.post(reverse('turni:programma', args=['pulizia']),
+                         {'luogo': 'IMP1', 'descrizione': 'Tramoggia', 'giorno': self.giorno.isoformat(), 'turno': '2T',
+                          'fermo': '1', 'impianto': 'IMP1', 'dalle': '15:00', 'alle': '17:30'})
+        p = Pulizia.objects.get()
+        self.assertEqual(p.turno.dipendente, self.persone['CAPO'])
+        c = Comunicazione.objects.get(tipo='FERMO', testo='Tramoggia')
+        self.assertEqual((c.tipo, c.motivo, timezone.localtime(c.dal).strftime('%H:%M'), timezone.localtime(c.al).strftime('%H:%M')),
+                         ('FERMO', 'PULIZIA', '15:00', '17:30'))
+        for d in self.persone.values():
+            self.assertTrue(Notifica.objects.filter(utente=d.utente, titolo__startswith='Fermo programmato').exists())

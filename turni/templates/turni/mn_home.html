@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Manutenzione{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
@@ -15,72 +16,72 @@
 
 <div class="home-griglia">
   <a class="home-tasto tasto-fermo" href="{% url 'turni:nuovo_fermo' %}">
-    <span class="home-icona">⛔</span>
-    <b>Segnala fermo impianto</b><small>Impianto 1, Impianto 2, sabbia, metalli</small>
+    <span class="home-icona">{% icona 'fermo' %}</span>
+    <b>Segnala fermo impianto</b>
   </a>
 
   <a class="home-tasto tasto-ripartenza" href="{% url 'turni:ripartenza' %}">
     {% if fermi_in_corso %}<i class="home-badge">{{ fermi_in_corso|length }}</i>{% endif %}
-    <span class="home-icona">▶️</span>
+    <span class="home-icona">{% icona 'riparti' %}</span>
     <b>Segnala ripartenza impianto</b>
   </a>
 
   <a class="home-tasto tasto-guasto" href="{% url 'turni:segnala' %}">
-    <span class="home-icona">⚠️</span>
-    <b>Segnala guasto o richiedi manutenzione</b><small>Foto e due righe, arriva subito</small>
+    <span class="home-icona">{% icona 'attenzione' %}</span>
+    <b>Segnala guasto o richiedi manutenzione</b>
   </a>
 
   {% if registra_lavoro %}
   <a class="home-tasto tasto-lavoro" href="{% url 'turni:segnala' %}?lavoro=1">
-    <span class="home-icona">✅</span>
-    <b>Segnala risoluzione guasto o completamento manutenzione</b><small>Ripristino o sostituzione, con le foto</small>
+    <span class="home-icona">{% icona 'ok' %}</span>
+    <b>Segnala risoluzione guasto o completamento manutenzione</b>
   </a>
   {% endif %}
 
   {% if puo_comunicare %}
   <a class="home-tasto tasto-fermo" href="{% url 'turni:nuova_comunicazione' %}?tipo=FERMO">
-    <span class="home-icona">🛑</span>
-    <b>Fermo programmato</b><small>Un turno o una giornata: pulizia, manutenzione, sostituzioni</small>
+    <span class="home-icona">{% icona 'programmate' %}</span>
+    <b>Fermo programmato</b>
   </a>
   {% endif %}
 
 
   <a class="home-tasto" href="{% url 'turni:interventi' %}">
     {% if badge_interventi %}<i class="home-badge">{{ badge_interventi }}</i>{% endif %}
-    <span class="home-icona">🛠️</span>
-    <b>Lista interventi aperti e chiusi</b>
-    <small>{% if aperti %}{{ aperti }} apert{{ aperti|pluralize:'o,i' }}{% if ferme %} · {{ ferme }} macchin{{ ferme|pluralize:'a ferma,e ferme' }}{% endif %}{% else %}Nessun guasto aperto 👍{% endif %}</small>
+    <span class="home-icona">{% icona 'manutenzione' %}</span>
+    <b>Interventi</b>
+    <small>{% if aperti %}{{ aperti }} apert{{ aperti|pluralize:'o,i' }}{% if ferme %} · {{ ferme }} macchin{{ ferme|pluralize:'a ferma,e ferme' }}{% endif %}{% endif %}</small>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=macchinari">
-    <span class="home-icona">🏭</span>
-    <b>Lista macchinari e attrezzature</b><small>Impianto 1, Impianto 2, piazzale, metalli, sabbia</small>
+    <span class="home-icona">{% icona 'macchine' %}</span>
+    <b>Macchinari e attrezzature</b>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=mezzi">
-    <span class="home-icona">🚚</span>
-    <b>Lista mezzi</b><small>Interni ed esterni</small>
+    <span class="home-icona">{% icona 'mezzi' %}</span>
+    <b>Mezzi</b>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:macchine' %}?gruppo=segnaletica">
-    <span class="home-icona">🪧</span>
-    <b>Segnaletica e Cartelli</b><small>Cartelli, specchi, cartelli dei cumuli</small>
+    <span class="home-icona">{% icona 'segnaletica' %}</span>
+    <b>Segnaletica e cartelli</b>
   </a>
 
   <a class="home-tasto" href="{% url 'turni:ricambi' %}">
-    <span class="home-icona">🔩</span>
-    <b>Lista ricambi</b><small>{% if sotto_scorta %}{{ sotto_scorta }} sotto scorta{% else %}Magazzino pezzi{% endif %}</small>
+    <span class="home-icona">{% icona 'ricambi' %}</span>
+    <b>Ricambi</b>{% if sotto_scorta %}<small>{{ sotto_scorta }} sotto scorta</small>{% endif %}
   </a>
 
   <a class="home-tasto" href="{% url 'turni:ordini' %}">
     {% if badge_ordini %}<i class="home-badge">{{ badge_ordini }}</i>{% endif %}
-    <span class="home-icona">📦</span>
-    <b>Ordini</b><small>{% if ordini_aperti %}{{ ordini_aperti }} in corso{% else %}Nessun ordine in corso{% endif %}</small>
+    <span class="home-icona">{% icona 'ordini' %}</span>
+    <b>Ordini</b>{% if ordini_aperti %}<small>{{ ordini_aperti }} in corso</small>{% endif %}
   </a>
 
   <a class="home-tasto" href="{% url 'turni:fermi' %}">
-    <span class="home-icona">⏱️</span>
-    <b>Storico fermi impianto</b><small>Quante ore si è fermato ogni impianto</small>
+    <span class="home-icona">{% icona 'orologio' %}</span>
+    <b>Storico fermi impianto</b>
   </a>
 
 </div>

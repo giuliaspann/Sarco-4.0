@@ -15,7 +15,7 @@
 {% endif %}
 
 <h2 class="rq-sezione">{% if miei or da_approvare %}Altri interventi aperti{% else %}Interventi aperti{% endif %}</h2>
-{% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}. 👍</p>{% endfor %}
+{% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}.</p>{% endfor %}
 
 {% if recenti %}
 {% include 'turni/_archivio_cerca_link.html' with sezione='manutenzione' %}

@@ -534,3 +534,34 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
     }
   });
 })();
+
+
+// Fermo impianto facoltativo (Manutenzione in corso, Programma): la spunta mostra i campi del fermo
+(function () {
+  const c = document.getElementById('mc-fermo'), d = document.getElementById('mc-fermo-dati');
+  if (c && d) c.addEventListener('change', () => { d.hidden = !c.checked; });
+})();
+
+// Programma riunione: cerca un nome, "Tutti", conteggio degli invitati
+(function () {
+  const f = document.getElementById('rn-filtro'), elenco = document.querySelector('.rn-persone');
+  if (!f || !elenco) return;
+  const righe = [...elenco.querySelectorAll('label')], conta = document.getElementById('rn-conta');
+  const aggiorna = () => { const n = elenco.querySelectorAll('input:checked').length; if (conta) conta.textContent = n ? n + ' scelti' : ''; };
+  f.addEventListener('input', () => { const q = f.value.trim().toLowerCase(); righe.forEach(l => { l.hidden = !!q && !l.dataset.nome.includes(q); }); });
+  const tutti = document.getElementById('rn-tutti');
+  if (tutti) tutti.addEventListener('click', () => {
+    const visibili = righe.filter(l => !l.hidden).map(l => l.querySelector('input'));
+    const giaTutti = visibili.every(c => c.checked);
+    visibili.forEach(c => { c.checked = !giaTutti; });
+    aggiorna();
+  });
+  elenco.addEventListener('change', aggiorna);
+  aggiorna();
+})();
+
+// Turni di tutti: la testa con settimana e giorni si ferma subito sotto la barra in alto
+(function () {
+  const barra = document.querySelector('.barra');
+  if (barra && document.querySelector('.st-testa')) document.documentElement.style.setProperty('--alto-barra', barra.offsetHeight + 'px');
+})();

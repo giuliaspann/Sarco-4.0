@@ -8,7 +8,8 @@ from django.utils import timezone
 
 from .models import CambioTurno, Fascia, Pulizia, RichiestaFerie, Turno
 
-CAMPI_TURNO = ('fascia', 'postazione', 'capoturno', 'codice')
+# nel cambio si scambiano anche posto, ruolo e incarichi del Layout Turni (altrimenti il collega mostrerebbe il posto vecchio)
+CAMPI_TURNO = ('fascia', 'postazione', 'capoturno', 'codice', 'ruolo', 'posto', 'incarichi')
 
 
 class RichiestaNonValida(Exception):
@@ -62,7 +63,7 @@ def crea_cambio(richiedente, collega, giorno1, giorno2=None, motivo=''):
     ).filter(Q(giorno1__in=giorni) | Q(giorno2__in=giorni))
     if aperti.exists():
         raise RichiestaNonValida('C\'è già una richiesta di cambio aperta per questi giorni.')
-    return CambioTurno.objects.create(
+    cambio = CambioTurno.objects.create(
         richiedente=richiedente,
         collega=collega,
         giorno1=giorno1,
@@ -70,6 +71,33 @@ def crea_cambio(richiedente, collega, giorno1, giorno2=None, motivo=''):
         motivo=motivo[:300],
         situazione={_chiave(t): _stato_turno(t) for t in turni.values()},
     )
+    # nel centro notifiche del collega, con Conferma / Rifiuta
+    _avvisa([collega.utente_id], richiedente, f'{richiedente.nome_breve} ti chiede un cambio turno',
+            _giorni_testo(cambio), 'cambio', cambio.pk)
+    return cambio
+
+
+def _giorni_testo(cambio):
+    return ' e '.join(f'{g:%a %d/%m}' for g in cambio.giorni)
+
+
+def _responsabili_turni():
+    from django.contrib.auth import get_user_model
+
+    U = get_user_model()
+    return list(U.objects.filter(Q(is_superuser=True) | Q(user_permissions__codename='approva_richieste')
+                                 | Q(groups__permissions__codename='approva_richieste'), is_active=True)
+                .values_list('pk', flat=True).distinct())
+
+
+def _avvisa(utenti, dip_mittente, titolo, testo, tipo='', oggetto_id=None):
+    from django.urls import reverse
+
+    from . import push
+
+    url = reverse('turni:notifiche') if tipo else reverse('turni:richieste')
+    push.invia([u for u in utenti if u], titolo, testo, url,
+               mittente=getattr(dip_mittente, 'utente', dip_mittente), tipo=tipo, oggetto_id=oggetto_id)
 
 
 def risposta_collega(cambio, accetta):
@@ -80,6 +108,13 @@ def risposta_collega(cambio, accetta):
     cambio.stato = CambioTurno.Stato.ATTESA_UFFICIO if accetta else CambioTurno.Stato.RIFIUTATO_COLLEGA
     cambio.risposta_collega_il = timezone.now()
     cambio.save()
+    _avvisa([cambio.richiedente.utente_id], cambio.collega,
+            f"{cambio.collega.nome_breve} {'ha accettato' if accetta else 'ha rifiutato'} il cambio turno",
+            _giorni_testo(cambio) + (" · ora decide l'ufficio" if accetta else ""))
+    if accetta:
+        _avvisa(_responsabili_turni(), cambio.richiedente,
+                f'Cambio turno da approvare: {cambio.richiedente.nome_breve} ↔ {cambio.collega.nome_breve}',
+                _giorni_testo(cambio), 'cambio_ufficio', cambio.pk)
 
 
 def _togli_pulizie_da_fare(turno):
@@ -115,6 +150,9 @@ def decisione_ufficio_cambio(cambio, utente, approva, nota=''):
         cambio.gestito_il = timezone.now()
         cambio.nota_ufficio = nota[:300]
         cambio.save()
+    esito = 'approvato' if approva else 'non approvato'
+    _avvisa([cambio.richiedente.utente_id, cambio.collega.utente_id], utente,
+            f"Cambio turno {esito} dall'ufficio", _giorni_testo(cambio) + (f' · {nota}' if nota else ''))
 
 
 def crea_ferie(dipendente, tipo, dal, al, motivo='', dalle=None, alle=None):

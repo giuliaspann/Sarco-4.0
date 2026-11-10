@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Produzione del turno{% endblock %}
 {% block contenuto %}
 {% if impianto %}
@@ -9,19 +10,19 @@
 <div class="intestazione"><h1>Inserisci produzione del turno</h1></div>
 {% endif %}
 {% if impianto and not prodotti %}
-<div class="pl-vuoto"><span class="home-icona">🕒</span><b>Le righe del display di {{ nome_impianto }} non sono ancora state definite.</b></div>
+<div class="pl-vuoto"><span class="home-icona">{% icona 'orologio' %}</span><b>Le righe del display di {{ nome_impianto }} non sono ancora state definite.</b></div>
 {% else %}
 <form method="post" enctype="multipart/form-data" class="mn-form" data-lettura="produzione">{% csrf_token %}
   {% if impianto %}<input type="hidden" name="impianto" value="{{ impianto }}">{% endif %}
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-    <span>📷 Foto del display</span>
-  </label>
-  {% if leggi_foto %}<button type="button" class="bottone pieno piena-larghezza st-leggi" data-leggi>🔎 Leggi i numeri dalla foto</button>{% endif %}
+    <span>{% icona 'foto' %} Foto del display</span>
+</label>
+  {% if leggi_foto %}<button type="button" class="bottone pieno piena-larghezza st-leggi" data-leggi>{% icona 'cerca' %} Leggi i numeri dalla foto</button>{% endif %}
   <p class="st-esito" hidden></p>
   <div class="pr-quando" data-quando hidden>
     <b data-giorno>{{ giorno|date:'l j F'|capfirst }}</b> <span class="cal-sigla pr-sigla {{ classe }}" data-sigla>{{ sigla }}</span>
-    <span class="avviso-rosso">⚠️ Controlla i valori prima di salvare</span>
+    <span class="avviso-rosso">{% icona 'attenzione' %} Controlla i valori prima di salvare</span>
   </div>
   <details class="pr-cambia">
     <summary>Giorno e turno: {{ giorno|date:'D j M' }} · {{ sigla }} (si leggono dalla foto)</summary>

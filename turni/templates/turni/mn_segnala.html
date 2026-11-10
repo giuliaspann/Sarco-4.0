@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}{% if lavoro %}Aggiungi manutenzione{% elif programma %}Programma manutenzione{% else %}Richiedi manutenzione{% endif %}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
@@ -20,7 +21,7 @@
 
 {% if macchina %}
   <a class="sg-scelta" href="?{{ pre }}luogo={{ macchina.luogo }}{% if macchina.tipo == 'SEGNALETICA' %}&gruppo=segnaletica{% endif %}">
-    <span class="home-icona">{{ macchina.icona }}</span>
+    <span class="home-icona">{{ macchina.icona|come_icona }}</span>
     <span class="rq-testo"><b>{{ macchina.nome }}</b><small>{{ macchina.codice }} · {{ macchina.get_luogo_display }}</small></span>
     <span class="link-piccolo">Cambia</span>
   </a>
@@ -34,7 +35,7 @@
       {% for v, n in ripetizioni %}<label><input type="radio" name="ogni" value="{{ v }}" {% if forloop.first %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}
     </div>
     <textarea name="istruzioni" rows="2" maxlength="1000" placeholder="Controlli da fare (facoltativo)" class="mn-campo"></textarea>
-    <button class="bottone pieno piena-larghezza">🗓️ Programma</button>
+    <button class="bottone pieno piena-larghezza">{% icona 'programmate' %} Programma</button>
   </form>
   {% elif lavoro %}
   <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
@@ -47,30 +48,30 @@
     <textarea name="descrizione" rows="2" maxlength="1000" placeholder="Note (es. griglie zig zag n3 1240 f8)" class="mn-campo">{{ descrizione }}</textarea>
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" multiple data-riduci required>
-      <span>📷 Foto</span>
-    </label>
+      <span>{% icona 'foto' %} Foto</span>
+</label>
     {% include 'turni/_mn_pezzi.html' %}
     <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
     {% include 'turni/_mn_colleghi_video.html' %}
-    <button class="bottone pieno piena-larghezza">✅ Registra la manutenzione</button>
+    <button class="bottone pieno piena-larghezza">{% icona 'ok' %} Registra la manutenzione</button>
   </form>
   {% else %}
   <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
     <input type="hidden" name="macchina" value="{{ macchina.pk }}">{% if a %}<input type="hidden" name="a" value="{{ a }}">{% endif %}
     <label>Cosa succede
       <textarea name="descrizione" rows="3" maxlength="1000" required placeholder="{% if macchina.tipo == 'SEGNALETICA' %}Es. cartello caduto, scritta illeggibile{% else %}Es. perde olio dal cilindro del braccio{% endif %}">{{ descrizione }}</textarea>
-    </label>
+</label>
     {% if macchina.tipo != 'SEGNALETICA' %}
     <fieldset class="mn-sino">
       <legend>La macchina è ferma?</legend>
-      <label><input type="radio" name="ferma" value="1"><span>🔴 Sì, è ferma</span></label>
-      <label><input type="radio" name="ferma" value="0" checked><span>🟠 No, funziona ancora</span></label>
+      <label><input type="radio" name="ferma" value="1"><span>Sì, è ferma</span></label>
+      <label><input type="radio" name="ferma" value="0" checked><span>No, funziona ancora</span></label>
     </fieldset>
     {% endif %}
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
-      <span>📷 Foto</span>
-    </label>
+      <span>{% icona 'foto' %} Foto</span>
+</label>
     <button class="bottone pieno piena-larghezza">Invia segnalazione</button>
   </form>
   {% endif %}
@@ -85,7 +86,7 @@
   <div class="sg-macchine">
     {% for m in elenco %}
     <a class="sg-macchina" href="?{{ pre }}macchina={{ m.pk }}">
-      <span class="home-icona">{{ m.icona }}</span>
+      <span class="home-icona">{{ m.icona|come_icona }}</span>
       <span class="rq-testo"><b>{{ m.nome }}</b><small>{{ m.codice }}{% if not luogo %} · {{ m.get_luogo_display }}{% endif %}</small></span>
       {% if m.stato != 'ok' %}<span class="mn-stato {{ m.stato }}">{{ m.stato_testo }}</span>{% else %}<span class="sg-freccia">›</span>{% endif %}
     </a>
@@ -98,7 +99,7 @@
   <h2 class="rq-sezione">{% if gruppo.0 == 'mezzi' %}Interno o esterno?{% else %}Dove si trova?{% endif %}</h2>
   <div class="sg-luoghi">
     {% for v, nome, icona, n in luoghi %}
-    <a href="?{{ pre }}gruppo={{ gruppo.0 }}&luogo={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} {% if gruppo.0 == 'mezzi' %}mezz{{ n|pluralize:'o,i' }}{% elif gruppo.0 == 'segnaletica' %}element{{ n|pluralize:'o,i' }}{% else %}macchin{{ n|pluralize:'a,e' }}{% endif %}</small></a>
+    <a href="?{{ pre }}gruppo={{ gruppo.0 }}&luogo={{ v }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b><small>{{ n }} {% if gruppo.0 == 'mezzi' %}mezz{{ n|pluralize:'o,i' }}{% elif gruppo.0 == 'segnaletica' %}element{{ n|pluralize:'o,i' }}{% else %}macchin{{ n|pluralize:'a,e' }}{% endif %}</small></a>
     {% endfor %}
   </div>
 
@@ -107,12 +108,12 @@
   <h2 class="rq-sezione">Oppure seleziona manualmente</h2>
   <div class="sg-gruppi">
     {% for g, nome, icona, n in gruppi %}
-    <a href="?{{ pre }}gruppo={{ g }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{{ n }} in elenco</small></a>
+    <a href="?{{ pre }}gruppo={{ g }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b><small>{{ n }} in elenco</small></a>
     {% endfor %}
   </div>
   {% if not lavoro and not programma and not a and vecchia_pagina %}
   {% if puo_programmare %}
-  <a class="home-tasto tasto-programma" href="?programma=1"><span class="home-icona">🗓️</span><b>Programma una manutenzione</b></a>
+  <a class="home-tasto tasto-programma" href="?programma=1"><span class="home-icona">{% icona 'programmate' %}</span><b>Programma una manutenzione</b></a>
   {% endif %}
   <h2 class="rq-sezione">Manutenzioni in arrivo</h2>
   {% for p in prossime %}

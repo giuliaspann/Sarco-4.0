@@ -1,6 +1,9 @@
 """Il quadrato centrale della barra (stile Instagram): tutte le funzioni dell'app, divise per sezione,
 e la home dell'ufficio con le 4 funzioni più usate. Ognuno vede solo quello che può usare."""
 
+import re
+from datetime import timedelta
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
@@ -8,6 +11,7 @@ from django.utils import timezone
 
 # icone a linea (stesso tratto dei riquadri di Oggi)
 ICONE = {
+    'riunione': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/>',
     'pulizia': '<path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/>',
     'manutenzione': '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/>',
     'produzione': '<path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/>',
@@ -100,10 +104,8 @@ def sezioni_per(request):
         dati.append(voce('Report', r('turni:report'), 'report'))
     sezioni.append(('Dati', dati))
 
-    archivio = [voce('Archivio', r('turni:archivio'), 'archivio'), voce('Pulizie', r('turni:archivio_pulizie'), 'foto'),
-                voce('Analisi', r('turni:archivio_analisi'), 'analisi')]
-    if ufficio:
-        archivio.append(voce('Dipendenti', r('turni:archivio_dipendenti'), 'dipendenti'))
+    archivio = [voce('Archivio', r('turni:archivio'), 'archivio'), voce('Pulizie', r('turni:archivio_cerca', args=['pulizie']), 'foto'),
+                voce('Analisi', r('turni:archivio_cerca', args=['analisi']), 'analisi'), voce('Inventario', r('turni:inventario'), 'zone')]
     sezioni.append(('Archivio', archivio))
 
     if ufficio:
@@ -115,6 +117,9 @@ def sezioni_per(request):
             uff += [voce('Carica turni', r('turni:importa'), 'carica'), voce('Dipendenti', r('turni:dipendenti'), 'dipendenti'),
                     voce('Assenze', r('turni:report_assenze'), 'report'),
                     voce('Mezzi e zone', r('admin:turni_elementopulizia_changelist'), 'zone')]
+        from .views_riunioni import puo_programmare_riunione
+        if puo_programmare_riunione(u):
+            uff.append(voce('Riunioni', r('turni:riunioni'), 'riunione'))
         if uff:
             sezioni.append(('Ufficio', uff))
     return sezioni
@@ -128,8 +133,9 @@ def menu(request):
 def home_ufficio(request):
     """Home di chi non ha turni (ufficio, responsabili): le 4 funzioni più usate, poi i fermi impianto."""
     from .context import navigazione
-    from .models import FermoImpianto
+    from .models import FermoImpianto, Riunione
     from .views import pulizie_da_verificare
+    from .views_riunioni import puo_programmare_riunione
 
     u = request.user
     nav = navigazione(request)
@@ -152,6 +158,8 @@ def home_ufficio(request):
         'nome': nome,
         'oggi_data': timezone.localdate(),
         'fermi_aperti': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
+        'puo_riunioni': puo_programmare_riunione(u),
+        'prossima_riunione': Riunione.objects.filter(annullata=False, fine__gte=timezone.now()).first(),
     })
 
 
@@ -175,46 +183,321 @@ def profilo(request):
     })
 
 
-def da_fare(request, nav=None):
-    """Le cose che aspettano la persona adesso (in cima al centro notifiche), con il link per farle."""
-    from .context import navigazione
-    from .views import pulizie_da_verificare
+# ---------------------------------------------------------------- centro notifiche (come Instagram, Giulia 10/11)
+#
+# Una riga per ogni cosa: gli avvisi ricevuti (modello Notifica) e le cose che aspettano la persona adesso
+# (cambi turno, pulizie da verificare o convalidare, manutenzioni, pezzi, turni cambiati...). Nessuna area "Da fare":
+# ogni cosa ha la sua riga, e quelle che chiedono una risposta hanno Conferma / Rifiuta.
+
+TIPI_CON_RISPOSTA = ('cambio', 'cambio_ufficio', 'manutenzione', 'pulizia_ct', 'pulizia_rp', 'riunione')
+
+
+def _tondino(utente):
+    """Foto del dipendente che ha generato la notifica, oppure le sue iniziali (l'ufficio: la sua iniziale)."""
+    dip = getattr(utente, 'dipendente', None) if utente else None
+    if dip and dip.foto:
+        return {'foto': reverse('turni:foto_profilo_img', args=[dip.pk]) + f'?v={dip.foto.name[-12:]}'}
+    if dip:
+        parole = dip.nome_breve.replace("'", ' ').replace('’', ' ').split()
+        return {'iniziali': (parole[0][:1] + (parole[-1][:1] if len(parole) > 1 else '')).upper()}
+    if utente:
+        return {'iniziali': (utente.get_full_name() or utente.username)[:1].upper()}
+    return {'iniziali': 'S'}
+
+
+def _quando(dt):
+    """Come Instagram: 34 min, 9 h, 3 g, poi la data."""
+    secondi = (timezone.now() - dt).total_seconds()
+    if secondi < 3600:
+        return f'{max(1, int(secondi // 60))} min'
+    if secondi < 86400:
+        return f'{int(secondi // 3600)} h'
+    if secondi < 7 * 86400:
+        return f'{int(secondi // 86400)} g'
+    return timezone.localtime(dt).strftime('%d/%m')
+
+
+def _sezione(dt):
+    giorni = (timezone.localdate() - timezone.localtime(dt).date()).days
+    if giorni <= 0:
+        return 'Oggi'
+    if giorni == 1:
+        return 'Ieri'
+    if giorni < 7:
+        return 'Ultimi 7 giorni'
+    if giorni < 30:
+        return 'Ultimi 30 giorni'
+    return 'Meno recenti'
+
+
+SEZIONI = ['Oggi', 'Ieri', 'Ultimi 7 giorni', 'Ultimi 30 giorni', 'Meno recenti']
+ESITI = {'confermata': 'Hai confermato', 'rifiutata': 'Hai rifiutato'}
+
+
+def _oggetto(tipo, oggetto_id):
+    from .models import CambioTurno, Intervento, Pulizia
+
+    if tipo in ('cambio', 'cambio_ufficio'):
+        return CambioTurno.objects.filter(pk=oggetto_id).select_related('richiedente', 'collega').first()
+    if tipo == 'manutenzione':
+        return Intervento.objects.filter(pk=oggetto_id).select_related('macchina').first()
+    if tipo in ('pulizia_ct', 'pulizia_rp', 'pulizia'):
+        return Pulizia.objects.filter(pk=oggetto_id).select_related('turno__dipendente', 'elemento').first()
+    if tipo == 'riunione':
+        from .models import InvitoRiunione
+        return InvitoRiunione.objects.filter(pk=oggetto_id).select_related('riunione__creata_da', 'dipendente').first()
+    return None
+
+
+def puo_rispondere(tipo, ogg, utente):
+    """Questa persona può rispondere adesso (Conferma / Rifiuta) a questa richiesta?"""
+    from .models import CambioTurno, ElementoPulizia, Intervento, Pulizia
+    from .pulizie import e_resp_piazzale
+    from .richieste import e_responsabile
+    from .views import fasce_del_capo
+
+    if ogg is None:
+        return False
+    dip = getattr(utente, 'dipendente', None)
+    if tipo == 'riunione':
+        from .views_riunioni import puo_rispondere as puo_rispondere_riunione
+        return puo_rispondere_riunione(ogg, utente)
+    if tipo == 'cambio':
+        return bool(dip and ogg.collega_id == dip.pk and ogg.stato == CambioTurno.Stato.ATTESA_COLLEGA and not ogg.scaduto)
+    if tipo == 'cambio_ufficio':
+        return e_responsabile(utente) and ogg.stato == CambioTurno.Stato.ATTESA_UFFICIO
+    if tipo == 'manutenzione':
+        return bool(dip and ogg.assegnata_a_id == dip.pk and ogg.stato == Intervento.Stato.SEGNALATA)
+    if tipo == 'pulizia_ct':
+        if ogg.stato != Pulizia.Stato.FATTA or ogg.ok_capoturno_il or ogg.turno.dipendente.utente_id == utente.pk:
+            return False
+        if ogg.elemento_id and ogg.elemento.convalida == ElementoPulizia.Convalida.PIAZZALE:
+            return False
+        fasce = fasce_del_capo(utente, ogg.turno.data)
+        return fasce is None and utente.is_staff or bool(fasce and ogg.turno.fascia in fasce)
+    if tipo == 'pulizia_rp':
+        if not e_resp_piazzale(utente) or ogg.stato != Pulizia.Stato.FATTA:
+            return False
+        C = ElementoPulizia.Convalida
+        return bool(ogg.elemento_id and (ogg.elemento.convalida == C.PIAZZALE
+                                         or (ogg.elemento.convalida == C.CT_RP and ogg.ok_capoturno_il)))
+    return False
+
+
+def in_attesa(request):
+    """Le cose che aspettano la persona adesso, una riga ciascuna (al posto dell'area "Da fare")."""
+    from .manutenzione import e_resp, puo_approvare
+    from .models import CambioTurno, ElementoPulizia, Intervento, OrdineRicambio, Pulizia
+    from .pulizie import da_convalidare_piazzale, e_resp_piazzale
+    from .richieste import e_responsabile, extra_per
+    from .views import e_capoturno, fasce_del_capo
 
     u = request.user
-    nav = nav if nav is not None else navigazione(request)
     dip = getattr(u, 'dipendente', None)
     r = reverse
-    voci = []
+    righe = []
 
-    def aggiungi(n, testo, url, icona):
-        if n:
-            voci.append({'n': n, 'testo': testo, 'url': url, 'icona': ICONE[icona]})
+    def riga(tipo, oggetto_id, titolo, testo, url, quando, mittente=None):
+        righe.append({'tipo': tipo, 'oggetto_id': oggetto_id, 'titolo': titolo, 'testo': testo, 'url': url,
+                      'quando_dt': quando or timezone.now(), 'mittente': mittente})
 
     if dip:
-        aggiungi(nav.get('nav_da_rispondere', 0), 'Cambi turno a cui rispondere', r('turni:richieste'), 'cambio')
-        aggiungi(dip.modifiche_turno.filter(vista_il__isnull=True).count(), 'Turni cambiati da vedere', r('turni:messaggi'), 'calendario')
-        aggiungi(nav.get('nav_extra', 0), 'Turni extra: cercasi volontari', r('turni:miei_turni'), 'extra')
-    aggiungi(pulizie_da_verificare(u), 'Pulizie da verificare', r('turni:capoturno'), 'verifica')
-    if nav.get('nav_responsabile'):
-        aggiungi(nav.get('nav_da_approvare', 0), 'Richieste da approvare', r('turni:ufficio_richieste'), 'richieste')
-        aggiungi(nav.get('nav_volontari', 0), 'Volontari da confermare', r('turni:ufficio_extra'), 'extra')
-    aggiungi(nav.get('nav_manutenzione', 0), 'Manutenzioni da seguire', r('turni:manutenzione'), 'manutenzione')
-    return voci
+        for c in CambioTurno.objects.filter(collega=dip, stato=CambioTurno.Stato.ATTESA_COLLEGA).select_related('richiedente__utente'):
+            if not c.scaduto:
+                riga('cambio', c.pk, f'{c.richiedente.nome_breve} ti chiede un cambio turno',
+                     ' e '.join(f'{g:%a %d/%m}' for g in c.giorni), r('turni:richieste'), c.creato_il, c.richiedente.utente)
+        for m in dip.modifiche_turno.filter(vista_il__isnull=True):
+            riga('', None, 'Il tuo turno è cambiato', f'{m.data:%a %d/%m}: {m.prima} → {m.dopo}', r('turni:messaggi'), m.creata_il)
+        from .models import InvitoRiunione
+        from .views_riunioni import quando as quando_riunione
+        for inv in InvitoRiunione.objects.filter(dipendente=dip, risposta='', riunione__annullata=False,
+                                                 riunione__fine__gt=timezone.now()).select_related('riunione__creata_da'):
+            rr = inv.riunione
+            riga('riunione', inv.pk, f'Riunione: {rr.titolo}', f'{quando_riunione(rr)} · {rr.luogo}',
+                 r('turni:riunione', args=[rr.pk]), rr.creata_il, rr.creata_da)
+        for e in extra_per(dip):
+            if not e.mia:
+                riga('', None, 'Cercasi volontari', f'{e.data:%a %d/%m} · {e.descrizione_fascia}', r('turni:miei_turni'), e.creata_il)
+        for i in Intervento.objects.filter(assegnata_a=dip, stato__in=[Intervento.Stato.SEGNALATA, Intervento.Stato.ASSEGNATA]
+                                           ).select_related('macchina', 'segnalata_da__dipendente'):
+            riga('manutenzione', i.pk, f'Manutenzione da eseguire · {i.macchina.nome}', i.descrizione,
+                 r('turni:intervento', args=[i.pk]), i.segnalata_il, i.segnalata_da)
+    if e_responsabile(u):
+        for c in CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_UFFICIO).select_related('richiedente__utente', 'collega'):
+            riga('cambio_ufficio', c.pk, f'Cambio turno da approvare: {c.richiedente.nome_breve} ↔ {c.collega.nome_breve}',
+                 ' e '.join(f'{g:%a %d/%m}' for g in c.giorni), r('turni:ufficio_richieste'),
+                 c.risposta_collega_il or c.creato_il, c.richiedente.utente)
+    if puo_approvare(u):
+        for i in Intervento.objects.filter(stato=Intervento.Stato.SEGNALATA, assegnata_a__isnull=True
+                                           ).select_related('macchina', 'segnalata_da__dipendente'):
+            riga('', None, f'Guasto da assegnare · {i.macchina.nome}', i.descrizione, r('turni:intervento', args=[i.pk]),
+                 i.segnalata_il, i.segnalata_da)
+    if e_resp(u):
+        for o in OrdineRicambio.objects.filter(stato=OrdineRicambio.Stato.RICHIESTO):
+            riga('', None, f'Pezzo da approvare · n. {o.numero}', f'{o.nome} × {o.quantita}', r('turni:ordini'),
+                 o.richiesto_il, getattr(o, 'richiesto_da', None))
+    if dip and dip.acquisti:
+        for o in OrdineRicambio.objects.filter(stato=OrdineRicambio.Stato.APPROVATO):
+            riga('', None, f'Pezzo da ordinare · n. {o.numero}', f'{o.nome} × {o.quantita}', r('turni:ordini'),
+                 o.richiesto_il, getattr(o, 'richiesto_da', None))
+    # pulizie fatte che aspettano l'ok del Capo Turno (solo il suo turno; l'ufficio vede tutto)
+    oggi = timezone.localdate()
+    if e_capoturno(u, oggi):
+        for giorno in (oggi, oggi - timedelta(days=1)):
+            fasce = fasce_del_capo(u, giorno)
+            if fasce == set():
+                continue
+            q = Pulizia.objects.filter(turno__data=giorno, stato=Pulizia.Stato.FATTA, ok_capoturno_il__isnull=True).exclude(
+                elemento__convalida=ElementoPulizia.Convalida.PIAZZALE).select_related('turno__dipendente__utente', 'elemento')
+            if fasce is not None:
+                q = q.filter(turno__fascia__in=fasce)
+            for p in q:
+                if p.turno.dipendente.utente_id != u.pk:
+                    riga('pulizia_ct', p.pk, f'{p.turno.dipendente.nome_breve} ha completato una pulizia', p.titolo,
+                         r('turni:capoturno') + f'?giorno={giorno.isoformat()}', p.fatta_il, p.turno.dipendente.utente)
+    if e_resp_piazzale(u):
+        for p in da_convalidare_piazzale().select_related('turno__dipendente__utente'):
+            riga('pulizia_rp', p.pk, f'Pulizia da convalidare · {p.turno.dipendente.nome_breve}', p.titolo,
+                 r('turni:pulizie_piazzale'), p.ok_capoturno_il or p.fatta_il, p.turno.dipendente.utente)
+    return righe
 
 
-def conta_notifiche(request, nav):
-    """Il numero sul cuore: cose da fare + avvisi non letti."""
+def _righe_notifiche(request):
+    """Tutte le righe del centro notifiche, dalla più recente: avvisi e cose in attesa, senza doppioni."""
     from .models import Notifica
 
-    return sum(v['n'] for v in da_fare(request, nav)) + Notifica.objects.filter(utente=request.user, letta_il__isnull=True).count()
+    u = request.user
+    attese = in_attesa(request)
+    chiavi_attese = {(a['tipo'], a['oggetto_id']) for a in attese if a['tipo']}
+    righe, viste = [], set()
+    for n in Notifica.objects.filter(utente=u).select_related('mittente__dipendente')[:80]:
+        chiave = (n.tipo, n.oggetto_id)
+        if n.tipo in TIPI_CON_RISPOSTA and chiave in viste:
+            continue  # una sola riga per richiesta
+        ogg = _oggetto(n.tipo, n.oggetto_id) if n.tipo in TIPI_CON_RISPOSTA else None
+        azioni = n.tipo in TIPI_CON_RISPOSTA and puo_rispondere(n.tipo, ogg, u)
+        esito = ''
+        if n.tipo == 'pulizia':
+            esito = 'Accettata in automatico'
+        elif n.tipo in TIPI_CON_RISPOSTA and not azioni:
+            esito = ESITI.get(n.esito) or (ogg.get_stato_display() if ogg is not None and hasattr(ogg, 'get_stato_display') else '')
+        viste.add(chiave)
+        righe.append({'tipo': n.tipo, 'oggetto_id': n.oggetto_id, 'titolo': re.sub(r'^[^\w(]+', '', n.titolo),
+                      'testo': n.testo, 'url': n.url, 'quando_dt': n.creata_il, 'mittente': n.mittente,
+                      'azioni': azioni, 'esito': esito, 'nuova': n.letta_il is None})
+    for a in attese:
+        if a['tipo'] and (a['tipo'], a['oggetto_id']) in viste:
+            continue  # c'è già la notifica di questa richiesta
+        ogg = _oggetto(a['tipo'], a['oggetto_id']) if a['tipo'] in TIPI_CON_RISPOSTA else None
+        a.update(azioni=a['tipo'] in TIPI_CON_RISPOSTA and puo_rispondere(a['tipo'], ogg, u), esito='', nuova=True)
+        righe.append(a)
+    righe.sort(key=lambda x: x['quando_dt'], reverse=True)
+    del chiavi_attese
+    return righe
+
+
+def conta_notifiche(request, nav=None):
+    """Il numero sulla campanella: avvisi non letti + cose che aspettano una risposta."""
+    return sum(1 for r in _righe_notifiche(request) if r['nuova'] or r.get('azioni'))
 
 
 @login_required
 def notifiche(request):
-    """Il centro notifiche (il cuore in alto a destra): da fare adesso, poi gli avvisi ricevuti."""
+    """Il centro notifiche (la campanella in alto a destra), come Instagram: una riga per ogni cosa,
+    divise per Oggi / Ieri / Ultimi 7 giorni / Ultimi 30 giorni, con il tondino di chi l'ha generata
+    e Conferma / Rifiuta per quello che aspetta una risposta."""
     from .models import Notifica
 
-    avvisi = list(Notifica.objects.filter(utente=request.user)[:60])
-    nuove = {n.pk for n in avvisi if n.letta_il is None}
+    gruppi = {}
+    for r in _righe_notifiche(request):
+        r.update(tondino=_tondino(r['mittente']), quando=_quando(r['quando_dt']))
+        gruppi.setdefault(_sezione(r['quando_dt']), []).append(r)
     Notifica.objects.filter(utente=request.user, letta_il__isnull=True).update(letta_il=timezone.now())
-    return render(request, 'turni/notifiche.html', {'da_fare': da_fare(request), 'avvisi': avvisi, 'nuove': nuove})
+    return render(request, 'turni/notifiche.html', {'sezioni': [(s, gruppi[s]) for s in SEZIONI if s in gruppi]})
+
+
+@login_required
+def notifica_scelta(request, tipo, oggetto_id, scelta):
+    """Conferma / Rifiuta dal centro notifiche: prima il riepilogo di cosa cambierà (o non cambierà), poi la convalida."""
+    from django.contrib import messages
+    from django.http import Http404
+    from django.shortcuts import redirect
+
+    from . import manutenzione as mn
+    from . import richieste as svc
+    from .models import ElementoPulizia, Notifica, Pulizia
+    from .pulizie import resp_piazzale
+    from .views_richieste import _righe_cambio
+
+    if scelta not in ('conferma', 'rifiuta') or tipo not in TIPI_CON_RISPOSTA:
+        raise Http404
+    ogg = _oggetto(tipo, oggetto_id)
+    if not puo_rispondere(tipo, ogg, request.user):
+        messages.info(request, 'Questa richiesta non aspetta più una tua risposta.')
+        return redirect('turni:notifiche')
+    conferma = scelta == 'conferma'
+    if request.method == 'POST':
+        nota = (request.POST.get('nota') or '').strip()[:300]
+        try:
+            if tipo == 'riunione':
+                from .views_riunioni import rispondi
+                rispondi(ogg, conferma)
+                fatto = f'Partecipazione confermata: {ogg.riunione.titolo}.' if conferma else 'Hai detto che non partecipi alla riunione.'
+            elif tipo == 'cambio':
+                svc.risposta_collega(ogg, conferma)
+                fatto = "Cambio confermato: ora decide l'ufficio." if conferma else 'Cambio rifiutato.'
+            elif tipo == 'cambio_ufficio':
+                svc.decisione_ufficio_cambio(ogg, request.user, conferma, nota)
+                fatto = 'Cambio approvato: i turni sono stati scambiati.' if conferma else 'Cambio non approvato.'
+            elif tipo == 'manutenzione':
+                if conferma:
+                    mn.accetta_richiesta(request.user, ogg)
+                    fatto = f'Manutenzione presa in carico: {ogg.macchina.nome}.'
+                else:
+                    mn.rifiuta_richiesta(request.user, ogg, nota)
+                    fatto = 'Richiesta rifiutata: torna al responsabile manutenzione.'
+            elif tipo == 'pulizia_ct':
+                if conferma and ogg.elemento_id and ogg.elemento.convalida == ElementoPulizia.Convalida.CT_RP:
+                    ogg.ok_capoturno_da, ogg.ok_capoturno_il, ogg.nota_verifica = request.user, timezone.now(), nota
+                    ogg.save()
+                    mn.avvisa(resp_piazzale(), request.user, f'{ogg.titolo} · {ogg.turno.dipendente.nome_breve}',
+                              'Ok del Capo Turno: da convalidare', reverse('turni:pulizie_piazzale'), tipo='pulizia_rp', oggetto_id=ogg.pk)
+                    fatto = f'{ogg.titolo}: ok, inviata al responsabile piazzale.'
+                else:
+                    ogg.stato = Pulizia.Stato.VERIFICATA if conferma else Pulizia.Stato.SEGNALATA
+                    ogg.verificata_da, ogg.verificata_il, ogg.nota_verifica = request.user, timezone.now(), nota
+                    ogg.save()
+                    fatto = f'{ogg.titolo}: ' + ('approvata.' if conferma else 'da rifare.')
+            else:  # pulizia_rp
+                ogg.stato = Pulizia.Stato.VERIFICATA if conferma else Pulizia.Stato.SEGNALATA
+                ogg.verificata_da, ogg.verificata_il, ogg.nota_verifica = request.user, timezone.now(), nota
+                ogg.save()
+                fatto = f'{ogg.titolo}: ' + ('convalidata.' if conferma else 'da rifare.')
+        except (svc.RichiestaNonValida, ValueError) as e:
+            messages.error(request, str(e))
+        else:
+            Notifica.objects.filter(utente=request.user, tipo=tipo, oggetto_id=oggetto_id).update(
+                esito='confermata' if conferma else 'rifiutata')
+            messages.success(request, fatto)
+        return redirect('turni:notifiche')
+
+    dip = getattr(request.user, 'dipendente', None)
+    mittente = {'cambio': lambda: ogg.richiedente.utente, 'cambio_ufficio': lambda: ogg.richiedente.utente,
+                'manutenzione': lambda: ogg.segnalata_da,
+                'riunione': lambda: ogg.riunione.creata_da}.get(tipo, lambda: ogg.turno.dipendente.utente)()
+    contesto = {'conferma': conferma, 'tipo': tipo, 'tondino': _tondino(mittente), 'ogg': ogg}
+    if tipo == 'riunione':
+        from .views_riunioni import quando as quando_riunione
+        contesto.update(titolo=f'Riunione: {ogg.riunione.titolo}', quando=quando_riunione(ogg.riunione))
+    elif tipo == 'cambio':
+        contesto.update(titolo=f'{ogg.richiedente.nome_breve} ti chiede un cambio turno', righe=_righe_cambio(ogg, dip))
+    elif tipo == 'cambio_ufficio':
+        contesto.update(titolo=f'Cambio turno: {ogg.richiedente.nome_breve} ↔ {ogg.collega.nome_breve}',
+                        persone=[(ogg.richiedente, _righe_cambio(ogg, ogg.richiedente)), (ogg.collega, _righe_cambio(ogg, ogg.collega))])
+    elif tipo == 'manutenzione':
+        contesto.update(titolo=f'Richiesta di manutenzione · {ogg.macchina.nome}')
+    else:
+        contesto.update(titolo=f'{ogg.turno.dipendente.nome_breve} · {ogg.titolo}',
+                        due_passaggi=tipo == 'pulizia_ct' and ogg.elemento_id
+                        and ogg.elemento.convalida == ElementoPulizia.Convalida.CT_RP)
+    return render(request, 'turni/notifica_scelta.html', contesto)

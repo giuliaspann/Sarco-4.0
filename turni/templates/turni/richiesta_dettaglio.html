@@ -23,7 +23,7 @@
 </section>
 
 {% elif tipo == 'ferie' %}
-<div class="intestazione"><h1>⏸️ {{ r.get_tipo_display }}</h1></div>
+<div class="intestazione"><h1>{{ r.get_tipo_display }}</h1></div>
 <section class="scheda rq-dettaglio">
   <dl>
     <dt>Quando</dt><dd>{% if r.dal == r.al %}{{ r.dal|date:'l j F Y'|capfirst }}{% else %}Dal {{ r.dal|date:'j M' }} al {{ r.al|date:'j M Y' }}{% endif %}</dd>

@@ -1,0 +1,48 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ r.titolo }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% if organizza %}{% url 'turni:riunioni' %}{% else %}{% url 'turni:miei_turni' %}?giorno={{ r.inizio|date:'Y-m-d' }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if organizza %}Riunioni{% else %}I miei turni{% endif %}</a>
+<div class="intestazione"><h1>Riunione</h1></div>
+
+<section class="scheda rn-scheda">
+  <div class="rn-testa">
+    <span class="rn-foglio"><small>{{ r.inizio|date:'D'|slice:':3' }}</small><b>{{ r.inizio|date:'j' }}</b><small>{{ r.inizio|date:'M' }}</small></span>
+    <span><b class="rn-titolo">{{ r.titolo }}</b><span class="rn-ora">{{ quando }} · {{ r.luogo }}</span></span>
+  </div>
+  {% if r.annullata %}<p class="rn-annullata">Riunione annullata</p>{% endif %}
+  {% if r.note %}<p class="istruzioni">{{ r.note|linebreaksbr }}</p>{% endif %}
+  {% if r.creata_da %}<p class="tenue piccolo">Programmata da {{ r.creata_da.dipendente.nome_breve|default:r.creata_da.get_full_name|default:r.creata_da.username }}</p>{% endif %}
+</section>
+
+{% if invito and not r.annullata and not finita %}
+<section class="scheda">
+  {% if invito.risposta == 'si' %}<p><b>Hai confermato la partecipazione.</b></p>
+  {% elif invito.risposta == 'no' %}<p><b>Hai detto che non partecipi.</b></p>
+  {% else %}<p><b>Partecipi alla riunione?</b></p>{% endif %}
+  <form method="post" class="rn-tasti">{% csrf_token %}
+    {% if invito.risposta != 'si' %}<button class="nt-conferma" name="azione" value="si">{% if invito.risposta %}Partecipo{% else %}Conferma{% endif %}</button>{% endif %}
+    {% if invito.risposta != 'no' %}<button class="nt-rifiuta" name="azione" value="no">{% if invito.risposta %}Non partecipo{% else %}Rifiuta{% endif %}</button>{% endif %}
+  </form>
+</section>
+{% endif %}
+
+{% if organizza %}
+<h2 class="rq-sezione">Invitati</h2>
+<div class="rn-conteggi">
+  <span class="rn-stato si">{{ conta.si }} sì</span>
+  <span class="rn-stato attesa">{{ conta.attesa }} da confermare</span>
+  <span class="rn-stato no">{{ conta.no }} no</span>
+</div>
+<div class="nt-elenco">
+  {% for i in inviti %}
+  <div class="rn-invitato"><span>{{ i.dipendente.nome_breve }}</span>
+    <span class="rn-stato {% if i.risposta == 'si' %}si{% elif i.risposta == 'no' %}no{% else %}attesa{% endif %}">{{ i.get_risposta_display }}</span></div>
+  {% endfor %}
+</div>
+{% if not r.annullata and not finita %}
+<form method="post" class="rn-annulla" onsubmit="return confirm('Annullare la riunione? Gli invitati vengono avvisati.');">{% csrf_token %}
+  <button class="bottone avviso-btn piena-larghezza" name="azione" value="annulla">Annulla riunione</button>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

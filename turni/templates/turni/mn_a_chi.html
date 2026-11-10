@@ -1,24 +1,25 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Richiedi manutenzione{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>
 <div class="intestazione"><h1>Richiedi manutenzione</h1></div>
 <h2 class="rq-sezione">A chi la chiedi?</h2>
 <a class="sg-macchina" href="{% url 'turni:segnala' %}?a=resp">
-  <span class="home-icona">👷</span>
+  <span class="home-icona">{% icona 'dipendenti' %}</span>
   <span class="rq-testo"><b>Responsabile manutenzione</b><small>riceve la richiesta e la assegna</small></span>
   <span class="sg-freccia">›</span>
 </a>
 {% for d in in_turno %}
 <a class="sg-macchina" href="{% url 'turni:segnala' %}?a={{ d.pk }}">
-  <span class="home-icona">🔧</span>
+  <span class="home-icona">{% icona 'manutenzione' %}</span>
   <span class="rq-testo"><b>{{ d.nome_breve }}</b><small>manutentore · in turno ora</small></span>
   <span class="sg-freccia">›</span>
 </a>
 {% endfor %}
 {% for d in altri %}
 <a class="sg-macchina" href="{% url 'turni:segnala' %}?a={{ d.pk }}">
-  <span class="home-icona">🔧</span>
+  <span class="home-icona">{% icona 'manutenzione' %}</span>
   <span class="rq-testo"><b>{{ d.nome_breve }}</b><small>manutentore</small></span>
   <span class="sg-freccia">›</span>
 </a>

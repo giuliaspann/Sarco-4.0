@@ -218,7 +218,8 @@ def segnala(request):
                     i.assegnata_a = dest
                     i.save(update_fields=['assegnata_a'])
                     mn.evento(i, request.user, f'Richiesta a {dest.nome_breve}')
-                    mn.avvisa([dest.utente_id], request.user, f'🔧 Richiesta di manutenzione · {macchina.nome}', descrizione, mn.url_intervento(i))
+                    mn.avvisa([dest.utente_id], request.user, f'🔧 Richiesta di manutenzione · {macchina.nome}', descrizione, mn.url_intervento(i),
+                              tipo='manutenzione', oggetto_id=i.pk)
                 messages.success(request, 'Segnalazione inviata: il Capo Turno e il responsabile manutenzione la ricevono subito.')
                 return redirect('turni:intervento', i.pk)
     contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', ''),
@@ -735,7 +736,7 @@ def etichette(request):
 
 
 
-CAUSE_ICONE = {'NASTRO': '➰', 'TRAMOGGIA': '🧱', 'MACCHINA': '⚙️', 'CORRENTE': '⚡', 'ALTRO': '❓'}
+CAUSE_ICONE = {'NASTRO': '➰', 'TRAMOGGIA': '🧱', 'MACCHINA': '⚙️', 'CORRENTE': '⚡', 'MANUTENZ': '🔧', 'ALTRO': '❓'}
 
 
 def _quando(valore):

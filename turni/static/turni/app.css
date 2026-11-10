@@ -1998,3 +1998,265 @@ a.rq-riga { color: inherit; text-decoration: none; }
 .nt-ora { margin-left: auto; flex: none; font-size: .78rem; color: var(--tenue); white-space: nowrap; }
 .nt-dafare .ig-ico { width: 40px; height: 40px; flex: none; background: var(--primario-chiaro); color: var(--primario); }
 .nt-dafare .badge-riga { margin-left: auto; }
+
+/* icone a linea al posto delle emoji (tag {% icona %}) */
+svg.ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -5px; }
+.home-icona:has(svg.ico) { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 99px; font-size: 0;
+  background: color-mix(in srgb, var(--primario) 14%, var(--carta)); color: var(--primario); flex: none; }
+.home-icona svg.ico { width: 24px; height: 24px; vertical-align: 0; }
+.bottone svg.ico { margin-right: 6px; }
+.rp-box span svg.ico { width: 18px; height: 18px; margin-right: 4px; color: var(--primario); }
+
+/* pagine di manutenzione, produzione, analisi e ufficio: stessi riquadri di Oggi */
+.sg-macchina, .sg-scelta, .rq-riga, .home-tasto, .cm-avviso, .stato-imp {
+  border-radius: 16px; box-shadow: 0 1px 2px rgba(0, 56, 79, .06), 0 2px 8px rgba(0, 56, 79, .05);
+}
+.sg-macchina, .rq-riga { gap: 14px; }
+.sg-freccia { font-size: 1.4rem; }
+.rp-box { border-radius: 16px; }
+.tasto-piccolo { border-radius: 99px; }
+
+/* Giulia 10/11 (dallo screenshot): barra in alto senza riga; sigle sulla riga del posto; riquadro Archivio; chat come tasti separati */
+.barra { box-shadow: none; }
+.ig-io-riga { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.ig-io-riga .ig-io-sigle { margin-top: 0; }
+.ig-archivio-tasto { display: flex; align-items: center; gap: 16px; min-height: 96px; margin: 12px 0; padding: 14px 18px; border-radius: 18px;
+  background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); color: var(--testo); text-decoration: none; }
+.ig-archivio-tasto .ig-ico { flex: none; width: 64px; height: 64px; border-radius: 16px; background: color-mix(in srgb, var(--primario) 14%, var(--carta)); color: var(--primario); }
+.ig-archivio-tasto .ig-ico svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ig-archivio-tasto b { font-family: var(--font-titoli); font-size: 1.5rem; }
+.ig-chat { margin: 0; gap: 8px; }
+.ig-chat-riga { padding: 10px 14px; border-radius: 18px; background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+.ig-chat-cerchio { background: color-mix(in srgb, var(--primario) 12%, var(--carta)); color: var(--primario); }
+.ig-chat-testi b { font-weight: 600; }
+.ig-io-sigle .cal-sigla { flex: none; white-space: nowrap; }
+.ig-azioni.grandi:not(.tre):not(.due) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ig-azioni a { overflow-wrap: anywhere; text-align: center; }
+.ig-barra { grid-template-columns: 36px minmax(0, 1fr) 36px; }
+.ig-barra .ws-logo { min-width: 0; }
+@media (max-width: 440px) {
+  .ig-barra .ws-logo .ws-campana { height: 22px; margin-right: 7px; }
+  .ig-barra .ws-logo picture, .ig-barra .ws-logo .ws-sarco { height: 14px; margin-right: 6px; }
+  .ig-barra .ws-logo .ws-parola { font-size: 17px; }
+}
+.ig-io-sigle .cal-sigla { width: auto; min-width: 0; padding: 4px 10px; }
+
+/* Giulia 10/11 (sera): barra in basso a "pillola" semitrasparente come Instagram; in alto niente fascia bianca */
+.ig-menu { left: 50%; right: auto; bottom: calc(12px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: min(360px, calc(100% - 40px)); box-sizing: border-box; padding: 6px; gap: 4px; justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, .55); border-radius: 99px;
+  background: rgba(245, 245, 245, .72); -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .14), inset 0 1px 0 rgba(255, 255, 255, .7); }
+.ig-menu a { flex: 1 1 0; height: 52px; border-radius: 99px; }
+.ig-menu a.attivo { background: rgba(0, 0, 0, .07) !important; }
+@media (prefers-color-scheme: dark) {
+  .ig-menu { background: rgba(28, 40, 47, .72); border-color: rgba(255, 255, 255, .12); box-shadow: 0 8px 28px rgba(0, 0, 0, .45); }
+  .ig-menu a.attivo { background: rgba(255, 255, 255, .1) !important; }
+}
+/* la pagina non finisce sotto la pillola */
+body:not(.accesso) { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+/* nella chat la casella per scrivere resta sopra la pillola */
+.scrivi, .wa-scrivi, .wa-solo-admin { bottom: calc(84px + env(safe-area-inset-bottom)); }
+/* in alto: il logo sullo stesso grigio della pagina, senza fascia né riga */
+.barra, .ig-barra { background: var(--sfondo); box-shadow: none; border-bottom: 0; }
+.ig-azioni a { overflow-wrap: normal; word-break: normal; }
+.ig-azioni:not(.grandi) a { font-size: .68rem; letter-spacing: -.02em; }
+/* SARCO e WORKSPACE più vicini (Giulia, 10/11) */
+.ws-logo picture, .ws-logo .ws-sarco, .ig-barra .ws-logo picture, .ig-barra .ws-logo .ws-sarco { margin-right: 3px; }
+.accesso-ws picture, .accesso-ws .ws-sarco { margin-right: 5px; }
+/* Archivio (Giulia, 10/11): non un quinto riquadro grande ma una riga bassa, con la stessa scritta dei riquadri */
+.ig-archivio-tasto { min-height: 56px; gap: 12px; padding: 8px 14px; margin: 10px 0; border-radius: 16px; }
+.ig-archivio-tasto .ig-ico { width: 40px; height: 40px; border-radius: 99px; }
+.ig-archivio-tasto .ig-ico svg { width: 22px; height: 22px; }
+.ig-archivio-tasto b { font-family: inherit; font-size: .9rem; font-weight: 600; }
+.ig-archivio-tasto::after { content: '›'; margin-left: auto; color: var(--tenue); font-size: 1.3rem; }
+/* il cerchietto di Archivio grande come quelli dei riquadri sopra (Giulia, 10/11) */
+.ig-archivio-tasto .ig-ico { width: 44px; height: 44px; border-radius: 99px; }
+.ig-archivio-tasto .ig-ico svg { width: 24px; height: 24px; stroke-width: 2; }
+.ig-azioni.grandi ~ .ig-archivio-tasto .ig-ico { width: 60px; height: 60px; }
+.ig-azioni.grandi ~ .ig-archivio-tasto .ig-ico svg { width: 30px; height: 30px; }
+/* Archivio in blu Sarco: serve per consultare lo storico e scaricare i PDF, non per registrare (Giulia, 10/11) */
+.ig-archivio-tasto { background: color-mix(in srgb, #00384f 7%, var(--carta)); border-color: color-mix(in srgb, #00384f 22%, var(--carta)); }
+.ig-archivio-tasto .ig-ico { background: color-mix(in srgb, #00384f 14%, var(--carta)); color: #00384f; }
+@media (prefers-color-scheme: dark) {
+  .ig-archivio-tasto { background: color-mix(in srgb, #4fa3c7 12%, var(--carta)); border-color: color-mix(in srgb, #4fa3c7 30%, var(--carta)); }
+  .ig-archivio-tasto .ig-ico { background: color-mix(in srgb, #4fa3c7 22%, var(--carta)); color: #8fcbe4; }
+}
+
+/* Centro notifiche come Instagram (Giulia, 10/11): sezioni per periodo, tondino, Conferma / Rifiuta */
+.nt-sezione { font-size: 1.15rem; margin: 18px 0 8px; }
+.nt-ig { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.nt-ig.nuova .nt-corpo b { color: var(--testo); }
+.nt-tondo { flex: none; width: 52px; height: 52px; border-radius: 99px; overflow: hidden; display: grid; place-items: center;
+  background: var(--primario-chiaro); color: var(--testo); font-weight: 700; font-size: 1.05rem; }
+.nt-tondo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nt-corpo { flex: 1; min-width: 0; color: var(--testo); text-decoration: none; font-size: .92rem; line-height: 1.3; }
+.nt-corpo span { color: var(--testo); }
+.nt-corpo small { display: block; color: var(--tenue); margin-top: 2px; }
+.nt-ig.nuova .nt-corpo small::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: #2a72b0; margin-right: 6px; vertical-align: 1px; }
+.nt-tasti { flex: none; display: flex; gap: 6px; }
+.nt-tasti a { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border-radius: 10px; font-weight: 700; font-size: .85rem; text-decoration: none; }
+.nt-conferma { background: var(--primario); color: #fff; }
+.nt-rifiuta { background: var(--altro); color: var(--testo); }
+.nt-riepilogo-testa { margin-bottom: 8px; }
+.nt-riepilogo p { margin: 0 0 10px; }
+.nt-persona { font-weight: 700; margin-top: 12px !important; }
+.nt-convalida { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.nt-convalida input { grid-column: 1 / -1; }
+.nt-convalida .bottone { min-height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+@media (max-width: 380px) { .nt-tasti { flex-direction: column; } }
+/* notifiche separate da una linea sottile, ognuna con il suo spazio (Giulia, 10/11) */
+.nt-elenco { display: flex; flex-direction: column; }
+.nt-elenco .nt-ig { padding: 12px 0; border-bottom: 1px solid var(--bordo); }
+.nt-elenco .nt-ig:last-child { border-bottom: 0; }
+@media (max-width: 380px) { .nt-tasti { flex-direction: row; } .nt-tasti a { padding: 0 10px; } }
+.nt-tasti { flex-direction: column; }
+@media (min-width: 420px) { .nt-tasti { flex-direction: row; } }
+
+/* Manutenzione in corso / conclusa del Capo Turno (Giulia, 10/11) */
+.mc-form { display: grid; gap: 12px; }
+.mc-passo { font-weight: 700; margin: 0; }
+.mc-macchine { max-height: 46vh; overflow-y: auto; }
+.mc-campo { display: grid; gap: 4px; font-weight: 600; font-size: .92rem; }
+.mc-spunta { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 12px; border-radius: 14px; background: var(--altro); font-weight: 600; }
+.mc-spunta input { width: 22px; height: 22px; }
+.mc-fermo { display: grid; gap: 10px; padding: 12px; border-radius: 14px; border: 1px solid var(--attenzione); }
+.mc-invia { min-height: 52px; border-radius: 14px; }
+.mc-aperta { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--bordo); color: var(--testo); text-decoration: none; }
+.mc-aperta-testo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.mc-aperta-testo small { color: var(--tenue); }
+.mc-fermo-chip { flex: none; padding: 3px 8px; border-radius: 99px; background: color-mix(in srgb, var(--attenzione) 15%, var(--carta)); color: var(--attenzione); font-size: .75rem; font-weight: 700; }
+/* Rifiuta ben visibile: riquadro rosso chiaro pastello (Giulia, 10/11); i tasti non devono confondersi con lo sfondo */
+.nt-rifiuta { background: #fcd9d9; color: #9b1c1c; border: 1px solid #f5b5b5; }
+@media (prefers-color-scheme: dark) { .nt-rifiuta { background: #5a2222; color: #ffd4d4; border-color: #7a3030; } }
+.ig-tasti a { background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+.mc-due { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ig-azioni.grandi.tre a { min-height: 120px; font-size: .82rem; }
+
+/* Tutte le scritte centrate sui tasti, in qualsiasi caso (Giulia, 10/11) */
+.nt-tasti a { justify-content: center; text-align: center; min-width: 84px; }
+button, .bottone, .tasto, input[type="submit"], .nt-tasti a, .rn-tasti a, .rn-tasti button { text-align: center; justify-content: center; }
+
+/* Riunioni: riquadro tipo calendario (Giulia, 10/11) */
+.rn-riquadro { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; padding: 10px 12px; border-radius: 16px;
+  background: var(--carta); border: 1px solid var(--bordo); border-left: 5px solid #2a72b0; color: var(--testo); text-decoration: none; }
+.rn-riquadro.attesa { border-left-color: #e0a100; }
+.rn-riquadro.annullata { opacity: .55; }
+.rn-riquadro .sg-freccia { margin-left: auto; }
+.rn-foglio { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 10px; overflow: hidden; background: #fff; border: 1px solid #c9d8ea; text-align: center; line-height: 1.1; }
+.rn-foglio small:first-child { width: 100%; background: #2a72b0; color: #fff; font-size: .68rem; font-weight: 700; padding: 2px 0; text-transform: uppercase; }
+.rn-foglio b { font-size: 1.35rem; color: #1b2b3c; padding: 2px 0 0; }
+.rn-foglio small:last-child { font-size: .68rem; color: #4a5b6c; padding-bottom: 3px; text-transform: uppercase; }
+.rn-corpo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rn-corpo b { font-size: .98rem; }
+.rn-ora { font-size: .82rem; color: var(--tenue); }
+.rn-stato { align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; text-align: center;
+  font-size: .75rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; margin-top: 3px; }
+.rn-stato.si { background: #dff3dc; color: #1f6b1a; }
+.rn-stato.attesa { background: #fff1c9; color: #7a5600; }
+.rn-stato.no { background: #fcd9d9; color: #9b1c1c; }
+.rn-stato.neutro { background: #e3edf8; color: #1d4f80; }
+.rn-pallino { display: block; width: 8px; height: 8px; border-radius: 99px; background: #2a72b0; margin: 4px auto 0; }
+.rn-testa { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.rn-testa > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.rn-titolo { font-size: 1.1rem; }
+.rn-annullata { color: #9b1c1c; font-weight: 700; }
+.rn-tasti { display: flex; gap: 10px; }
+.rn-tasti button { flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 46px; border-radius: 12px;
+  font: inherit; font-weight: 700; cursor: pointer; border: 1px solid transparent; }
+.rn-tasti .nt-conferma { border-color: var(--primario); }
+.rn-conteggi { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.rn-conteggi .rn-stato { margin-top: 0; }
+.rn-invitato { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 2px; border-bottom: 1px solid var(--bordo); }
+.rn-invitato .rn-stato { margin-top: 0; }
+.rn-annulla { margin-top: 18px; }
+.rn-cerca { display: flex; gap: 8px; margin-bottom: 8px; }
+.rn-cerca input { flex: 1; }
+.rn-cerca .bottone { flex: none; border: 1px solid var(--bordo); background: var(--carta); }
+.rn-persone { max-height: 320px; overflow-y: auto; }
+.rn-persone label[hidden] { display: none; }
+.rn-tasto-home small { margin-left: 6px; }
+@media (prefers-color-scheme: dark) {
+  .rn-foglio { background: #1d2733; border-color: #34465a; }
+  .rn-foglio b { color: #e8eef5; }
+  .rn-foglio small:last-child { color: #a9b8c8; }
+}
+.rn-cerca input { font: inherit; padding: 11px 12px; min-height: 44px; border-radius: 10px; border: 1px solid var(--bordo); background: var(--sfondo); color: var(--testo); }
+.rn-cerca .bottone { min-width: 76px; }
+.rn-persone small { margin-left: 5px; font-weight: 400; }
+.mn-capo-tasto .badge-riga { margin-left: auto; }
+
+/* Analisi: campioni a tutta larghezza, poi Foto / Manuale (Giulia, 10/11) */
+.an-campioni { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.an-campioni label { display: block; }
+.an-campioni input { position: absolute; opacity: 0; pointer-events: none; }
+.an-campioni span { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 52px; padding: 0 14px;
+  border-radius: 14px; background: var(--carta); border: 1px solid var(--bordo); font-weight: 700; cursor: pointer; }
+.an-campioni input:checked + span { background: var(--primario); border-color: var(--primario); color: #fff; }
+.an-campioni input:focus-visible + span { outline: 2px solid var(--primario); outline-offset: 2px; }
+.an-modi .mn-capo-tasto { width: 100%; font: inherit; color: var(--testo); text-align: left; justify-content: flex-start; cursor: pointer; }
+.an-scelto { display: flex; flex-direction: column; gap: 2px; margin: 0 0 12px; padding: 12px 14px; border-radius: 14px;
+  background: color-mix(in srgb, var(--primario) 12%, var(--carta)); border: 1px solid color-mix(in srgb, var(--primario) 35%, var(--carta)); }
+.an-scelto b { font-size: 1.05rem; }
+.an-scelto span { font-size: .85rem; color: var(--tenue); }
+
+/* Archivio (Giulia, 10/11): tasti a tutta larghezza, Inventario di un altro colore, filtri subito, elenco cliccabile */
+.ac-home .mn-capo-tasto { min-height: 64px; }
+.ac-home .mn-capo-tasto .sg-freccia { margin-left: auto; }
+.ac-home .ac-inventario { background: #e3edf8; border-color: #9cbde0; }
+.ac-home .ac-inventario .ig-ico { background: #2a72b0; color: #fff; }
+.ac-home .ac-inventario b { color: #1d4f80; }
+@media (prefers-color-scheme: dark) {
+  .ac-home .ac-inventario { background: #1b3048; border-color: #34587e; }
+  .ac-home .ac-inventario b { color: #d4e5f7; }
+}
+.ac-tasti { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+.ac-tasti a { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 42px; padding: 0 6px;
+  border-radius: 12px; background: var(--carta); border: 1px solid var(--bordo); color: var(--testo); font-weight: 700; font-size: .88rem; text-decoration: none; }
+.ac-tasti a.attivo { background: var(--primario); border-color: var(--primario); color: #fff; }
+.ac-filtri-tasti { display: flex; gap: 8px; margin-top: 4px; }
+.ac-filtri-tasti .bottone { flex: 1; }
+.ac-filtri-tasti .bottone.leggero { border: 1px solid var(--bordo); background: var(--carta); }
+.ac-esito { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 8px; }
+.ac-scarica { background: var(--carta); border: 1px solid var(--primario); color: var(--primario); min-height: 40px; }
+.ac-elenco { display: flex; flex-direction: column; gap: 8px; }
+.ac-riga { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; border-radius: 14px; background: var(--carta);
+  border: 1px solid var(--bordo); color: var(--testo); text-decoration: none; }
+.ac-riga img, .ac-riga-vuota { flex: none; width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: var(--altro); }
+.ac-riga-testo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ac-riga-testo b { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ac-riga-testo small { color: var(--tenue); font-size: .8rem; }
+.ac-riga .sg-freccia { margin-left: auto; }
+.ac-voce-titolo { display: block; font-size: 1.1rem; margin-bottom: 6px; }
+
+/* Turni di tutti (Giulia, 10/11): testa fissa con settimana e giorni, aree in blu pastello a tutta larghezza */
+.st-testa { position: sticky; top: var(--alto-barra, 58px); z-index: 5; background: var(--sfondo); margin: 0 -16px; padding: 4px 16px 6px;
+  border-bottom: 1px solid var(--bordo); }
+.st-settimana { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .9rem; font-weight: 700; }
+.st-settimana span { flex: 1; text-align: center; }
+.st-freccia { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 99px;
+  background: var(--carta); border: 1px solid var(--bordo); color: var(--testo); font-size: 1.3rem; text-decoration: none; line-height: 1; }
+.st-aiuto { margin: 4px 0 6px; text-align: center; font-size: .74rem; color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-testa .gt-testa { padding-top: 2px; padding-bottom: 0; }
+.st-tabella { padding-top: 6px; }
+.st-area { margin: 14px 0 6px; padding: 8px 12px; border-radius: 10px; background: #dbe8f6; color: #1d4f80; font-weight: 800;
+  font-size: .9rem; text-align: center; }
+@media (prefers-color-scheme: dark) { .st-area { background: #1d3550; color: #d4e5f7; } }
+.st-tabella .gt-riga { padding: 3px 2px; }
+/* "CT | 1T" sta nella casella stretta */
+.gt-cella.f-capo { font-size: .62rem; letter-spacing: -.02em; white-space: nowrap; }
+@media (max-width: 360px) { .gt-cella.f-capo { font-size: .55rem; } }
+
+/* Avvisi dell'Area personale: un riquadro per ogni cosa (Giulia, 10/11) */
+.av-riquadro { display: flex; flex-direction: column; gap: 2px; margin: 0 0 10px; padding: 10px 14px; border-radius: 16px;
+  background: var(--carta); border: 1px solid var(--bordo); border-left: 5px solid #e0a100; color: var(--testo); text-decoration: none; }
+.av-riquadro .av-tipo { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tenue); }
+.av-riquadro b { font-size: .98rem; }
+.av-riquadro small { font-size: .82rem; color: var(--tenue); }
+.av-riquadro .stato-chip { align-self: flex-start; margin-top: 4px; }
+.av-rispondi { border-left-color: var(--primario); }
+.av-rispondi .rn-tasti { margin-top: 8px; }
+.ap-tasti { margin-top: 18px; }
+.ap-tasti .mn-capo-tasto { min-height: 60px; }
+.ap-tasti .mn-capo-tasto .sg-freccia { margin-left: auto; }

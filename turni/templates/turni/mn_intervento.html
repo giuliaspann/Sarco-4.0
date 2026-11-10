@@ -1,10 +1,11 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Intervento #{{ i.pk }}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
   <a class="tasto-indietro" href="{% url 'turni:interventi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Interventi</a>
   <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% elif i.tipo == 'LAVORO' %}{{ i.get_tipo_lavoro_display|default:'Manutenzione completata' }}{% else %}Guasto{% endif %} #{{ i.pk }}</p>
-  <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona }} {{ i.macchina.nome }}</a></h1>
+  <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona|come_icona }} {{ i.macchina.nome }}</a></h1>
   <div class="mn-etichette">
     <span class="stato-chip {{ i.classe_stato }}">{{ i.etichetta_stato }}</span>
     {% if i.macchina_ferma %}<span class="stato-chip no">{% if i.aperto %}Macchina ferma{% else %}Ferma {{ i.ore_fermo }} ore{% endif %}</span>{% endif %}
@@ -16,12 +17,12 @@
 <section class="scheda">
   {% if i.tipo != 'LAVORO' %}<p class="mn-descrizione">{{ i.descrizione|linebreaksbr }}</p>{% endif %}
   <dl class="mn-chi-scheda">
-    {% if i.tipo != 'LAVORO' %}<div><dt>📣 Segnalato da</dt><dd>{{ i.chi_ha_segnalato|default:'—' }} <small>{{ i.segnalata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
-    {% if i.approvata_da %}<div><dt>👍 Approvato da</dt><dd>{{ i.chi_ha_approvato }} <small>{{ i.approvata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
-    {% if i.assegnata_a and i.stato != 'COMPLETATA' %}<div><dt>🔧 Se ne occupa</dt><dd>{{ i.assegnata_a.nome_breve }}</dd></div>{% endif %}
-    {% if i.da_fare_il and i.aperto %}<div><dt>📅 Da fare</dt><dd>{% if i.da_fare_il == oggi %}Oggi{% elif i.da_fare_il == domani %}Domani mattina{% else %}{{ i.da_fare_il|date:'D j M' }}{% endif %}</dd></div>{% endif %}
-    {% if i.officina_esterna %}<div><dt>🏭 Riparazione esterna</dt><dd>{{ i.officina_esterna }}</dd></div>{% endif %}
-    {% if i.stato == 'COMPLETATA' %}<div><dt>✅ Sistemato da</dt><dd>{{ i.squadra }} <small>{{ i.completata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
+    {% if i.tipo != 'LAVORO' %}<div><dt>{% icona 'avvisi' %} Segnalato da</dt><dd>{{ i.chi_ha_segnalato|default:'—' }} <small>{{ i.segnalata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
+    {% if i.approvata_da %}<div><dt>Approvato da</dt><dd>{{ i.chi_ha_approvato }} <small>{{ i.approvata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
+    {% if i.assegnata_a and i.stato != 'COMPLETATA' %}<div><dt>{% icona 'manutenzione' %} Se ne occupa</dt><dd>{{ i.assegnata_a.nome_breve }}</dd></div>{% endif %}
+    {% if i.da_fare_il and i.aperto %}<div><dt>{% icona 'calendario' %} Da fare</dt><dd>{% if i.da_fare_il == oggi %}Oggi{% elif i.da_fare_il == domani %}Domani mattina{% else %}{{ i.da_fare_il|date:'D j M' }}{% endif %}</dd></div>{% endif %}
+    {% if i.officina_esterna %}<div><dt>{% icona 'macchine' %} Riparazione esterna</dt><dd>{{ i.officina_esterna }}</dd></div>{% endif %}
+    {% if i.stato == 'COMPLETATA' %}<div><dt>{% icona 'ok' %} Sistemato da</dt><dd>{{ i.squadra }} <small>{{ i.completata_il|date:'D j M, H:i' }}</small></dd></div>{% endif %}
   </dl>
   {% if i.foto_guasto or i.foto_riparazione or i.video %}
   <div class="mn-foto-coppia">
@@ -36,7 +37,7 @@
     <b>{% if i.titolo_lavoro %}{{ i.titolo_lavoro }}{% else %}Manutenzione completata{% endif %}</b>
     <p>{{ i.lavoro_svolto|linebreaksbr }}</p>
     <small>Sistemato da {{ i.squadra }} · {{ i.completata_il|date:'D j M, H:i' }}{% if i.ore_lavoro %} · {{ i.ore_lavoro }} ore di lavoro{% endif %}</small>
-    {% if i.ricambi_usati.all %}<ul>{% for p in i.ricambi_usati.all %}<li>🔩 {{ p.nome }} × {{ p.quantita }}</li>{% endfor %}</ul>{% endif %}
+    {% if i.ricambi_usati.all %}<ul>{% for p in i.ricambi_usati.all %}<li>{% icona 'ricambi' %} {{ p.nome }} × {{ p.quantita }}</li>{% endfor %}</ul>{% endif %}
   </div>
   {% endif %}
   {% if i.stato == 'COMPLETATA' %}{% include 'turni/_mn_costi.html' %}{% endif %}
@@ -64,12 +65,12 @@
 
 {% if lavora and i.stato == 'ASSEGNATA' %}
 <form method="post" class="mn-azione-rapida">{% csrf_token %}
-  <button class="bottone pieno piena-larghezza" name="azione" value="inizia">▶️ Inizio il lavoro</button>
+  <button class="bottone pieno piena-larghezza" name="azione" value="inizia">{% icona 'riparti' %}Inizio il lavoro</button>
 </form>
 {% endif %}
 
 {% if i.aperto and i.stato != 'SEGNALATA' and chiede_pezzi %}
-<a class="bottone piena-larghezza mn-pezzo" href="{% url 'turni:nuovo_ordine' %}?intervento={{ i.pk }}">📦 Serve un pezzo da ordinare</a>
+<a class="bottone piena-larghezza mn-pezzo" href="{% url 'turni:nuovo_ordine' %}?intervento={{ i.pk }}">{% icona 'ordini' %} Serve un pezzo da ordinare</a>
 {% endif %}
 
 {% if lavora and i.aperto and i.stato != 'SEGNALATA' %}
@@ -80,16 +81,16 @@
   <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
-    <span>📷 Foto</span>
-  </label>
+    <span>{% icona 'foto' %} Foto</span>
+</label>
   {% include 'turni/_mn_colleghi_video.html' %}
-  <button class="bottone pieno piena-larghezza" name="azione" value="completa">✅ Riparata</button>
+  <button class="bottone pieno piena-larghezza" name="azione" value="completa">{% icona 'ok' %} Riparata</button>
 </form>
 {% endif %}
 
 {% if i.aperto and i.stato != 'SEGNALATA' %}{% if approvatore or lavora %}
 <details class="scheda mn-riassegna">
-  <summary>📅 Per quando / riparazione esterna</summary>
+  <summary>{% icona 'calendario' %} Per quando / riparazione esterna</summary>
   <form method="post">{% csrf_token %}
     {% include 'turni/_mn_quando.html' %}
     <button class="bottone piena-larghezza" name="azione" value="pianifica">Salva</button>
@@ -109,7 +110,7 @@
 
 {% if i.stato == 'COMPLETATA' %}
 <form method="post" class="mn-bravo">{% csrf_token %}
-  <button name="azione" value="bravo" class="{% if user in bravi %}fatto{% endif %}">👍 {% if bravi %}{{ bravi|length }}{% else %}Bravo{% endif %}</button>
+  <button name="azione" value="bravo" class="{% if user in bravi %}fatto{% endif %}">{% if bravi %}{{ bravi|length }}{% else %}Bravo{% endif %}</button>
   {% if bravi %}<small>{% for u in bravi %}{{ u.dipendente.nome_breve|default:'Ufficio' }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>{% endif %}
 </form>
 {% endif %}
@@ -117,8 +118,8 @@
 {% if ordini %}
 <h2 class="rq-sezione">Pezzi chiesti</h2>
 {% for o in ordini %}
-<div class="rq-riga"><span class="home-icona">📦</span>
-  <span class="rq-testo"><b>{{ o.nome }} × {{ o.quantita }}</b><small>{{ o.richiesto_il|date:'j M' }}{% if o.fornitore %} · {{ o.fornitore }}{% endif %}{% if o.dove %} · 📍 {{ o.dove }}{% endif %}</small></span>
+<div class="rq-riga"><span class="home-icona">{% icona 'ordini' %}</span>
+  <span class="rq-testo"><b>{{ o.nome }} × {{ o.quantita }}</b><small>{{ o.richiesto_il|date:'j M' }}{% if o.fornitore %} · {{ o.fornitore }}{% endif %}{% if o.dove %} · {% icona 'posizione' %} {{ o.dove }}{% endif %}</small></span>
   <span class="stato-chip {{ o.classe_stato }}">{{ o.get_stato_display }}</span></div>
 {% endfor %}
 {% endif %}

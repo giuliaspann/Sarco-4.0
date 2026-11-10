@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Storico fermi{% endblock %}
 {% block contenuto %}
 {% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Archivio</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
@@ -10,16 +11,16 @@
 <div class="cb-elenco">
   {% for f in recenti %}
   <a class="mn-riga{% if f.in_corso %} ferma{% endif %}" href="{% url 'turni:fermo' f.pk %}">
-    <span class="home-icona">⛔</span>
+    <span class="home-icona">{% icona 'fermo' %}</span>
     <span class="rq-testo">
       <b>{{ f.get_impianto_display }} · {{ f.get_causa_display }}</b>
       <small>{{ f.fermo_dal|date:'D j M, H:i' }}{% if f.macchina %} · {{ f.macchina.nome }}{% endif %}</small>
-      <small class="mn-chi"><span>📣 {{ f.chi_ha_segnalato|default:'—' }}</span>{% if not f.in_corso %}<span>✅ {{ f.chi_ha_fatto_ripartire }}</span>{% endif %}</small>
-    </span>
+      <small class="mn-chi"><span>{% icona 'avvisi' %} {{ f.chi_ha_segnalato|default:'—' }}</span>{% if not f.in_corso %}<span>{% icona 'ok' %} {{ f.chi_ha_fatto_ripartire }}</span>{% endif %}</small>
+</span>
     <span class="stato-chip {% if f.in_corso %}no{% else %}ok{% endif %}">{% if f.in_corso %}Fermo{% else %}{{ f.durata }}{% endif %}</span>
   </a>
   {% empty %}
-  <p class="tenue piccolo">Nessun fermo negli ultimi 30 giorni. 👍</p>
+  <p class="tenue piccolo">Nessun fermo negli ultimi 30 giorni.</p>
   {% endfor %}
 </div>
 {% endblock %}

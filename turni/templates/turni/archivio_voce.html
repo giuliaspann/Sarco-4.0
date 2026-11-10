@@ -1,0 +1,16 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ s.titolo }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:archivio_cerca' sezione %}{% if indietro %}?{{ indietro }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ titolo }}</a>
+<div class="intestazione"><h1>{{ titolo }}</h1></div>
+
+<section class="scheda ac-voce">
+  <p class="ac-quando">{{ s.giorno|date:'D j M Y'|capfirst }}{% if s.ora %} · {{ s.ora }}{% endif %}{% if s.turno %} · {{ s.turno }}{% endif %}{% if s.impianto %} · {{ s.impianto }}{% endif %}</p>
+  <b class="ac-voce-titolo">{{ s.titolo }}</b>
+  {% if s.righe %}<dl class="ac-righe">{% for e, v in s.righe %}<dt>{{ e }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>{% endif %}
+  {% include 'turni/_admin_modifica.html' with admin_url=s.admin_url %}
+  {% if s.foto %}<div class="ac-foto">{% for d, file, url in s.foto %}<a href="{{ url }}" target="_blank"><img src="{{ url }}" alt="{{ d }}" loading="lazy"><small>{{ d }}</small></a>{% endfor %}</div>{% endif %}
+</section>
+
+<a class="bottone pieno piena-larghezza" href="{% url 'turni:archivio_voce_pdf' sezione pk %}">⬇ Scarica PDF{% if s.foto %} con le foto{% endif %}</a>
+{% endblock %}

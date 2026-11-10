@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}{{ dip.nome_breve }}{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% if tutti %}{% url 'turni:archivio_dipendenti' %}{% else %}{% url 'turni:archivio' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if tutti %}Dipendenti{% else %}Archivio{% endif %}</a>
@@ -14,14 +15,14 @@
 </form>
 
 <div class="rp-griglia due-col">
-  <div class="rp-box"><span>📅 Turni lavorati</span><b>{{ s.turni|length }}</b></div>
+  <div class="rp-box"><span>{% icona 'calendario' %} Turni lavorati</span><b>{{ s.turni|length }}</b></div>
   <div class="rp-box"><span>⏱️ Ore di lavoro</span><b>{{ s.ore|floatformat:"-1" }} h</b></div>
-  <div class="rp-box"><span>➕ Straordinari</span><b>{{ s.ore_extra|floatformat:"-1" }} h</b></div>
-  <div class="rp-box"><span>🏖️ Ferie e permessi</span><b>{{ s.assenze }} g</b></div>
-  <div class="rp-box"><span>🧹 Pulizie fatte</span><b>{{ s.pulizie|length }}</b></div>
-  <div class="rp-box"><span>🔧 Manutenzioni</span><b>{{ s.manutenzioni|length }}</b></div>
-  <div class="rp-box"><span>📣 Segnalazioni</span><b>{{ s.n_segnalazioni }}</b></div>
-  <div class="rp-box"><span>🧪 Analisi fatte</span><b>{{ s.analisi|length }}</b></div>
+  <div class="rp-box"><span>{% icona 'extra' %} Straordinari</span><b>{{ s.ore_extra|floatformat:"-1" }} h</b></div>
+  <div class="rp-box"><span>{% icona 'calendario' %} Ferie e permessi</span><b>{{ s.assenze }} g</b></div>
+  <div class="rp-box"><span>{% icona 'pulizia' %} Pulizie fatte</span><b>{{ s.pulizie|length }}</b></div>
+  <div class="rp-box"><span>{% icona 'manutenzione' %} Manutenzioni</span><b>{{ s.manutenzioni|length }}</b></div>
+  <div class="rp-box"><span>{% icona 'avvisi' %} Segnalazioni</span><b>{{ s.n_segnalazioni }}</b></div>
+  <div class="rp-box"><span>{% icona 'analisi' %} Analisi fatte</span><b>{{ s.analisi|length }}</b></div>
 </div>
 <p class="tenue piccolo">Ore stimate dai turni (8 ore a turno) in attesa dei dati del badge. Straordinari: turni extra confermati.</p>
 {# saldo di ferie e ROL tolto dall'app (Giulia, 10/11/2026) #}
@@ -47,6 +48,6 @@
   {% if not s.n_segnalazioni %}<li class="tenue">Nessuna segnalazione.</li>{% endif %}</ul>
 </details>
 <details class="scheda ac-dettaglio"><summary>Analisi ({{ s.analisi|length }})</summary>
-  <ul class="elenco">{% for a in s.analisi %}<li><span>{{ a.data|date:'D j M'|capfirst }}</span><small>{{ a.get_campione_display }}{% if a.fuori_limite %} · ⚠️ fuori limite{% endif %}</small></li>{% empty %}<li class="tenue">Nessuna analisi.</li>{% endfor %}</ul>
+  <ul class="elenco">{% for a in s.analisi %}<li><span>{{ a.data|date:'D j M'|capfirst }}</span><small>{{ a.get_campione_display }}{% if a.fuori_limite %} · {% icona 'attenzione' %} fuori limite{% endif %}</small></li>{% empty %}<li class="tenue">Nessuna analisi.</li>{% endfor %}</ul>
 </details>
 {% endblock %}

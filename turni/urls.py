@@ -1,15 +1,23 @@
 from django.contrib.auth.views import LogoutView, PasswordChangeView
 from django.urls import path, reverse_lazy
 
-from . import views, views_menu, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import views, views_menu, views_mn_capo, views_programma, views_riunioni,views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
 
 app_name = 'turni'
 
 urlpatterns = [
     path('', views.home, name='home'),
     path('menu/', views_menu.menu, name='menu'),
+    path('manutenzione/in-corso/', views_mn_capo.in_corso, name='mn_in_corso'),
+    path('programma/<str:cosa>/', views_programma.programma, name='programma'),
+    path('riunioni/', views_riunioni.elenco, name='riunioni'),
+    path('riunioni/nuova/', views_riunioni.nuova, name='riunione_nuova'),
+    path('riunioni/<int:riunione_id>/', views_riunioni.dettaglio, name='riunione'),
+    path('manutenzione/conclusa/', views_mn_capo.conclusa, name='mn_conclusa'),
+    path('manutenzione/conclusa/<int:intervento_id>/', views_mn_capo.concludi, name='mn_concludi'),
     path('profilo/', views_menu.profilo, name='profilo'),
     path('notifiche/', views_menu.notifiche, name='notifiche'),
+    path('notifiche/<str:tipo>/<int:oggetto_id>/<str:scelta>/', views_menu.notifica_scelta, name='notifica_scelta'),
     path('profilo/password/', PasswordChangeView.as_view(
         template_name='turni/password.html', success_url=reverse_lazy('turni:profilo')), name='password'),
     path('accesso/', views.Accesso.as_view(), name='login'),
@@ -25,6 +33,7 @@ urlpatterns = [
     path('pulizie/richiedi/', views.richiedi_pulizia_vista, name='richiedi_pulizia'),
     path('capoturno/', views.capoturno, name='capoturno'),
     path('archivio/', views.archivio, name='archivio'),
+    path('archivio/inventario/', views_archivio.inventario, name='inventario'),
     path('archivio/analisi/', views.archivio_analisi, name='archivio_analisi'),
     path('archivio/pulizie/', views.archivio_pulizie, name='archivio_pulizie'),
     path('archivio/dipendenti/', views_archivio.dipendenti, name='archivio_dipendenti'),
@@ -32,11 +41,14 @@ urlpatterns = [
     path('archivio/dipendenti/<int:dip_id>/pdf/', views_archivio.dipendente_pdf, name='archivio_dipendente_pdf'),
     path('archivio/<str:sezione>/cerca/', views_archivio.cerca, name='archivio_cerca'),
     path('archivio/<str:sezione>/pdf/', views_archivio.scarica, name='archivio_pdf'),
+    path('archivio/<str:sezione>/<int:pk>/', views_archivio.voce, name='archivio_voce'),
+    path('archivio/<str:sezione>/<int:pk>/pdf/', views_archivio.voce_pdf, name='archivio_voce_pdf'),
     path('capoturno/fascia/', views.fascia_capo, name='fascia_capo'),
     path('foto/<int:pulizia_id>/', views.foto, name='foto'),
     path('profilo/foto/', views.foto_profilo, name='foto_profilo'),
     path('profilo/foto/<int:dip_id>/', views.foto_profilo_img, name='foto_profilo_img'),
     path('richieste/', views_richieste.richieste, name='richieste'),
+    path('richieste/archivio/', views_richieste.archivio_richieste, name='archivio_richieste'),
     path('richieste/cambio/', views_richieste.nuovo_cambio, name='nuovo_cambio'),
     path('richieste/ferie/', views_richieste.nuove_ferie, name='nuove_ferie'),
     path('richieste/avviso/', views_richieste.nuovo_avviso, name='nuovo_avviso'),

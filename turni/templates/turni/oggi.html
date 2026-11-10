@@ -12,20 +12,18 @@
       {% if turno_oggi.lavora and turno_oggi.posti %}
         {% with p=turno_oggi.posti %}
         {% with ruolo=p.0.1|cut:'Capo Turno e '|cut:'Capo Turno' %}
-        <b>{{ p.0.0 }}</b>{% if ruolo %}<span class="riq-ruolo">{{ ruolo }}</span>{% endif %}
+        <span class="ig-io-riga"><b>{{ p.0.0 }}</b>{% include 'turni/_sigle_oggi.html' %}</span>{% if ruolo %}<span class="riq-ruolo">{{ ruolo }}</span>{% endif %}
         {% endwith %}
         {% for a in p|slice:'1:' %}<span class="riq-anche">+ {{ a.0 }}{% if a.1 %} · {{ a.1 }}{% endif %}</span>{% endfor %}
         {% endwith %}
       {% else %}
-      <b>{{ turno_oggi.nome_postazione|default:turno_oggi.descrizione_fascia }}</b>
+      <span class="ig-io-riga"><b>{{ turno_oggi.nome_postazione|default:turno_oggi.descrizione_fascia }}</b>{% include 'turni/_sigle_oggi.html' %}</span>
       {% endif %}
-      <span class="ig-io-sigle">{% if turno_oggi.sigla_fascia %}<span class="cal-sigla {{ turno_oggi.classe_solo_fascia }}">{{ turno_oggi.sigla_fascia }}</span>{% endif %}{% if turno_oggi.capoturno and turno_oggi.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}</span>
     {% else %}
       <b>Turno non pubblicato</b>
     {% endif %}
   </a>
 </div>
-<a class="riq-con ig-con" href="{% url 'turni:squadra' %}"><span class="ico">👥</span><b>Con chi lavoro oggi</b></a>
 
 
 {% include 'turni/_capi_da_completare.html' %}
@@ -34,13 +32,13 @@
 {% with c=a.controllo %}
 <div class="pr-avviso {% if c.stato == 'FATTA' or c.stato == 'VERIFICATA' %}fatto{% elif c.stato == 'IMPEDITA' %}problema{% endif %}">
   <span class="pr-ora">{{ a.ora|time:'H:i' }}</span>
-  <span><b>⏸️ Fermo produzione · {{ a.elemento.nome|lower }}</b>
+  <span><b>Fermo produzione · {{ a.elemento.nome|lower }}</b>
   <small>{% if not c %}Controllo da assegnare{% elif c.stato == 'IMPEDITA' %}{{ c.turno.dipendente.nome_breve }}: problema segnalato{% elif c.stato == 'FATTA' %}{{ c.turno.dipendente.nome_breve }}: tutto ok · da convalidare{% elif c.stato == 'VERIFICATA' %}{{ c.turno.dipendente.nome_breve }}: tutto ok ✓{% else %}Lo fa {{ c.turno.dipendente.nome_breve }}{% endif %}</small></span>
 </div>
 {% if c and c.turno.dipendente_id == dip.pk and c.stato == 'DA_FARE' or c and c.turno.dipendente_id == dip.pk and c.stato == 'SEGNALATA' %}
-<a class="bottone pieno piena-larghezza pr-tasto" href="{% url 'turni:pulizie_turno' c.turno_id %}?fai=assegnata&voce={{ c.pk }}&da=oggi">🔍 Fai il controllo</a>
+<a class="bottone pieno piena-larghezza pr-tasto" href="{% url 'turni:pulizie_turno' c.turno_id %}?fai=assegnata&voce={{ c.pk }}&da=oggi">Fai il controllo</a>
 {% elif not c and turno_oggi.capoturno %}
-<a class="bottone leggero piena-larghezza pr-tasto" href="{% url 'turni:pulizie' %}?fai=richiedi&squadra=1">👷 Assegna il controllo</a>
+<a class="bottone leggero piena-larghezza pr-tasto" href="{% url 'turni:pulizie' %}?fai=richiedi&squadra=1">Assegna il controllo</a>
 {% endif %}
 {% endwith %}
 {% endfor %}
@@ -71,6 +69,6 @@
 <a class="cm-avviso" href="{% url 'turni:comunicazione' c.pk %}">{{ c.icona }} <span>{% if c.tipo == 'FERMO' %}<b>{{ c.get_luogo_display }} fermo · {{ c.get_motivo_display|lower }}</b><small>{{ c.periodo }}</small></span></a>
 {% else %}<b>{{ c.macchina.nome }}{% if c.macchina.modello %} {{ c.macchina.modello }}{% endif %} non disponibile</b><small>{% if c.attiva_ora %}Fino a {{ c.al|date:'D j M H:i' }}{% else %}Dal {{ c.dal|date:'D j M H:i' }} al {{ c.al|date:'D j M H:i' }}{% endif %}</small></span></a>
 {% endif %}{% endfor %}
-{# il quadrato del Menu non è più nella barra: tutte le funzioni si aprono da qui (Giulia, 10/11) #}
-<a class="ig-tutte" href="{% url 'turni:menu' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><b>Tutte le funzioni</b>{% if nav_ufficio_badge %}<i class="badge-riga">{{ nav_ufficio_badge }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}</a>
+{# al posto di "Tutte le funzioni": il riquadro Archivio (Giulia, 10/11) #}
+<a class="ig-archivio-tasto" href="{% url 'turni:archivio' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 13h4"/></svg></span><b>Archivio</b></a>
 {% endblock %}

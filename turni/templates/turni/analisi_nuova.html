@@ -1,21 +1,40 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Analisi prodotto{% endblock %}
 {% block contenuto %}
-{% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Statistiche</a>{% endif %}
-<div class="intestazione"><h1>Inserisci analisi prodotto</h1></div>
+{% if passo == 'dati' %}
+<a class="tasto-indietro" href="?campione={{ campione }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Campione</a>
+{% elif nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
+{% else %}<a class="tasto-indietro" href="{% url 'turni:statistiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Statistiche</a>{% endif %}
+<div class="intestazione"><h1>Analisi</h1></div>
+
+{% if passo == 'scelta' %}
+{# 1) il campione, poi come si caricano i numeri (Giulia, 10/11). Le analisi si fanno solo nel turno giornaliero: niente turni #}
+<form method="get" class="an-scelta">
+  <p class="mn-sottotitolo">Campione</p>
+  <div class="an-campioni">
+    {% for v, n in campioni %}<label><input type="radio" name="campione" value="{{ v }}" required{% if campione == v %} checked{% endif %}><span>{{ n }}</span></label>{% endfor %}
+  </div>
+  <div class="mn-capo an-modi">
+    <button class="mn-capo-tasto" name="modo" value="foto"><span class="ig-ico">{% icona 'foto' %}</span><span><b>Foto dell'analisi</b></span></button>
+    <button class="mn-capo-tasto" name="modo" value="manuale"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></span><span><b>Analisi manuale</b></span></button>
+  </div>
+</form>
+{% else %}
+{# 2) campione, inquinanti trovati, note e Conferma analisi #}
 <form method="post" enctype="multipart/form-data" class="mn-form" data-lettura="analisi">{% csrf_token %}
+  <input type="hidden" name="campione" value="{{ campione }}">
+  <input type="hidden" name="modo" value="{{ modo }}">
+  <input type="hidden" name="data" value="{{ oggi|date:'Y-m-d' }}">
+  <p class="an-scelto"><b>{{ nome_campione }}</b><span>{{ oggi|date:'D j M' }} · {% if modo == 'foto' %}foto dell'analisi{% else %}analisi manuale{% endif %}</span></p>
+
+  {% if modo == 'foto' %}
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-    <span>📷 Foto dell'analisi</span>
+    <span>{% icona 'foto' %} Foto dell'analisi</span>
   </label>
-  {% if leggi_foto %}<button type="button" class="bottone piena-larghezza st-leggi" data-leggi>🔎 Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
-
-  <p class="mn-sottotitolo">Campione</p>
-  <div class="scegli">
-    {% for v, n in campioni %}<label><input type="radio" name="campione" value="{{ v }}" required {% if dati.campione == v %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}
-  </div>
-  <label>Giorno<input type="date" name="data" value="{% if dati.data %}{{ dati.data }}{% else %}{{ giorno|date:'Y-m-d' }}{% endif %}" required></label>
-  <div class="scegli tre">{% for v, n in fasce %}<label><input type="radio" name="fascia" value="{{ v }}" {% if v == fascia %}checked{% endif %}><span>{{ n }}</span></label>{% endfor %}</div>
+  {% if leggi_foto %}<button type="button" class="bottone piena-larghezza st-leggi" data-leggi>{% icona 'cerca' %} Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
+  {% endif %}
 
   <section class="scheda pr-gruppo">
     <h2>Campione</h2>
@@ -29,6 +48,7 @@
     {% endfor %}
   </section>
   <label>Note (facoltative)<input type="text" name="note" maxlength="500" value="{{ dati.note }}"></label>
-  <button class="bottone pieno piena-larghezza cb-invia">Salva l'analisi</button>
+  <button class="bottone pieno piena-larghezza cb-invia">Conferma analisi</button>
 </form>
+{% endif %}
 {% endblock %}

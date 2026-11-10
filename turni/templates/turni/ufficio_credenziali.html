@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Tessere di accesso{% endblock %}
 {% block classe_body %}pagina-tessere{% endblock %}
 {% block contenuto %}
@@ -17,7 +18,7 @@
     <div class="avviso avviso-warning">L'invio email non è configurato: stampa le tessere o annota i PIN adesso.</div>
   {% endif %}
   <p class="tenue piccolo"><b>I PIN si vedono solo ora</b>: l'app non li conserva. Se chiudi la pagina, per rivederli serve un nuovo PIN.</p>
-  <button type="button" class="bottone pieno piena-larghezza" data-stampa>🖨️ Stampa le tessere</button>
+  <button type="button" class="bottone pieno piena-larghezza" data-stampa>{% icona 'stampa' %} Stampa le tessere</button>
   <a class="bottone leggero piena-larghezza" href="{% url 'turni:dipendenti' %}">Torna ai dipendenti</a>
 </div>
 

@@ -94,6 +94,7 @@ def analisi_nuova(request):
             elif all(v is None for v in valori.values()):
                 messages.error(request, 'Scrivi almeno un valore (o leggilo dalla foto).')
             else:
+                # le analisi si fanno solo nel turno giornaliero: niente scelta del turno (Giulia, 10/11)
                 fascia = request.POST.get('fascia') if request.POST.get('fascia') in ('1T', '2T', 'N') else ''
                 a = AnalisiProdotto(data=giorno, fascia=fascia, campione=campione, peso_kg=peso, numero=numero,
                                     note=(request.POST.get('note') or '').strip()[:500], inserita_da=request.user, **valori)
@@ -106,11 +107,18 @@ def analisi_nuova(request):
                 avvisa_fuori_limite(a, request.user)
                 messages.success(request, 'Analisi salvata.')
                 return redirect('turni:analisi', a.pk)
-    giorno, fascia = turno_corrente()
+    # due passaggi (Giulia, 10/11): 1) campione + "Foto dell'analisi" o "Analisi manuale";
+    # 2) peso e numero del campione, inquinanti trovati, note e "Conferma analisi"
+    C = AnalisiProdotto.Campione
+    campioni = [(c.value, c.label) for c in (C.MISTO_IMP1, C.MEZZO_IMP1, C.MEZZO_PICVISA, C.MEZZO_RW, C.BIANCO_PICVISA, C.BIANCO_RW)]
+    campione = request.POST.get('campione') or request.GET.get('campione') or ''
+    modo = request.POST.get('modo') or request.GET.get('modo') or ''
+    passo = 'dati' if campione in C.values and modo in ('foto', 'manuale') else 'scelta'
     return render(request, 'turni/analisi_nuova.html', {
-        'campioni': AnalisiProdotto.Campione.choices,
-        'inquinanti': [(c, n, l, request.POST.get(c, '')) for c, n, l in INQUINANTI], 'giorno': giorno, 'fascia': fascia,
-        'fasce': ProduzioneTurno.FASCE, 'dati': request.POST, 'leggi_foto': lettura.attiva(),
+        'passo': passo, 'campioni': campioni, 'campione': campione, 'nome_campione': dict(C.choices).get(campione, ''),
+        'modo': modo, 'oggi': timezone.localdate(),
+        'inquinanti': [(c, n, l, request.POST.get(c, '')) for c, n, l in INQUINANTI],
+        'dati': request.POST, 'leggi_foto': lettura.attiva(),
     })
 
 

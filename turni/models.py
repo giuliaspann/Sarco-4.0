@@ -223,7 +223,7 @@ class Turno(models.Model):
         return ' · '.join(parti) or self.codice
 
     # il file a volte scrive solo "CAPO T. - Imp. 1": la fascia la indica poi il Capo Turno o l'ufficio
-    SIGLE_CAPO = {Fascia.MATTINA: 'CT1', Fascia.POMERIGGIO: 'CT2', Fascia.NOTTE: 'CTN', Fascia.GIORNALIERO: 'CTG'}
+    SIGLE_CAPO = {Fascia.MATTINA: 'CT | 1T', Fascia.POMERIGGIO: 'CT | 2T', Fascia.NOTTE: 'CT | N', Fascia.GIORNALIERO: 'CT | G'}
 
     @property
     def capo_da_completare(self):
@@ -276,7 +276,7 @@ class Turno(models.Model):
 
     @property
     def sigla(self):
-        """Sigla corta per la casella del calendario. Capo Turno: CT1, CT2, CTN (CT? se manca la fascia)."""
+        """Sigla corta per la casella del calendario. Capo Turno: CT | 1T, CT | 2T, CT | N (Giulia, 10/11)."""
         if self.capoturno and self.lavora:
             return self.SIGLE_CAPO.get(self.fascia, 'CT?')
         return self.SIGLE.get(self.fascia, '?')
@@ -913,6 +913,23 @@ class Notifica(models.Model):
     url = models.CharField(max_length=300, blank=True)
     creata_il = models.DateTimeField(auto_now_add=True)
     letta_il = models.DateTimeField(null=True, blank=True)
+    # chi l'ha generata (il tondino a sinistra: la sua foto o le iniziali) e a cosa si riferisce,
+    # per i tasti Conferma / Rifiuta come su Instagram (Giulia, 10/11)
+    mittente = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
+    class Tipo(models.TextChoices):
+        AVVISO = '', 'Avviso'
+        CAMBIO = 'cambio', 'Cambio turno da confermare (collega)'
+        CAMBIO_UFFICIO = 'cambio_ufficio', 'Cambio turno da approvare (ufficio)'
+        MANUTENZIONE = 'manutenzione', 'Richiesta di manutenzione'
+        PULIZIA = 'pulizia', 'Pulizia richiesta (accettata in automatico)'
+        MENZIONE = 'menzione', 'Menzione in chat'
+        RIUNIONE = 'riunione', 'Invito a una riunione'
+
+    tipo = models.CharField(max_length=20, choices=Tipo.choices, blank=True, default='')
+    oggetto_id = models.PositiveIntegerField(null=True, blank=True)
+    # la scelta fatta dalla notifica: "confermata" / "rifiutata"
+    esito = models.CharField(max_length=12, blank=True)
 
     class Meta:
         verbose_name_plural = 'notifiche'
@@ -921,6 +938,49 @@ class Notifica(models.Model):
 
     def __str__(self):
         return f'{self.utente} · {self.titolo}'
+
+
+class Riunione(models.Model):
+    """Una riunione programmata dall'ufficio (Giulia, 10/11/2026): gli invitati la ricevono come notifica,
+    confermano o no la partecipazione e la vedono come riquadro nella settimana dei turni."""
+
+    titolo = models.CharField(max_length=120)
+    luogo = models.CharField(max_length=80, default='Ufficio')
+    inizio = models.DateTimeField()
+    fine = models.DateTimeField()
+    note = models.TextField(blank=True)
+    creata_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    creata_il = models.DateTimeField(auto_now_add=True)
+    annullata = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = 'riunioni'
+        ordering = ['inizio']
+
+    def __str__(self):
+        return f'{self.titolo} · {self.inizio:%d/%m %H:%M}'
+
+
+class InvitoRiunione(models.Model):
+    class Risposta(models.TextChoices):
+        ATTESA = '', 'Da confermare'
+        SI = 'si', 'Partecipa'
+        NO = 'no', 'Non partecipa'
+
+    riunione = models.ForeignKey(Riunione, on_delete=models.CASCADE, related_name='inviti')
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='inviti_riunione')
+    risposta = models.CharField(max_length=2, choices=Risposta.choices, blank=True, default='')
+    risposto_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = 'inviti alle riunioni'
+        constraints = [models.UniqueConstraint(fields=['riunione', 'dipendente'], name='un_invito_a_testa')]
+
+    def get_stato_display(self):
+        return self.get_risposta_display()
+
+    def __str__(self):
+        return f'{self.dipendente} · {self.riunione}'
 
 
 class IscrizionePush(models.Model):
@@ -1302,6 +1362,7 @@ class FermoImpianto(models.Model):
         TRAMOGGIA = 'TRAMOGGIA', 'Blocco tramoggia'
         MACCHINA = 'MACCHINA', 'Guasto a una macchina'
         CORRENTE = 'CORRENTE', 'Alimentazione esterna (corrente)'
+        MANUTENZ = 'MANUTENZ', 'Manutenzione'  # fermo per una manutenzione in corso (tasto del Capo Turno)
         ALTRO = 'ALTRO', 'Altro guasto'
 
     impianto = models.CharField(max_length=10, choices=IMPIANTI)
@@ -1524,7 +1585,13 @@ class AnalisiProdotto(models.Model):
     """Un'analisi di laboratorio su un campione (prima finiva come foto nel gruppo WhatsApp)."""
 
     class Campione(models.TextChoices):
-        MISTO_IMP1 = 'MISTO_IMP1', 'Misto Imp. 1'
+        # i campioni dell'app (Giulia, 10/11/2026); quelli sotto restano per le analisi già inserite
+        MISTO_IMP1 = 'MISTO_IMP1', 'Misto'
+        MEZZO_IMP1 = 'MEZZO_IMP1', 'Mezzobianco Imp. 1'
+        MEZZO_PICVISA = 'MEZZO_PICVISA', 'Mezzobianco Picvisa'
+        MEZZO_RW = 'MEZZO_RW', 'Mezzobianco Redwave'
+        BIANCO_PICVISA = 'BIANCO_PICVISA', 'Bianco Picvisa'
+        BIANCO_RW = 'BIANCO_RW', 'Bianco Redwave'
         MEZZOBIANCO = 'MEZZOBIANCO', 'Mezzobianco'
         BIANCO = 'BIANCO', 'Bianco'
         PICVISA = 'PICVISA', 'Picvisa'

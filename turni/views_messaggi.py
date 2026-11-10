@@ -75,7 +75,7 @@ def avvisa_menzioni(messaggio, autore):
             menzionati.append(u.pk)
     if menzionati:
         push.invia(menzionati, f'{nome_di(autore)} ti ha menzionato', f'{messaggio.chat.nome}: {messaggio.testo}',
-                   _url_chat(messaggio.chat))
+                   _url_chat(messaggio.chat), mittente=autore, tipo='menzione', oggetto_id=messaggio.pk)
 
 
 def destinatari(escluso, chat=None):

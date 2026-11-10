@@ -1,4 +1,4 @@
-{% for c in da_rispondere %}
+{% load icone %}{% for c in da_rispondere %}
 <section class="scheda rq-rispondi">
   <p class="extra-titolo">Devi rispondere</p>
   <h2 class="grande">{{ c.richiedente.nome_breve }} ti chiede un cambio</h2>
@@ -35,7 +35,7 @@
 
 {% for f in ferie %}
 <a class="rq-riga" href="{% url 'turni:richiesta' 'ferie' f.pk %}">
-  <span class="home-icona">⏸️</span>
+  <span class="home-icona">{% icona 'calendario' %}</span>
   <span class="rq-testo">
     <b>{{ f.get_tipo_display }}</b>
     <small>{% if f.dal == f.al %}{{ f.dal|date:'D j M'|capfirst }}{% elif f.dal.month == f.al.month %}{{ f.dal|date:'j' }}–{{ f.al|date:'j M' }}{% else %}{{ f.dal|date:'j M' }} – {{ f.al|date:'j M' }}{% endif %}{% if f.a_ore %} · {{ f.dalle|time:'H:i' }}–{{ f.alle|time:'H:i' }}{% endif %}</small>

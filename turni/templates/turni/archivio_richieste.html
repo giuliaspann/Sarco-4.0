@@ -1,0 +1,33 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Archivio Richieste{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+<div class="intestazione"><h1>Archivio Richieste</h1></div>
+<p class="tenue">Le richieste risolte: cambi turno, assenze, ritardi e uscite anticipate.</p>
+
+{% for c in cambi %}
+<a class="av-riquadro" href="{% url 'turni:richiesta' 'cambio' c.pk %}">
+  <span class="av-tipo">Cambio turno</span>
+  <b>Cambio {% if c.mio %}con{% else %}da{% endif %} {{ c.altro.nome_breve }}</b>
+  <small>{{ c.giorno1|date:'D j M'|capfirst }}{% if c.giorno2 %} e {{ c.giorno2|date:'D j M' }}{% endif %}</small>
+  {% include 'turni/_stato_richiesta.html' with r=c %}
+</a>
+{% endfor %}
+{% for f in ferie %}
+<a class="av-riquadro" href="{% url 'turni:richiesta' 'ferie' f.pk %}">
+  <span class="av-tipo">Assenza</span>
+  <b>{{ f.get_tipo_display }}</b>
+  <small>{% if f.dal == f.al %}{{ f.dal|date:'D j M'|capfirst }}{% else %}{{ f.dal|date:'j M' }} – {{ f.al|date:'j M' }}{% endif %}{% if f.a_ore %} · {{ f.dalle|time:'H:i' }}–{{ f.alle|time:'H:i' }}{% endif %}</small>
+  {% include 'turni/_stato_richiesta.html' with r=f %}
+</a>
+{% endfor %}
+{% for a in avvisi %}
+<a class="av-riquadro" href="{% url 'turni:richiesta' 'avviso' a.pk %}">
+  <span class="av-tipo">Ritardo / Uscita</span>
+  <b>{{ a.get_tipo_display }}</b>
+  <small>{{ a.data|date:'D j M'|capfirst }}{% if a.orario %} · {{ a.orario }}{% endif %}</small>
+  {% include 'turni/_stato_avviso.html' %}
+</a>
+{% endfor %}
+{% if not cambi and not ferie and not avvisi %}<div class="vuoto"><p>Nessuna richiesta risolta.</p></div>{% endif %}
+{% endblock %}

@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Produzione {{ t }}{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:produzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Produzione</a>
@@ -17,7 +18,7 @@
     {% endfor %}
   </table>
   <p class="tenue piccolo">In rosso gli scarti oltre una volta e mezza la media degli ultimi 30 giorni.</p>
-  {% if t.foto %}<p class="foto-allegata">📷 Foto allegata</p><img class="pl-foto" src="{% url 'turni:foto_produzione' t.pk %}" alt="Foto del display" loading="lazy">{% endif %}
+  {% if t.foto %}<p class="foto-allegata">{% icona 'foto' %} Foto allegata</p><img class="pl-foto" src="{% url 'turni:foto_produzione' t.pk %}" alt="Foto del display" loading="lazy">{% endif %}
 </section>
-<a class="bottone piena-larghezza" href="?modifica=1">✏️ Correggi i valori</a>
+<a class="bottone piena-larghezza" href="?modifica=1">{% icona 'modifica' %} Correggi i valori</a>
 {% endblock %}

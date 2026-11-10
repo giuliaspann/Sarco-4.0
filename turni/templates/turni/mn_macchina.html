@@ -1,15 +1,16 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}{{ m.nome }}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
   <a class="tasto-indietro" href="{% url 'turni:macchine' %}?luogo={{ m.luogo }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Macchine</a>
   <p class="occhiello">{{ m.get_luogo_display }} · {{ m.codice }}</p>
-  <h1>{{ m.icona }} {{ m.nome }}</h1>
+  <h1>{{ m.icona|come_icona }} {{ m.nome }}</h1>
   <span class="mn-stato {{ m.stato }}">{{ m.stato_testo }}</span>
   {% if m.esempio %}<span class="stato-chip spento">Esempio</span>{% endif %}
 </div>
 
-<a class="mn-segnala" href="{% url 'turni:segnala' %}?macchina={{ m.pk }}"><span>⚠️</span><b>Segnala guasto o richiedi manutenzione</b><small>su questa macchina</small></a>
+<a class="mn-segnala" href="{% url 'turni:segnala' %}?macchina={{ m.pk }}"><span>{% icona 'attenzione' %}</span><b>Segnala guasto o richiedi manutenzione</b><small>su questa macchina</small></a>
 
 <div class="mn-numeri">
   <div><b>{{ stat.guasti }}</b><small>guasti in 12 mesi</small></div>
@@ -33,12 +34,12 @@
 </section>
 
 <h2 class="rq-sezione">Interventi aperti</h2>
-{% for i in aperti %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessuno. 👍</p>{% endfor %}
+{% for i in aperti %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessuno.</p>{% endfor %}
 
 {% if programmate %}
 <h2 class="rq-sezione">Manutenzioni programmate</h2>
 {% for p in programmate %}
-<div class="rq-riga"><span class="home-icona">🗓️</span>
+<div class="rq-riga"><span class="home-icona">{% icona 'programmate' %}</span>
   <span class="rq-testo"><b>{{ p.attivita }}</b><small>Ogni {{ p.ogni_giorni }} giorni · prossima {{ p.prossima|date:'j M' }}</small></span></div>
 {% endfor %}
 {% endif %}
@@ -46,7 +47,7 @@
 {% if ricambi %}
 <h2 class="rq-sezione">Ricambi di questa macchina</h2>
 {% for r in ricambi %}
-<div class="rq-riga"><span class="home-icona">🔩</span>
+<div class="rq-riga"><span class="home-icona">{% icona 'ricambi' %}</span>
   <span class="rq-testo"><b>{{ r.nome }}</b><small>{{ r.codice|default:'' }}{% if r.ubicazione %} · {{ r.ubicazione }}{% endif %}</small></span>
   <span class="stato-chip {% if r.sotto_scorta %}no{% else %}ok{% endif %}">{{ r.scorta }} {{ r.unita }}</span></div>
 {% endfor %}
@@ -57,7 +58,7 @@
 
 {% if form %}
 <details class="scheda mn-modifica">
-  <summary><b>✏️ Modifica la scheda</b></summary>
+  <summary><b>{% icona 'modifica' %} Modifica la scheda</b></summary>
   <form method="post" class="mn-form">{% csrf_token %}{{ form.as_p }}<button class="bottone pieno piena-larghezza" name="azione" value="modifica">Salva</button></form>
 </details>
 {% endif %}

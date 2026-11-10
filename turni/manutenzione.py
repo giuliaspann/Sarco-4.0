@@ -114,9 +114,10 @@ def evento(intervento, utente, testo, nota=False):
     EventoIntervento.objects.create(intervento=intervento, autore=utente, testo=testo[:500], nota=nota)
 
 
-def avvisa(utenti, escluso, titolo, testo, url):
+def avvisa(utenti, escluso, titolo, testo, url, tipo='', oggetto_id=None):
+    """escluso è chi fa l'azione: non riceve l'avviso e nel centro notifiche compare come mittente."""
     ids = {u for u in utenti if u and (escluso is None or u != escluso.pk)}
-    push.invia(ids, titolo, testo, url)
+    push.invia(ids, titolo, testo, url, mittente=escluso, tipo=tipo, oggetto_id=oggetto_id)
 
 
 def comprimi_foto(file):
@@ -165,6 +166,31 @@ def rifiuta(utente, i, motivo):
     i.save()
     evento(i, utente, 'Segnalazione non approvata' + (f': {motivo}' if motivo else ''))
     avvisa([i.segnalata_da_id], utente, 'Segnalazione non approvata', f'{i.macchina.nome}: {motivo}', url_intervento(i))
+
+
+def accetta_richiesta(utente, i):
+    """Dal centro notifiche: il manutentore a cui è stata chiesta la manutenzione la prende in carico."""
+    dip = getattr(utente, 'dipendente', None)
+    if not dip or i.assegnata_a_id != dip.pk or i.stato != Intervento.Stato.SEGNALATA:
+        raise ValueError('Questa richiesta non aspetta più la tua risposta.')
+    i.stato = Intervento.Stato.ASSEGNATA
+    i.approvata_da, i.approvata_il = utente, timezone.now()
+    i.save()
+    evento(i, utente, f'Presa in carico da {dip.nome_breve}')
+    avvisa([i.segnalata_da_id] + responsabili(), utente, f'{dip.nome_breve} ha preso in carico la manutenzione',
+           i.macchina.nome, url_intervento(i))
+
+
+def rifiuta_richiesta(utente, i, motivo=''):
+    """Dal centro notifiche: il manutentore non può farla; torna al responsabile manutenzione da assegnare."""
+    dip = getattr(utente, 'dipendente', None)
+    if not dip or i.assegnata_a_id != dip.pk or i.stato != Intervento.Stato.SEGNALATA:
+        raise ValueError('Questa richiesta non aspetta più la tua risposta.')
+    i.assegnata_a = None
+    i.save(update_fields=['assegnata_a'])
+    evento(i, utente, f'Rifiutata da {dip.nome_breve}' + (f': {motivo}' if motivo else '') + ' · torna al responsabile')
+    avvisa([i.segnalata_da_id] + responsabili(), utente, f'{dip.nome_breve} non può fare la manutenzione',
+           f'{i.macchina.nome}: va assegnata a un altro manutentore', url_intervento(i))
 
 
 def inizia(utente, i):

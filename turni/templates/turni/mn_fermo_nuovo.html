@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Segnala fermo impianto{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
@@ -11,17 +12,17 @@
   <h2 class="rq-sezione">Quale impianto si è fermato?</h2>
   <div class="sg-gruppi">
     {% for v, nome, icona, gia in impianti %}
-    <a href="?impianto={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{% if gia %}⛔ Già segnalato fermo{% else %}In funzione{% endif %}</small></a>
+    <a href="?impianto={{ v }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b><small>{% if gia %}{% icona 'fermo' %} Già segnalato fermo{% else %}In funzione{% endif %}</small></a>
     {% endfor %}
   </div>
 {% else %}
   <form method="post" enctype="multipart/form-data" class="mn-form">{% csrf_token %}
     <input type="hidden" name="impianto" value="{{ impianto }}">
-    <p class="cb-giorno">⛔ {{ nome_impianto }}</p>
+    <p class="cb-giorno">{% icona 'fermo' %} {{ nome_impianto }}</p>
     <h2 class="rq-sezione">Perché si è fermato?</h2>
     <div class="fermo-cause">
       {% for v, nome, icona in cause %}
-      <label><input type="radio" name="causa" value="{{ v }}" required><span><i>{{ icona }}</i>{{ nome }}</span></label>
+      <label><input type="radio" name="causa" value="{{ v }}" required><span><i>{{ icona|come_icona }}</i>{{ nome }}</span></label>
       {% endfor %}
     </div>
     {% if macchine %}
@@ -36,9 +37,9 @@
     <label>Già ripartito alle (se è già ripartito)<input type="datetime-local" name="ripartito"></label>
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
-      <span>📷 Foto</span>
-    </label>
-    <button class="bottone piena-larghezza bottone-fermo">⛔ Segnala il fermo</button>
+      <span>{% icona 'foto' %} Foto</span>
+</label>
+    <button class="bottone piena-larghezza bottone-fermo">{% icona 'fermo' %} Segnala il fermo</button>
   </form>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{% if conferma %}Conferma{% else %}Rifiuta{% endif %}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:notifiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Notifiche</a>
+<div class="intestazione"><h1>{% if conferma %}Confermi?{% else %}Rifiuti?{% endif %}</h1></div>
+
+<div class="nt-ig nt-riepilogo-testa">
+  <span class="nt-tondo">{% if tondino.foto %}<img src="{{ tondino.foto }}" alt="">{% else %}<span>{{ tondino.iniziali }}</span>{% endif %}</span>
+  <span class="nt-corpo"><b>{{ titolo }}</b></span>
+</div>
+
+<section class="scheda nt-riepilogo">
+{% if tipo == 'cambio' %}
+  {% if conferma %}
+  <p>Il cambio passa all'ufficio per l'approvazione. <b>Se lo approva, i tuoi turni diventano:</b></p>
+  {% for r in righe %}
+  <div class="rq-scambio"><span class="rq-giorno">{{ r.giorno|date:'D j M'|capfirst }}</span>
+    <span class="rq-da">{% include 'turni/_pillola.html' with t=r.prima %}</span><span class="rq-freccia">→</span>
+    <span class="rq-a">{% include 'turni/_pillola.html' with t=r.dopo %}</span></div>
+  {% endfor %}
+  {% else %}
+  <p><b>Il cambio non verrà fatto.</b> I tuoi turni restano come sono:</p>
+  {% for r in righe %}
+  <div class="rq-scambio"><span class="rq-giorno">{{ r.giorno|date:'D j M'|capfirst }}</span>
+    <span class="rq-da">{% include 'turni/_pillola.html' with t=r.prima %}</span></div>
+  {% endfor %}
+  {% endif %}
+{% elif tipo == 'cambio_ufficio' %}
+  {% if conferma %}<p><b>Approvando, i turni vengono scambiati subito:</b></p>{% else %}<p><b>Il cambio non verrà fatto:</b> i turni restano come sono.</p>{% endif %}
+  {% for persona, righe in persone %}
+  <p class="nt-persona">{{ persona.nome_breve }}</p>
+  {% for r in righe %}
+  <div class="rq-scambio"><span class="rq-giorno">{{ r.giorno|date:'D j M'|capfirst }}</span>
+    <span class="rq-da">{% include 'turni/_pillola.html' with t=r.prima %}</span>
+    {% if conferma %}<span class="rq-freccia">→</span><span class="rq-a">{% include 'turni/_pillola.html' with t=r.dopo %}</span>{% endif %}</div>
+  {% endfor %}
+  {% endfor %}
+{% elif tipo == 'riunione' %}
+  <p><b>{{ ogg.riunione.titolo }}</b> · {{ quando }} · {{ ogg.riunione.luogo }}</p>
+  {% if ogg.riunione.note %}<p class="istruzioni">{{ ogg.riunione.note }}</p>{% endif %}
+  {% if conferma %}<p>Confermi la partecipazione: la riunione resta nei tuoi turni della settimana e chi l'ha programmata viene avvisato.</p>
+  {% else %}<p><b>Non partecipi:</b> chi l'ha programmata viene avvisato e la riunione sparisce dai tuoi turni.</p>{% endif %}
+{% elif tipo == 'manutenzione' %}
+  <p><b>{{ ogg.macchina.nome }}</b> · {{ ogg.descrizione }}</p>
+  {% if conferma %}<p>Prendi in carico la manutenzione. Chi l'ha chiesta e il responsabile manutenzione vengono avvisati.</p>
+  {% else %}<p><b>La manutenzione non la fai tu:</b> torna al responsabile manutenzione, che la assegna a un altro manutentore.</p>{% endif %}
+{% else %}
+  <p><b>{{ ogg.titolo }}</b> · {{ ogg.turno.dipendente.nome_breve }}{% if ogg.fatta_il %}, alle {{ ogg.fatta_il|time:'H:i' }}{% endif %}</p>
+  {% if ogg.nota %}<p class="istruzioni">“{{ ogg.nota }}”</p>{% endif %}
+  {% if ogg.foto_prima %}<img class="miniatura" src="{% url 'turni:foto' ogg.pk %}?quale=prima" alt="Prima">{% endif %}{% if ogg.foto %}<img class="miniatura" src="{% url 'turni:foto' ogg.pk %}" alt="Dopo">{% endif %}
+  {% if conferma %}
+  <p>{% if due_passaggi %}La pulizia è ok: <b>passa al responsabile piazzale</b> per la convalida finale.{% else %}La pulizia è approvata e <b>va in archivio</b>.{% endif %}</p>
+  {% else %}
+  <p><b>La pulizia è da rifare:</b> {{ ogg.turno.dipendente.nome_breve }} la ritrova nella sua lista, con la tua nota.</p>
+  {% endif %}
+{% endif %}
+</section>
+
+<form method="post" class="nt-convalida">{% csrf_token %}
+  {% if tipo != 'riunione' and not conferma or tipo == 'cambio_ufficio' %}<input type="text" name="nota" maxlength="300" placeholder="{% if tipo == 'pulizia_ct' or tipo == 'pulizia_rp' %}Cosa va rifatto{% else %}Nota{% endif %} (facoltativa)">{% endif %}
+  <a class="bottone leggero" href="{% url 'turni:notifiche' %}">Annulla</a>
+  <button class="bottone {% if conferma %}pieno{% else %}avviso-btn{% endif %}">{% if conferma %}Sì, conferma{% else %}Sì, rifiuta{% endif %}</button>
+</form>
+{% endblock %}

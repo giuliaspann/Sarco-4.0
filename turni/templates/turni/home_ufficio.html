@@ -16,6 +16,9 @@
 {% for f in fermi_aperti %}
 <a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>
 {% endfor %}
+{% if puo_riunioni %}
+<a class="ig-tutte rn-tasto-home" href="{% url 'turni:riunioni' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/></svg></span><b>Riunioni</b>{% if prossima_riunione %}<small class="tenue">{{ prossima_riunione.inizio|date:'D j · H:i' }}</small>{% endif %}<span class="sg-freccia">›</span></a>
+{% endif %}
 {# il quadrato del Menu non è più nella barra: tutte le funzioni si aprono da qui (Giulia, 10/11) #}
 <a class="ig-tutte" href="{% url 'turni:menu' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><b>Tutte le funzioni</b>{% if nav_ufficio_badge %}<i class="badge-riga">{{ nav_ufficio_badge }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}</a>
 {% endblock %}

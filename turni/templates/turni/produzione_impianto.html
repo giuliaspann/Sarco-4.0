@@ -1,4 +1,5 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Produzione del turno{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
@@ -6,7 +7,7 @@
 <h2 class="rq-sezione">Quale impianto?</h2>
 <div class="sg-luoghi">
   {% for codice, nome, icona in impianti %}
-  <a href="?impianto={{ codice }}"><span>{{ icona }}</span><b>{{ nome }}</b></a>
+  <a href="?impianto={{ codice }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b></a>
   {% endfor %}
 </div>
 {% endblock %}

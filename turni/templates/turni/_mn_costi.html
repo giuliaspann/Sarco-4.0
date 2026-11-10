@@ -1,3 +1,4 @@
+{% load icone %}
 {% with c=i.costi %}
 <div class="mn-costi">
   <p class="mn-sottotitolo">Costi</p>
@@ -6,14 +7,14 @@
     <dt>Ditta esterna</dt><dd>€ {{ c.esterno|floatformat:2 }}{% if i.officina_esterna %} · {{ i.officina_esterna }}{% endif %}</dd>
     <dt><b>Totale</b></dt><dd><b>€ {{ c.totale|floatformat:2 }}</b></dd>
   </dl>
-  {% if i.report_esterno %}<a class="bottone leggero piena-larghezza mn-report" href="{% url 'turni:report_esterno' i.pk %}" target="_blank">📄 Report della ditta esterna</a>{% endif %}
+  {% if i.report_esterno %}<a class="bottone leggero piena-larghezza mn-report" href="{% url 'turni:report_esterno' i.pk %}" target="_blank">{% icona 'documento' %} Report della ditta esterna</a>{% endif %}
   {% if resp or ordina %}
   <details class="mn-costi-modifica">
     <summary>{% if i.costo_esterno or i.report_esterno %}Modifica costo o report esterno{% else %}Aggiungi costo o report della ditta esterna{% endif %}</summary>
     <form method="post" enctype="multipart/form-data">{% csrf_token %}
       <label>Ditta esterna<input type="text" name="officina_esterna" maxlength="80" value="{{ i.officina_esterna }}" placeholder="Es. officina Enzo"></label>
       <label>Costo della ditta esterna (€)<input type="text" name="costo_esterno" inputmode="decimal" value="{% if i.costo_esterno is not None %}{{ i.costo_esterno|floatformat:2 }}{% endif %}" placeholder="Es. 350,00"></label>
-      <label class="bottone foto-btn"><input type="file" name="report" accept="application/pdf,image/*"><span>📄 {% if i.report_esterno %}Sostituisci il report{% else %}Carica il report (PDF o foto){% endif %}</span></label>
+      <label class="bottone foto-btn"><input type="file" name="report" accept="application/pdf,image/*"><span>{% icona 'documento' %} {% if i.report_esterno %}Sostituisci il report{% else %}Carica il report (PDF o foto){% endif %}</span></label>
       <button class="bottone pieno piena-larghezza" name="azione" value="costi">Salva</button>
     </form>
   </details>
