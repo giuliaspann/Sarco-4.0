@@ -4,16 +4,18 @@
 {% block classe_body %}accesso{% endblock %}
 {% block contenuto %}
 <div class="accesso-pagina">
-  <div class="accesso-logo">
+  {# stesso logo della barra (Sarco Workspace), più grande #}
+  <div class="ws-logo accesso-ws" aria-label="Sarco Workspace">
+    <img class="ws-campana" src="{% static 'turni/logo-campana.png' %}" alt="" width="29" height="26">
     <picture>
-      <source srcset="{% static 'turni/logo-bianco.png' %}" media="(prefers-color-scheme: dark)">
-      <img src="{% static 'turni/logo-blu.png' %}" alt="Sarco" width="156" height="46">
+      <source srcset="{% static 'turni/logo-sarco-bianco.png' %}" media="(prefers-color-scheme: dark)">
+      <img class="ws-sarco" src="{% static 'turni/logo-sarco-blu.png' %}" alt="" width="84" height="17">
     </picture>
-    <span>Turni</span>
+    <span class="ws-parola">WORKSPACE</span>
   </div>
 
   <div>
-    <h1>Buongiorno,<br>accedi con il tuo PIN</h1>
+    <h1>Accedi</h1>
     <p class="tenue">Nome utente e PIN te li dà l'ufficio.</p>
   </div>
 

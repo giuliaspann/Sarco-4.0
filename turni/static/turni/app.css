@@ -1851,3 +1851,14 @@ a.rq-riga { color: inherit; text-decoration: none; }
 .ig-turno-riga .riq-con .ico { font-size: 1.25rem; }
 .ig-azioni a { background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
 .ig-azioni .ig-ico { background: color-mix(in srgb, var(--primario) 14%, var(--carta)); color: var(--primario); }
+
+/* Accesso: logo Sarco Workspace come nella barra, più grande; campi e tasti come il resto dell'app */
+.accesso-ws { justify-content: center; margin-top: 18px; }
+.accesso-ws .ws-campana { height: 40px; margin-right: 12px; }
+.accesso-ws picture, .accesso-ws .ws-sarco { height: 26px; margin-right: 10px; }
+.accesso-ws .ws-parola { font-size: 31px; }
+.accesso-pagina h1 { font-size: 1.6rem; margin-top: 4px; }
+.accesso-pagina input { border-radius: 14px; background: var(--carta); }
+.accesso-pagina .tastierino button { border-radius: 16px; background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.accesso-pagina .bottone.pieno { min-height: 52px; border-radius: 14px; }
+@media (max-width: 360px) { .accesso-ws .ws-parola { font-size: 25px; } }
