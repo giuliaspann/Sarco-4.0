@@ -51,6 +51,7 @@ class CodiceTurno:
     ruolo: str = ''  # solo dal "Layout Turni": CT, OdL, Pal, Man, Aut…
     posto: str = ''  # solo dal "Layout Turni": "Impianto 1 · Operatore di Linea"
     incarichi: str = ''  # solo dal "Layout Turni": "IMP1/CT IMP1/Pal"
+    sigla: str = ''  # solo dal "Layout Turni", come nella "Vista Dipendenti": "1T | Imp 1 | CT"
 
 
 def interpreta_codice(testo):
@@ -101,6 +102,9 @@ class SettimanaLetta:
     note: list = field(default_factory=list)  # (riferimento, dipendente, testo)
     tutor: dict = field(default_factory=dict)  # apprendista -> tutor
     avvisi: list = field(default_factory=list)
+    # solo dal "Layout Turni": le righe come nel foglio, per l'anteprima "Per Area"
+    # [{'area': 'Imp 1', 'turno': '1T', 'ruolo': 'CT', 'fascia': '1T', 'nomi': [7 nomi o '-']}, …]
+    layout: list = field(default_factory=list)
 
 
 def lunedi_da_nome_file(nome):
@@ -262,6 +266,7 @@ def leggi_layout(wb, lunedi):
         raise ValueError(f'Nel foglio "{ws.title}" non trovo l\'intestazione con "Area" e "Turno".')
     c_area, c_turno = col['AREA'], col['TURNO']
     c_ruolo, c_sigla = col.get('RUOLO'), col.get('RUOLO (ABBR.)')
+    c_abbr = col.get('AREA (ABBR.)')
     # i giorni: "Lunedì" nella riga sopra l'intestazione (o nella stessa)
     primo = None
     for r in (riga_int - 1, riga_int):
@@ -294,7 +299,10 @@ def leggi_layout(wb, lunedi):
         area_prec = area
         ruolo = pulisci(ws.cell(r, c_ruolo).value) if c_ruolo else ''
         sigla = pulisci(ws.cell(r, c_sigla).value) if c_sigla else ''
+        abbr = (pulisci(ws.cell(r, c_abbr).value) if c_abbr else '') or area
         fascia = FASCE_LAYOUT.get(turno, Fascia.ALTRO)
+        letta.layout.append({'area': abbr, 'turno': turno, 'ruolo': sigla or ruolo, 'fascia': fascia,
+                             'nomi': [pulisci(ws.cell(r, primo + i).value) or '-' for i in range(7)]})
         for i in range(7):
             v = pulisci(ws.cell(r, primo + i).value)
             if v in ('', '-', '–'):
@@ -309,7 +317,7 @@ def leggi_layout(wb, lunedi):
             if completo not in ordine:
                 ordine.append(completo)
             posti.setdefault((completo, i), []).append(
-                {'fascia': fascia, 'turno': turno, 'area': area, 'ruolo': ruolo or sigla, 'sigla': sigla}
+                {'fascia': fascia, 'turno': turno, 'area': area, 'abbr': abbr, 'ruolo': ruolo or sigla, 'sigla': sigla}
             )
 
     if sconosciuti:
@@ -317,13 +325,18 @@ def leggi_layout(wb, lunedi):
     if saltati:
         letta.avvisi.append('Caselle saltate perché non sono nomi: ' + ', '.join(sorted(saltati)) + '.')
 
+    # il ruolo si scrive nella sigla solo dove l'area ne ha più d'uno (Impianto 1), come nella "Vista Dipendenti"
+    ruoli_area = {}
+    for riga in letta.layout:
+        ruoli_area.setdefault(riga['area'], set()).add(riga['ruolo'].upper())
     for nome in ordine:
-        turni = [_unisci_posti(posti.get((nome, i), []), nome, lunedi + timedelta(days=i), letta.avvisi) for i in range(7)]
+        turni = [_unisci_posti(posti.get((nome, i), []), nome, lunedi + timedelta(days=i), letta.avvisi, ruoli_area)
+                 for i in range(7)]
         letta.righe.append(RigaDipendente(nome, turni))
     return letta
 
 
-def _unisci_posti(lista, nome, giorno, avvisi):
+def _unisci_posti(lista, nome, giorno, avvisi, ruoli_area=None):
     """Le assegnazioni di una persona in un giorno diventano un solo turno: il primo posto
     (quello da Capo Turno, se c'è) decide fascia e postazione, gli altri si aggiungono al nome del posto."""
     if not lista:
@@ -351,6 +364,7 @@ def _unisci_posti(lista, nome, giorno, avvisi):
     posto = ' + '.join(f"{area} · {' e '.join(r)}" if r else area for area, r in gruppi.items())
     codice = f"{principale['turno']} · {posto}" if principale['turno'] else posto
     return CodiceTurno(
+        sigla=_sigla_vista(principale, lista, ruoli_area or {}),
         codice=codice[:60],
         fascia=principale['fascia'],
         postazione=_postazione_area(principale['area'], principale['sigla']),
@@ -362,6 +376,28 @@ def _unisci_posti(lista, nome, giorno, avvisi):
             f"{_postazione_area(a['area'])}/{a['sigla'].replace(' ', '')}" for a in lista
             if a['fascia'] == principale['fascia']))[:200],
     )
+
+
+# ruoli che nella "Vista Dipendenti" si scrivono accanto all'area (gli altri si capiscono dall'area)
+RUOLI_IN_VISTA = {'CT', 'PAL'}
+
+
+def _sigla_vista(principale, lista, ruoli_area):
+    """Come la casella della "Vista Dipendenti": "1T | Imp 1", "1T | Imp 1 | CT", "N | Imp 1 | CT + Pal",
+    "2T | Imp 1 | Pal + Sab - Sar", "G | Met + Trasp"."""
+    stessa = [a for a in lista if a['fascia'] == principale['fascia']]
+    area = principale['abbr']
+    piu_ruoli = len(ruoli_area.get(area, ())) > 1
+    ruoli = [a['sigla'] for a in stessa
+             if piu_ruoli and a['abbr'] == area and a['sigla'].upper() in RUOLI_IN_VISTA]
+    altre = list(dict.fromkeys(a['abbr'] for a in stessa if a['abbr'] != area))
+    ruoli = list(dict.fromkeys(ruoli))
+    parti = [principale['turno']] if principale['turno'] else []
+    if ruoli:
+        parti += [area, ' + '.join(ruoli + altre)]
+    else:
+        parti.append(' + '.join([area] + altre))
+    return ' | '.join(parti)
 
 
 # ---------------------------------------------------------------- confronto nomi
@@ -404,11 +440,13 @@ def in_sessione(letta):
         'foglio': letta.foglio,
         'avvisi': letta.avvisi,
         'righe': [
-            [r.nome, [[t.codice, t.fascia, t.postazione, t.capoturno, t.ruolo, t.posto, t.incarichi] for t in r.turni]]
+            [r.nome, [[t.codice, t.fascia, t.postazione, t.capoturno, t.ruolo, t.posto, t.incarichi, t.sigla]
+                      for t in r.turni]]
             for r in letta.righe
         ],
         'note': letta.note,
         'tutor': letta.tutor,
+        'layout': letta.layout,
     }
 
 
@@ -419,6 +457,7 @@ def da_sessione(dati):
         note=[tuple(n) for n in dati['note']],
         tutor=dati['tutor'],
         avvisi=dati['avvisi'],
+        layout=dati.get('layout', []),
     )
     letta.righe = [RigaDipendente(nome, [CodiceTurno(*t) for t in turni]) for nome, turni in dati['righe']]
     return letta

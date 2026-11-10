@@ -1,0 +1,14 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Menu{% endblock %}
+{% block contenuto %}
+{# il quadrato centrale della barra: tutte le funzioni, divise per sezione (stile Instagram) #}
+<div class="ig-saluto"><h1>Menu</h1></div>
+{% for titolo, voci in sezioni %}
+<h2 class="ig-sezione">{{ titolo }}</h2>
+<div class="ig-azioni">
+  {% for v in voci %}
+  <a href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span>{{ v.nome }}{% if v.badge %}<i class="home-badge">{{ v.badge }}</i>{% endif %}</a>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

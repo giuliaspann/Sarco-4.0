@@ -10,28 +10,51 @@
 {% for a in letta.avvisi %}<div class="avviso avviso-warning">{{ a }}</div>{% endfor %}
 {% if esiste %}<div class="avviso avviso-info">Questa settimana è già caricata: confermando la aggiorni (le pulizie già registrate restano).</div>{% endif %}
 
-<form method="post" class="conferma">{% csrf_token %}
-  <a class="bottone leggero" href="{% url 'turni:importa' %}">Annulla</a>
-  <button class="bottone pieno">Pubblica i turni</button>
-</form>
+{% if aree %}
+<div class="vp-scelta" role="tablist">
+  <a href="?vista=dipendente" role="tab" class="{% if vista == 'dipendente' %}scelto{% endif %}" aria-selected="{% if vista == 'dipendente' %}true{% else %}false{% endif %}">Per Dipendente</a>
+  <a href="?vista=area" role="tab" class="{% if vista == 'area' %}scelto{% endif %}" aria-selected="{% if vista == 'area' %}true{% else %}false{% endif %}">Per Area</a>
+</div>
+{% endif %}
 
-<div class="tabella-scorre">
-<table class="tabella">
-  <thead><tr><th>Dipendente</th>{% for g in giorni %}<th>{{ g|date:'D j' }}</th>{% endfor %}</tr></thead>
+{% if vista == 'area' %}
+<div class="vp-scorre">
+<table class="vp-tabella vp-aree">
+  <thead><tr><th class="vp-fissa">Area</th><th>Turno</th><th>Ruolo</th>{% for g in giorni %}<th>{{ g|date:'D'|capfirst }}</th>{% endfor %}</tr></thead>
+  {% for b in aree %}
+  <tbody class="vp-blocco">
+    {% for r in b.righe %}
+    <tr class="{{ r.classe }}">
+      <th class="vp-fissa vp-area">{{ b.area }}</th>
+      {% if r.prima %}<td class="vp-turno" rowspan="{{ r.quante }}">{{ r.turno|default:'–' }}</td>{% endif %}
+      <td class="vp-ruolo">{{ r.ruolo }}</td>
+      {% for n in r.nomi %}<td>{{ n }}</td>{% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+  {% endfor %}
+</table>
+</div>
+{% else %}
+<div class="vp-scorre">
+<table class="vp-tabella">
+  <thead><tr><th class="vp-fissa">Dipendenti</th>{% for g in giorni %}<th>{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
   <tbody>
   {% for r in righe %}
     <tr>
-      <th>{{ r.nome }}
-        {% if r.nuovo %}<span class="etichetta">nuovo</span>{% elif r.come %}<span class="tenue piccolo">= {{ r.come }}</span>{% endif %}
-      </th>
-      {% for t in r.turni %}
-        <td class="{{ t.classe_fascia }}" title="{{ t.codice }}" data-giorno="{% cycle 'Lun' 'Mar' 'Mer' 'Gio' 'Ven' 'Sab' 'Dom' %}">{{ t.descrizione }}</td>
-      {% endfor %}
+      <th class="vp-fissa vp-nome">{{ r.nome }}{% if r.nuovo %} <span class="etichetta">nuovo</span>{% elif r.come %}<small class="tenue">= {{ r.come }}</small>{% endif %}</th>
+      {% for c in r.caselle %}<td class="{{ c.classe }}" title="{{ c.titolo }}">{{ c.testo }}</td>{% endfor %}
     </tr>
   {% endfor %}
   </tbody>
 </table>
 </div>
+{% endif %}
+
+<form method="post" class="vp-conferma">{% csrf_token %}
+  <a class="bottone leggero" href="{% url 'turni:importa' %}">Annulla</a>
+  <button class="bottone pieno">Pubblica i turni</button>
+</form>
 
 {% if letta.note %}
 <section class="scheda">

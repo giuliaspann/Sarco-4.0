@@ -1,12 +1,13 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import views, views_menu, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
 
 app_name = 'turni'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('menu/', views_menu.menu, name='menu'),
     path('accesso/', views.Accesso.as_view(), name='login'),
     path('esci/', LogoutView.as_view(), name='logout'),
     path('presa-visione/', views.presa_visione, name='presa_visione'),

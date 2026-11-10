@@ -1,0 +1,19 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Oggi{% endblock %}
+{% block contenuto %}
+{# la home di chi non ha turni (ufficio, responsabili): come Oggi, con le 4 funzioni più usate; il resto è nel Menu #}
+<div class="ig-saluto">
+  <h1>Ciao {{ nome }}</h1>
+  <span>{{ oggi_data|date:'D j M' }}</span>
+</div>
+
+<div class="ig-azioni">
+  {% for v in principali %}
+  <a href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span>{{ v.nome }}{% if v.badge %}<i class="home-badge">{{ v.badge }}</i>{% endif %}</a>
+  {% endfor %}
+</div>
+
+{% for f in fermi_aperti %}
+<a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>
+{% endfor %}
+{% endblock %}

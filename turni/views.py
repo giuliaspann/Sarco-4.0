@@ -81,10 +81,10 @@ def home(request):
     if dip is None:
         from .richieste import e_responsabile
 
-        if e_responsabile(request.user):
-            return redirect('turni:ufficio_richieste')
-        if request.user.is_staff:
-            return redirect('turni:importa')
+        if e_responsabile(request.user) or request.user.is_staff:
+            from .views_menu import home_ufficio
+
+            return home_ufficio(request)  # le 4 funzioni più usate, il resto nel Menu
         return redirect('turni:miei_turni')
 
     return oggi(request)
@@ -1043,14 +1043,34 @@ def anteprima(request):
         return redirect('turni:importa')
 
     esistenti = list(Dipendente.objects.all())
+    # "Per Dipendente": come la "Vista Dipendenti" dell'Excel, in ordine alfabetico, una sigla per casella
     righe = []
-    for r in letta.righe:
+    for r in sorted(letta.righe, key=lambda r: r.nome):
         trovato = importa.trova_dipendente(r.nome, esistenti)
-        turni = []
+        caselle = []
         for c in r.turni:
             t = Turno(fascia=c.fascia, postazione=c.postazione, capoturno=c.capoturno, codice=c.codice)
-            turni.append(t)
-        righe.append({'nome': r.nome, 'nuovo': trovato is None, 'come': trovato.nome if trovato and trovato.nome != r.nome else '', 'turni': turni})
+            testo = (c.sigla or c.codice or t.descrizione) if t.lavora else ('RIP' if c.fascia == Fascia.RIPOSO else t.descrizione)
+            caselle.append({'testo': testo, 'classe': CLASSI_VISTA.get(c.fascia, 'vp-rip'), 'titolo': c.posto or c.codice})
+        righe.append({'nome': r.nome, 'nuovo': trovato is None,
+                      'come': trovato.nome if trovato and trovato.nome != r.nome else '', 'caselle': caselle})
+    # "Per Area": le righe del foglio "Layout Turni", con il turno scritto una volta per blocco
+    aree = []
+    for riga in letta.layout:
+        blocco = aree[-1] if aree and aree[-1]['area'] == riga['area'] else None
+        if blocco is None:
+            blocco = {'area': riga['area'], 'righe': []}
+            aree.append(blocco)
+        prima = not blocco['righe'] or blocco['righe'][-1]['turno'] != riga['turno']
+        blocco['righe'].append({**riga, 'classe': CLASSI_VISTA.get(riga['fascia'], 'vp-g'), 'prima': prima})
+    for blocco in aree:
+        for i, riga in enumerate(blocco['righe']):
+            if riga['prima']:
+                n = 1
+                while i + n < len(blocco['righe']) and not blocco['righe'][i + n]['prima']:
+                    n += 1
+                riga['quante'] = n
+    vista = 'area' if request.GET.get('vista') == 'area' and aree else 'dipendente'
     giorni = [letta.lunedi + timedelta(days=i) for i in range(7)]
     return render(
         request,
@@ -1058,11 +1078,20 @@ def anteprima(request):
         {
             'letta': letta,
             'righe': righe,
+            'aree': aree,
+            'vista': vista,
             'giorni': giorni,
             'domenica': giorni[-1],
             'esiste': Settimana.objects.filter(lunedi=letta.lunedi).exists(),
         },
     )
+
+
+# colori dell'anteprima come nell'Excel del responsabile turni
+CLASSI_VISTA = {
+    Fascia.MATTINA: 'vp-1t', Fascia.POMERIGGIO: 'vp-2t', Fascia.NOTTE: 'vp-n', Fascia.GIORNALIERO: 'vp-g',
+    Fascia.ALTRO: 'vp-1t', Fascia.FERIE: 'vp-ferie', Fascia.PERMESSO: 'vp-ferie', Fascia.FESTA: 'vp-ferie',
+}
 
 
 # Calendario inventato per far vedere l'app a chi non ha turni (es. un dipendente fittizio):

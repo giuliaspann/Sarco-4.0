@@ -456,7 +456,7 @@ class HomeTest(TestCase):
         self.assertEqual(r.status_code, 200)
         # si apre "Oggi" (stile Instagram): storie di chi lavora con me, turno, quattro tasti e i fermi impianto
         for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', '>Produzione<', '>Analisi<',
-                      '>Fermo<', '>Ripartenza<', 'Area personale', 'Archivio'):
+                      '>Fermo<', '>Ripartenza<', 'Area personale', 'aria-label="Menu'):
             self.assertContains(r, testo)
         self.assertNotContains(r, '>Home<')
         r2 = self.client.get(reverse('turni:miei_turni'))

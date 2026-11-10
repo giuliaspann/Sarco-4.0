@@ -31,10 +31,8 @@
       <div class="testa-destra">
         {# l'assistente si vede solo con ASSISTENTE_ATTIVO=1: per ora resta spento (Giulia, 10/11/2026) #}
         {% if assistente_attivo %}<button type="button" class="as-apri" id="as-apri" aria-label="Assistente">💬</button>{% endif %}
-        {% if nav_dipendente %}
         <a class="ig-icona{% if '/messaggi/' in request.path %} attivo{% endif %}" href="{% url 'turni:messaggi' %}" aria-label="Messaggi{% if nav_messaggi %}, {{ nav_messaggi }} da leggere{% endif %}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>{% if nav_messaggi %}<b class="badge">{{ nav_messaggi }}</b>{% endif %}</a>
-        {% endif %}
         <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
           <button class="link-esci ig-icona" type="submit" aria-label="Esci"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></svg></button>
         </form>
@@ -50,36 +48,23 @@
   </main>
 
   {% if user.is_authenticated %}
-  <nav class="menu{% if nav_dipendente %} ig-menu{% endif %}">
+  {# stile Instagram per tutti: tre icone senza scritte. Home · Menu (tutte le funzioni) · profilo; Messaggi sta in alto a destra #}
+  {% with n=request.resolver_match.url_name %}
+  <nav class="menu ig-menu">
+    <a href="{% url 'turni:home' %}" aria-label="Home" class="{% if n == 'home' or n == 'oggi' or n == 'pulizie' or n == 'pulizie_turno' or n == 'capoturno' or n == 'pulizie_piazzale' %}attivo{% endif %}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/></svg></a>
+    <a href="{% url 'turni:menu' %}" aria-label="Menu{% if nav_ufficio_badge %}, {{ nav_ufficio_badge }} da vedere{% endif %}" class="{% if n == 'menu' or '/archivio/' in request.path or '/ufficio/' in request.path or '/statistiche/' in request.path or '/manutenzione/' in request.path or '/produzione/' in request.path or '/report' in request.path %}attivo{% endif %}">
+      <span class="icona-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>{% if nav_ufficio_badge %}<b class="badge">{{ nav_ufficio_badge }}</b>{% endif %}</span></a>
     {% if nav_dipendente %}
-      {# stile Instagram: tre icone senza scritte; Messaggi sta in alto a destra #}
-      <a href="{% url 'turni:home' %}" aria-label="Oggi" class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'oggi' or request.resolver_match.url_name == 'pulizie' or request.resolver_match.url_name == 'pulizie_turno' or '/manutenzione/' in request.path or '/produzione/' in request.path or '/statistiche/analisi/nuova' in request.path %}attivo{% endif %}">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z"/></svg></a>
-      <a href="{% url 'turni:archivio' %}" aria-label="Archivio" class="{% if '/archivio/' in request.path %}attivo{% endif %}">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></a>
-      <a href="{% url 'turni:miei_turni' %}" aria-label="Area personale{% if nav_area %}, {{ nav_area }} da vedere{% endif %}" class="{% if request.resolver_match.url_name == 'miei_turni' or request.resolver_match.url_name == 'settimana_tutti' or request.resolver_match.url_name == 'capoturno' or '/richieste/' in request.path and '/ufficio/' not in request.path %}attivo{% endif %}">
-        <span class="icona-badge"><span class="ig-avatar">{% if user.dipendente.foto %}<img src="{% url 'turni:foto_profilo_img' user.dipendente.pk %}?v={{ user.dipendente.foto.name|slice:'-12:' }}" alt="">{% else %}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="3.6"/><path d="M5.5 19.5c1-3.3 3.6-5 6.5-5s5.5 1.7 6.5 5"/></svg>{% endif %}</span>{% if nav_area %}<b class="badge">{{ nav_area }}</b>{% endif %}</span></a>
+    <a href="{% url 'turni:miei_turni' %}" aria-label="Area personale{% if nav_area %}, {{ nav_area }} da vedere{% endif %}" class="{% if n == 'miei_turni' or n == 'settimana_tutti' or '/richieste/' in request.path and '/ufficio/' not in request.path %}attivo{% endif %}">
+      <span class="icona-badge"><span class="ig-avatar">{% if user.dipendente.foto %}<img src="{% url 'turni:foto_profilo_img' user.dipendente.pk %}?v={{ user.dipendente.foto.name|slice:'-12:' }}" alt="">{% else %}<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="3.6"/><path d="M5.5 19.5c1-3.3 3.6-5 6.5-5s5.5 1.7 6.5 5"/></svg>{% endif %}</span>{% if nav_area %}<b class="badge">{{ nav_area }}</b>{% endif %}</span></a>
     {% else %}
-    <a href="{% url 'turni:squadra' %}" class="{% if request.resolver_match.url_name == 'squadra' %}attivo{% endif %}">
-      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c3 0 5 1.6 5.5 5"/></svg>Squadra</a>
-    <a href="{% url 'turni:manutenzione' %}" class="{% if '/manutenzione/' in request.path %}attivo{% endif %}">
-      <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>{% if nav_manutenzione %}<b class="badge">{{ nav_manutenzione }}</b>{% endif %}</span><span class="menu-lungo">Manutenzione</span></a>
-    <a href="{% url 'turni:statistiche' %}" class="{% if '/statistiche/' in request.path or '/produzione/' in request.path %}attivo{% endif %}">
-      <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span class="menu-lungo">Statistiche</span></a>
-    <a href="{% url 'turni:messaggi' %}" class="{% if '/messaggi/' in request.path %}attivo{% endif %}">
-      <span class="icona-badge"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>{% if nav_messaggi %}<b class="badge">{{ nav_messaggi }}</b>{% endif %}</span>Messaggi</a>
-    <a href="{% url 'turni:archivio' %}" class="{% if '/archivio/' in request.path %}attivo{% endif %}">
-      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 13h4"/></svg>Archivio</a>
-    {% if nav_capoturno %}
-      <a href="{% url 'turni:capoturno' %}" class="{% if request.resolver_match.url_name == 'capoturno' %}attivo{% endif %}">
-        <svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/><path d="M5 20h14"/></svg>Verifica</a>
-    {% endif %}
-    {% endif %}
-    {% if nav_ufficio %}
-      <a href="{% if nav_responsabile %}{% url 'turni:ufficio_richieste' %}{% else %}{% url 'turni:importa' %}{% endif %}" class="{% if '/ufficio/' in request.path %}attivo{% endif %}">
-        <span class="icona-badge"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>{% if nav_ufficio_badge %}<b class="badge">{{ nav_ufficio_badge }}</b>{% endif %}</span>Ufficio</a>
+    {# chi non ha turni (ufficio): il profilo è il suo account #}
+    <a href="{% url 'admin:password_change' %}" aria-label="Il mio account">
+      <span class="ig-avatar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="3.6"/><path d="M5.5 19.5c1-3.3 3.6-5 6.5-5s5.5 1.7 6.5 5"/></svg></span></a>
     {% endif %}
   </nav>
+  {% endwith %}
   {% endif %}
 
   {% if user.is_authenticated %}{% include 'turni/_assistente.html' %}{% endif %}

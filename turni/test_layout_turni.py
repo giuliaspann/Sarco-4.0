@@ -135,3 +135,23 @@ class CaricamentoLayoutTest(TestCase):
         self.assertEqual(Turno.objects.get(dipendente__nome='JARJU NABIE', data=LUNEDI).fascia, Fascia.RIPOSO)
         self.assertEqual(Turno.objects.get(dipendente__nome='RALLO GASPARE', data=LUNEDI).posto, 'Impianto 1 · Operatore di Linea')
         self.assertEqual(Dipendente.objects.filter(nome__startswith='ODDO').count(), 1)
+
+
+class AnteprimaTest(TestCase):
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user('uff', password='x', is_staff=True))
+        self.client.post(reverse('turni:importa'), {'file': file_layout()})
+
+    def test_per_dipendente_in_ordine_alfabetico_con_le_sigle(self):
+        r = self.client.get(reverse('turni:anteprima'))
+        nomi = [x['nome'] for x in r.context['righe']]
+        self.assertEqual(nomi, sorted(nomi))
+        self.assertContains(r, '1T | Impianto 1 | CT')
+        self.assertContains(r, '2T | Impianto 1 | Pal + Sabbia - Sarco')
+        self.assertContains(r, 'Per Area')
+
+    def test_per_area_come_il_layout(self):
+        r = self.client.get(reverse('turni:anteprima') + '?vista=area')
+        self.assertEqual(r.context['vista'], 'area')
+        self.assertEqual([b['area'] for b in r.context['aree']][:2], ['Impianto 1', 'Piazzale - Pala'])
+        self.assertContains(r, 'rowspan="3"')  # 1T dell'Impianto 1 su tre righe
