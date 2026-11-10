@@ -1,0 +1,17 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Profilo{% endblock %}
+{% block contenuto %}
+<div class="ig-profilo">
+  <span class="ig-profilo-foto"><span>{{ iniziali }}</span></span>
+  <div><h1>{{ nome }}</h1>{% if ruoli %}<p class="tenue">{{ ruoli }}</p>{% endif %}</div>
+</div>
+
+<div class="ig-tasti">
+  <a href="{% url 'turni:password' %}">Cambia password</a>
+  <a href="{% url 'turni:menu' %}">Menu</a>
+</div>
+
+<form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
+  <button class="bottone avviso-btn piena-larghezza" type="submit">Esci</button>
+</form>
+{% endblock %}

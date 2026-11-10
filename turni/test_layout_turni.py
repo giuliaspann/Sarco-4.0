@@ -155,3 +155,23 @@ class AnteprimaTest(TestCase):
         self.assertEqual(r.context['vista'], 'area')
         self.assertEqual([b['area'] for b in r.context['aree']][:2], ['Impianto 1', 'Piazzale - Pala'])
         self.assertContains(r, 'rowspan="3"')  # 1T dell'Impianto 1 su tre righe
+
+
+class ProfiloUfficioTest(TestCase):
+    def test_il_tasto_profilo_dell_ufficio_apre_la_sua_pagina(self):
+        u = get_user_model().objects.create_user('ufficio', password='Segreta.123', is_staff=True)
+        self.client.force_login(u)
+        r = self.client.get(reverse('turni:home'))
+        self.assertContains(r, reverse('turni:profilo'))
+        self.assertNotContains(r, '/admin/password_change/')
+        r = self.client.get(reverse('turni:profilo'))
+        self.assertContains(r, 'Cambia password')
+        self.assertContains(r, 'Ufficio')
+        self.assertEqual(self.client.get(reverse('turni:password')).status_code, 200)
+
+    def test_chi_ha_turni_va_nell_area_personale(self):
+        d = Dipendente.objects.create(nome='ROSSI MARIO')
+        d.utente = get_user_model().objects.create_user('rossi')
+        d.save()
+        self.client.force_login(d.utente)
+        self.assertRedirects(self.client.get(reverse('turni:profilo')), reverse('turni:miei_turni'))

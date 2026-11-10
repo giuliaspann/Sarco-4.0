@@ -2,7 +2,7 @@
 {% block titolo %}Intervento #{{ i.pk }}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  <a class="tasto-indietro" href="{% url 'turni:interventi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Interventi</a>
+  <a class="tasto-indietro" href="{% url 'turni:interventi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Interventi</a>
   <p class="occhiello">{% if i.tipo == 'PROGRAMMATA' %}Manutenzione programmata{% elif i.tipo == 'LAVORO' %}{{ i.get_tipo_lavoro_display|default:'Manutenzione completata' }}{% else %}Guasto{% endif %} #{{ i.pk }}</p>
   <h1><a class="mn-link-macchina" href="{% url 'turni:macchina' i.macchina.pk %}">{{ i.macchina.icona }} {{ i.macchina.nome }}</a></h1>
   <div class="mn-etichette">

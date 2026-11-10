@@ -149,3 +149,23 @@ def home_ufficio(request):
         'oggi_data': timezone.localdate(),
         'fermi_aperti': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
     })
+
+
+@login_required
+def profilo(request):
+    """Il tasto profilo della barra: per chi ha turni è l'Area personale; per l'ufficio una pagina sua
+    (nome, ruolo, cambio password, esci) invece della pagina di amministrazione."""
+    from django.shortcuts import redirect
+
+    from .richieste import e_responsabile
+
+    u = request.user
+    if getattr(u, 'dipendente', None):
+        return redirect('turni:miei_turni')
+    nome = (u.get_full_name() or u.username).strip()
+    ruoli = [r for r, si in (('Ufficio', u.is_staff), ('Responsabile', e_responsabile(u))) if si]
+    return render(request, 'turni/profilo_ufficio.html', {
+        'nome': nome.title() if nome.islower() else nome,
+        'iniziali': ''.join(p[0] for p in nome.split()[:2]).upper() or '?',
+        'ruoli': ' · '.join(ruoli),
+    })

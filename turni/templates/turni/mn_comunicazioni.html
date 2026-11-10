@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Comunicazioni{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
+<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>
 <div class="intestazione"><h1>Comunicazioni</h1></div>
 {% if puo_scrivere %}<a class="bottone pieno piena-larghezza cb-invia" href="{% url 'turni:nuova_comunicazione' %}">✍️ Nuova comunicazione</a>{% endif %}
 <h2 class="rq-sezione">Da seguire <span class="mn-conta">{{ aperte|length }}</span></h2>

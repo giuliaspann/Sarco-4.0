@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Manutenzione{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Oggi</a>
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
 <div class="intestazione"><h1>Manutenzione</h1></div>
 <div class="tasti-agg">
   <a class="agg" href="{% url 'turni:segnala' %}?lavoro=1"><span class="piu">+</span><span class="txt">Aggiungi manutenzione</span><span class="emo">🔧</span></a>

@@ -2,14 +2,14 @@
 {% block titolo %}Nuova comunicazione{% endblock %}
 {% block contenuto %}
 {% if not tipo %}
-<a class="tasto-indietro" href="{% url 'turni:comunicazioni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Comunicazioni</a>
+<a class="tasto-indietro" href="{% url 'turni:comunicazioni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Comunicazioni</a>
 <div class="intestazione"><h1>Nuova comunicazione</h1></div>
 <h2 class="rq-sezione">Di cosa si tratta?</h2>
 <div class="sg-gruppi">
   {% for v, nome, icona in tipi %}<a href="?tipo={{ v }}"><span>{{ icona }}</span><b>{{ nome }}</b><small>{% if v == 'QUALITA' %}Scarti, contaminazioni, dati del turno{% elif v == 'PROCEDURA' %}Come si deve lavorare d'ora in poi{% elif v == 'CONTROLLO' %}Situazione di un pezzo o di una macchina{% elif v == 'FERMO' %}Un turno o una giornata: pulizia, manutenzione, sostituzioni{% else %}Ferma per un intervento programmato{% endif %}</small></a>{% endfor %}
 </div>
 {% else %}
-<a class="tasto-indietro" href="{% url 'turni:nuova_comunicazione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Altro tipo</a>
+<a class="tasto-indietro" href="{% url 'turni:nuova_comunicazione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Altro tipo</a>
 <div class="intestazione"><h1>{{ icona }} {{ nome_tipo }}</h1></div>
 <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
   <input type="hidden" name="tipo" value="{{ tipo }}">

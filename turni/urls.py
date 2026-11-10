@@ -1,5 +1,5 @@
-from django.contrib.auth.views import LogoutView
-from django.urls import path
+from django.contrib.auth.views import LogoutView, PasswordChangeView
+from django.urls import path, reverse_lazy
 
 from . import views, views_menu, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
 
@@ -8,6 +8,9 @@ app_name = 'turni'
 urlpatterns = [
     path('', views.home, name='home'),
     path('menu/', views_menu.menu, name='menu'),
+    path('profilo/', views_menu.profilo, name='profilo'),
+    path('profilo/password/', PasswordChangeView.as_view(
+        template_name='turni/password.html', success_url=reverse_lazy('turni:profilo')), name='password'),
     path('accesso/', views.Accesso.as_view(), name='login'),
     path('esci/', LogoutView.as_view(), name='logout'),
     path('presa-visione/', views.presa_visione, name='presa_visione'),

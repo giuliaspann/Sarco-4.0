@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}{{ dip.nome_breve }}{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% if tutti %}{% url 'turni:archivio_dipendenti' %}{% else %}{% url 'turni:archivio' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>{% if tutti %}Dipendenti{% else %}Archivio{% endif %}</a>
+<a class="tasto-indietro" href="{% if tutti %}{% url 'turni:archivio_dipendenti' %}{% else %}{% url 'turni:archivio' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if tutti %}Dipendenti{% else %}Archivio{% endif %}</a>
 <div class="intestazione"><h1>{{ dip.nome_breve }}</h1><p class="tenue piccolo">{{ dip.mansioni_display }}</p></div>
 
 <div class="filtri tre-filtri">

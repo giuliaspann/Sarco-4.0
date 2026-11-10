@@ -1874,18 +1874,37 @@ a.rq-riga { color: inherit; text-decoration: none; }
 .vp-tabella .vp-fissa { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--carta); }
 .vp-tabella thead .vp-fissa { background: var(--testo); z-index: 2; }
 .vp-nome { font-weight: 600; font-size: .74rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
-.vp-1t { background: #ffff00; color: #1a1a1a; }
-.vp-2t { background: #70ad47; color: #10200a; }
-.vp-n { background: #2f6db5; color: #fff; }
-.vp-g, .vp-rip { background: var(--carta); color: var(--testo); }
-.vp-ferie { background: #f8cbad; color: #1a1a1a; }
+/* caselle: stessi colori del calendario dell'app (.f-mattina, .f-pomeriggio, .f-notte, .f-giorno, .f-capo, .f-riposo, .f-ferie) */
 .vp-aree .vp-blocco { border-top: 6px solid var(--altro); }
 .vp-aree .vp-area { font-weight: 700; }
 .vp-aree .vp-turno { font-weight: 800; font-size: .9rem; }
 .vp-aree .vp-ruolo { font-weight: 700; }
-.vp-aree tr.vp-1t .vp-fissa, .vp-aree tr.vp-2t .vp-fissa, .vp-aree tr.vp-n .vp-fissa { background: inherit; }
+.vp-aree tr[class^="f-"] .vp-fissa { background: inherit; }
+.vp-tabella td[class^="f-"], .vp-aree tr[class^="f-"] td { font-weight: 600; }
 .vp-conferma { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin: 0 0 18px; }
 .vp-conferma .bottone { min-height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
 
 /* Menu (il quadrato centrale): sezioni con i riquadri a icona */
 .ig-sezione { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tenue); margin: 16px 2px 8px; }
+
+/* Anteprima turni in tinte pastello, come l'Excel del responsabile turni (Giulia, 10/11); il calendario dell'app resta vivace */
+.vp-pastello .f-mattina { background: #fff2b3; color: #3a2f00; }
+.vp-pastello .f-pomeriggio { background: #fcd5b4; color: #4a2300; }
+.vp-pastello .f-notte { background: #b4c7e7; color: #10264a; }
+.vp-pastello .f-giorno { background: #c6e0b4; color: #1d3b0e; }
+.vp-pastello .f-capo { background: #d9f1fb; color: #06364f; }
+.vp-pastello .f-riposo { background: #e7e6e6; color: #3d3d3d; }
+.vp-pastello .f-ferie { background: #e6d0f0; color: #3f1250; }
+.vp-pastello .vp-tabella thead th { background: #4472c4; color: #fff; }
+.vp-pastello .vp-aree .vp-area { background: #4472c4 !important; color: #fff; }
+.vp-pastello .vp-tabella td[class^="f-"], .vp-pastello .vp-aree tr[class^="f-"] td { font-weight: 500; }
+.vp-pastello .vp-aree .vp-blocco { border-top: 0; }
+.vp-spazio td { height: 14px; padding: 0; border: 0 !important; background: var(--carta); }
+
+/* Tasto indietro come Instagram (Giulia, 10/11): solo la freccia "<", sulla riga del titolo (lo sposta app.js);
+   il nome della schermata resta per i lettori di schermo */
+.tasto-indietro { width: 36px; height: 36px; min-height: 0; padding: 0; margin: 0 4px 0 -8px; gap: 0; border: 0; background: none;
+  font-size: 0; justify-content: center; vertical-align: middle; flex: none; }
+.tasto-indietro svg { width: 26px; height: 26px; stroke-width: 2.6; }
+.tasto-indietro:active { background: var(--altro); border-radius: 99px; }
+.ha-indietro { display: flex; align-items: center; gap: 0; }

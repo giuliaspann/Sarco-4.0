@@ -2,11 +2,11 @@
 {% block titolo %}{% if lavoro %}Aggiungi manutenzione{% elif programma %}Programma manutenzione{% else %}Richiedi manutenzione{% endif %}{% endblock %}
 {% block contenuto %}
 <div class="intestazione">
-  {% if macchina %}<a class="tasto-indietro" href="?{{ pre }}luogo={{ macchina.luogo }}{% if macchina.tipo == 'SEGNALETICA' %}&gruppo=segnaletica{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia macchina</a>
-  {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}{% if gruppo_luogo %}gruppo={{ gruppo_luogo }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Cambia luogo</a>
-  {% elif gruppo %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Indietro</a>
-  {% elif a %}<a class="tasto-indietro" href="{% url 'turni:mn_a_chi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>A chi</a>
-  {% else %}<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>{% endif %}
+  {% if macchina %}<a class="tasto-indietro" href="?{{ pre }}luogo={{ macchina.luogo }}{% if macchina.tipo == 'SEGNALETICA' %}&gruppo=segnaletica{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Cambia macchina</a>
+  {% elif luogo or q %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}{% if gruppo_luogo %}gruppo={{ gruppo_luogo }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Cambia luogo</a>
+  {% elif gruppo %}<a class="tasto-indietro" href="{% url 'turni:segnala' %}?{{ pre }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Indietro</a>
+  {% elif a %}<a class="tasto-indietro" href="{% url 'turni:mn_a_chi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>A chi</a>
+  {% else %}<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
   <h1>{% if lavoro %}Aggiungi manutenzione{% elif programma %}Programma manutenzione{% else %}Richiedi manutenzione{% endif %}</h1>
   {% if dest or a_responsabile %}<p class="tenue">Richiesta a: <b>{% if dest %}{{ dest.nome_breve }}{% else %}Responsabile manutenzione{% endif %}</b></p>{% endif %}
   {% if gruppo or luogo or q or macchina %}

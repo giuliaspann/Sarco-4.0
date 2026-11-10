@@ -2,7 +2,7 @@
 {% block titolo %}Anteprima turni{% endblock %}
 {% block classe_body %}larga{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:importa' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Carica turni</a>
+<a class="tasto-indietro" href="{% url 'turni:importa' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Carica turni</a>
 <div class="intestazione">
   <h1>Anteprima: {{ letta.lunedi|date:'d/m' }} – {{ domenica|date:'d/m/Y' }}</h1>
   <p class="tenue piccolo">Foglio «{{ letta.foglio }}» · {{ righe|length }} dipendenti</p>
@@ -17,16 +17,29 @@
 </div>
 {% endif %}
 
+<div class="vp-pastello">
+{# stesse sigle del calendario dell'app, in tinte pastello come l'Excel #}
+<ul class="legenda legenda-due-righe">
+  <li><i class="f-mattina">1T</i>1° turno</li>
+  <li><i class="f-pomeriggio">2T</i>2° turno</li>
+  <li><i class="f-notte">N</i>Notturno</li>
+  <li><i class="f-giorno">G</i>Giornaliero</li>
+  <li><i class="f-capo">CT</i>Capo Turno</li>
+  <li><i class="f-riposo">R</i>Riposo</li>
+  <li><i class="f-ferie">F</i>Ferie</li>
+</ul>
+
 {% if vista == 'area' %}
 <div class="vp-scorre">
 <table class="vp-tabella vp-aree">
   <thead><tr><th class="vp-fissa">Area</th><th>Turno</th><th>Ruolo</th>{% for g in giorni %}<th>{{ g|date:'D'|capfirst }}</th>{% endfor %}</tr></thead>
   {% for b in aree %}
+  {% if not forloop.first %}<tbody class="vp-spazio" aria-hidden="true"><tr><td colspan="10"></td></tr></tbody>{% endif %}
   <tbody class="vp-blocco">
     {% for r in b.righe %}
     <tr class="{{ r.classe }}">
       <th class="vp-fissa vp-area">{{ b.area }}</th>
-      {% if r.prima %}<td class="vp-turno" rowspan="{{ r.quante }}">{{ r.turno|default:'–' }}</td>{% endif %}
+      {% if r.prima %}<td class="vp-turno {{ r.classe_turno }}" rowspan="{{ r.quante }}">{{ r.turno|default:'–' }}</td>{% endif %}
       <td class="vp-ruolo">{{ r.ruolo }}</td>
       {% for n in r.nomi %}<td>{{ n }}</td>{% endfor %}
     </tr>
@@ -50,6 +63,7 @@
 </table>
 </div>
 {% endif %}
+</div>
 
 <form method="post" class="vp-conferma">{% csrf_token %}
   <a class="bottone leggero" href="{% url 'turni:importa' %}">Annulla</a>

@@ -515,3 +515,22 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
     a.addEventListener('click', () => { try { sessionStorage.setItem('indietro:tornando', destinazione); } catch (e) {} });
   });
 })();
+
+// ---------------------------------------------------------------- tasto indietro sulla riga del titolo (come Instagram)
+(function () {
+  document.querySelectorAll('a.tasto-indietro').forEach(a => {
+    const nome = a.textContent.trim();
+    if (nome) a.setAttribute('aria-label', 'Indietro: ' + nome);
+    // il primo titolo dopo il tasto: lì dentro la freccia, così non occupa una riga sua
+    let el = a.nextElementSibling;
+    for (let i = 0; el && i < 3; i++, el = el.nextElementSibling) {
+      const h = el.matches('h1, h2') ? el : el.querySelector('h1');
+      if (h) {
+        const riga = h.parentElement && h.parentElement.classList.contains('naviga') ? h.parentElement : h;
+        riga.classList.add('ha-indietro');
+        riga.insertBefore(a, riga.firstChild);
+        return;
+      }
+    }
+  });
+})();

@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Richiedi manutenzione{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Manutenzione</a>
+<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>
 <div class="intestazione"><h1>Richiedi manutenzione</h1></div>
 <h2 class="rq-sezione">A chi la chiedi?</h2>
 <a class="sg-macchina" href="{% url 'turni:segnala' %}?a=resp">

@@ -2,13 +2,13 @@
 {% block titolo %}Archivio pulizie{% endblock %}
 {% block contenuto %}
 {% if posto %}
-<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ fascia }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Impianti</a>
+<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ fascia }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Impianti</a>
 {% elif fascia %}
-<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Turni</a>
+<a class="tasto-indietro" href="?giorno={{ giorno|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Turni</a>
 {% elif giorno %}
-<a class="tasto-indietro" href="{% url 'turni:archivio_pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Giorni</a>
+<a class="tasto-indietro" href="{% url 'turni:archivio_pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Giorni</a>
 {% else %}
-<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Archivio</a>
+<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Archivio</a>
 {% endif %}
 <div class="intestazione"><h1>{% if posto %}Pulizie approvate{% elif fascia %}Che impianto?{% elif giorno %}Che turno?{% else %}Archivio pulizie{% endif %}</h1></div>
 {% if giorno %}<p class="briciole">{% if giorno %}<span>{{ giorno|date:'D j F'|capfirst }}</span>{% endif %}{% if fascia %}<span>{{ nome_fascia }}</span>{% endif %}{% if posto %}<span>{{ nome_posto }}</span>{% endif %}</p>{% endif %}

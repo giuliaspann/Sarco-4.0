@@ -1050,8 +1050,7 @@ def anteprima(request):
         caselle = []
         for c in r.turni:
             t = Turno(fascia=c.fascia, postazione=c.postazione, capoturno=c.capoturno, codice=c.codice)
-            testo = (c.sigla or c.codice or t.descrizione) if t.lavora else ('RIP' if c.fascia == Fascia.RIPOSO else t.descrizione)
-            caselle.append({'testo': testo, 'classe': CLASSI_VISTA.get(c.fascia, 'vp-rip'), 'titolo': c.posto or c.codice})
+            caselle.append({'testo': sigla_app(c, t), 'classe': t.classe_fascia, 'titolo': c.posto or c.codice})
         righe.append({'nome': r.nome, 'nuovo': trovato is None,
                       'come': trovato.nome if trovato and trovato.nome != r.nome else '', 'caselle': caselle})
     # "Per Area": le righe del foglio "Layout Turni", con il turno scritto una volta per blocco
@@ -1062,7 +1061,10 @@ def anteprima(request):
             blocco = {'area': riga['area'], 'righe': []}
             aree.append(blocco)
         prima = not blocco['righe'] or blocco['righe'][-1]['turno'] != riga['turno']
-        blocco['righe'].append({**riga, 'classe': CLASSI_VISTA.get(riga['fascia'], 'vp-g'), 'prima': prima})
+        capo = riga['ruolo'].upper() == 'CT' and riga['fascia'] in Turno.SIGLE_CAPO
+        classe = 'f-capo' if capo else Turno(fascia=riga['fascia']).classe_fascia
+        blocco['righe'].append({**riga, 'classe': classe, 'prima': prima,
+                                'classe_turno': Turno(fascia=riga['fascia']).classe_fascia})
     for blocco in aree:
         for i, riga in enumerate(blocco['righe']):
             if riga['prima']:
@@ -1087,11 +1089,19 @@ def anteprima(request):
     )
 
 
-# colori dell'anteprima come nell'Excel del responsabile turni
-CLASSI_VISTA = {
-    Fascia.MATTINA: 'vp-1t', Fascia.POMERIGGIO: 'vp-2t', Fascia.NOTTE: 'vp-n', Fascia.GIORNALIERO: 'vp-g',
-    Fascia.ALTRO: 'vp-1t', Fascia.FERIE: 'vp-ferie', Fascia.PERMESSO: 'vp-ferie', Fascia.FESTA: 'vp-ferie',
-}
+def sigla_app(c, t):
+    """La casella dell'anteprima: prima il turno, poi area e incarichi, il Capo Turno sempre in fondo
+    (deciso con Giulia): "1T | Imp 1", "1T | Imp 1 | CT", "N | Imp 1 | Pal | CT", "R"."""
+    if not t.lavora:
+        return t.sigla_fascia or 'R'
+    testo = c.sigla or c.codice or t.descrizione
+    if not c.capoturno:
+        return testo
+    parti = [p.strip() for p in testo.split('|')]
+    if len(parti) == 3:  # "N | Imp 1 | CT + Pal": il CT esce dagli incarichi e va in fondo
+        resto = [x.strip() for x in parti[2].split('+') if x.strip().upper() != 'CT']
+        parti = parti[:2] + ([' + '.join(resto)] if resto else [])
+    return ' | '.join(parti + ['CT'])
 
 
 # Calendario inventato per far vedere l'app a chi non ha turni (es. un dipendente fittizio):

@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Dipendenti{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Archivio</a>
+<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Archivio</a>
 <div class="intestazione"><h1>Dipendenti</h1></div>
 <form method="get" class="ac-cerca"><input type="text" name="q" value="{{ q }}" placeholder="Cerca per nome" aria-label="Cerca per nome"><button class="bottone pieno">Cerca</button></form>
 <div class="archivio-voci">

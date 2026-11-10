@@ -11,9 +11,9 @@
 
 {% elif fai == 'assegnata' %}
   {% if da == 'oggi' %}
-  <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Oggi</a>
+  <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
   {% else %}
-  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
+  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizie</a>
   {% endif %}
   <div class="intestazione"><h1>{% if voce.elemento.promemoria %}Controllo{% elif voce.elemento.controllo %}Controllo di fine turno{% else %}Segnala completamento pulizia assegnata{% endif %}</h1></div>
   {% if voce %}
@@ -74,7 +74,7 @@
   {% endif %}
 
 {% elif fai == 'impedimento' %}
-  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
+  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizie</a>
   <div class="intestazione"><h1>Segnala impedimento pulizia</h1></div>
   {% if voce %}
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
@@ -99,7 +99,7 @@
   {% endif %}
 
 {% elif fai == 'aggiuntiva' %}
-  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
+  <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizie</a>
   <div class="intestazione"><h1>Segnala completamento pulizia aggiuntiva</h1></div>
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     {% include 'turni/_pl_cosa.html' with domanda='Cosa hai pulito?' %}
