@@ -18,6 +18,7 @@
 {% for i in altri %}{% include 'turni/_mn_intervento.html' %}{% empty %}<p class="tenue piccolo">Nessun intervento aperto{% if luogo %} in questo luogo{% endif %}. 👍</p>{% endfor %}
 
 {% if recenti %}
+{% include 'turni/_archivio_cerca_link.html' with sezione='manutenzione' %}
 <h2 class="rq-sezione">Chiusi negli ultimi 30 giorni</h2>
 {% for i in recenti %}{% include 'turni/_mn_intervento.html' %}{% endfor %}
 {% endif %}

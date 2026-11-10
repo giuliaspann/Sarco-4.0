@@ -14,12 +14,13 @@
 {% if giorno %}<p class="briciole">{% if giorno %}<span>{{ giorno|date:'D j F'|capfirst }}</span>{% endif %}{% if fascia %}<span>{{ nome_fascia }}</span>{% endif %}{% if posto %}<span>{{ nome_posto }}</span>{% endif %}</p>{% endif %}
 
 {% if not giorno %}
+{% include 'turni/_archivio_cerca_link.html' with sezione='pulizie' %}
   {% for g, n in giorni %}
   <a class="sg-macchina" href="?giorno={{ g|date:'Y-m-d' }}"><span class="rq-testo"><b>{{ g|date:'l j F'|capfirst }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }} approvat{{ n|pluralize:'a,e' }}</small></span><span class="sg-freccia">›</span></a>
   {% empty %}<p class="tenue piccolo">Nessuna pulizia approvata negli ultimi 30 giorni.</p>{% endfor %}
 {% elif not fascia %}
   {% for f, sigla, classe, nome, n, capo in fasce %}
-  <a class="sg-macchina" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}"><span class="cal-sigla {{ classe }} ar-sigla">{{ sigla }}</span><span class="rq-testo"><b>{{ nome }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }}{% if capo %} · capo turno {{ capo }}{% endif %}</small></span><span class="sg-freccia">›</span></a>
+  <a class="sg-macchina" href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}"><span class="cal-sigla {{ classe }} ar-sigla">{{ sigla }}</span><span class="rq-testo"><b>{{ nome }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }}{% if capo %} · Capo Turno {{ capo }}{% endif %}</small></span><span class="sg-freccia">›</span></a>
   {% empty %}<p class="tenue piccolo">Nessuna pulizia approvata in questo giorno.</p>{% endfor %}
 {% elif not posto %}
   {% for k, nome, n in posti %}

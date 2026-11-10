@@ -1,5 +1,6 @@
 """Manutenzione: guasti, interventi, macchine, ricambi, ordini, programmate."""
 
+import os
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -8,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -218,7 +219,7 @@ def segnala(request):
                     i.save(update_fields=['assegnata_a'])
                     mn.evento(i, request.user, f'Richiesta a {dest.nome_breve}')
                     mn.avvisa([dest.utente_id], request.user, f'🔧 Richiesta di manutenzione · {macchina.nome}', descrizione, mn.url_intervento(i))
-                messages.success(request, 'Segnalazione inviata: il capo turno e il responsabile manutenzione la ricevono subito.')
+                messages.success(request, 'Segnalazione inviata: il Capo Turno e il responsabile manutenzione la ricevono subito.')
                 return redirect('turni:intervento', i.pk)
     contesto = {'macchina': macchina, 'descrizione': request.POST.get('descrizione', ''),
                 'lavoro': lavoro, 'programma': programma,
@@ -302,6 +303,47 @@ def codice(request):
     return render(request, 'turni/mn_codice.html', {'pre': pre, 'lavoro': request.GET.get('lavoro'), 'a': request.GET.get('a', '')})
 
 
+REPORT_AMMESSI = ('.pdf', '.jpg', '.jpeg', '.png')
+
+
+def _salva_costi(request, i):
+    """Ditta esterna, il suo costo e il suo report (PDF o foto). I pezzi si calcolano da soli."""
+    testo = (request.POST.get('costo_esterno') or '').replace('€', '').strip()
+    if ',' in testo:  # 1.250,50 all'italiana
+        testo = testo.replace('.', '').replace(',', '.')
+    try:
+        costo = Decimal(testo).quantize(Decimal('0.01')) if testo else None
+        if costo is not None and not (0 <= costo < 10_000_000):
+            raise InvalidOperation
+    except InvalidOperation:
+        messages.error(request, 'Scrivi il costo come numero, es. 350,00.')
+        return
+    report = request.FILES.get('report')
+    if report:
+        import os
+
+        if os.path.splitext(report.name.lower())[1] not in REPORT_AMMESSI or report.size > 15 * 1024 * 1024:
+            messages.error(request, 'Il report deve essere un PDF o una foto (massimo 15 MB).')
+            return
+        i.report_esterno.save(os.path.basename(report.name)[-80:], report, save=False)
+    i.officina_esterna = (request.POST.get('officina_esterna') or '').strip()[:80]
+    i.costo_esterno = costo
+    i.save(update_fields=['officina_esterna', 'costo_esterno', 'report_esterno'])
+    mn.evento(i, request.user, 'Costi aggiornati' + (' e report caricato' if report else ''))
+    messages.success(request, 'Costi salvati.')
+
+
+@login_required
+def report_esterno(request, intervento_id):
+    import mimetypes
+
+    i = get_object_or_404(Intervento, pk=intervento_id)
+    if not i.report_esterno:
+        raise Http404
+    tipo = mimetypes.guess_type(i.report_esterno.name)[0] or 'application/octet-stream'
+    return FileResponse(i.report_esterno.open('rb'), content_type=tipo, filename=os.path.basename(i.report_esterno.name))
+
+
 @login_required
 def intervento(request, intervento_id):
     i = get_object_or_404(Intervento.objects.select_related('macchina', 'assegnata_a', 'segnalata_da__dipendente', 'approvata_da__dipendente', 'completata_da__dipendente', 'piano'), pk=intervento_id)
@@ -363,6 +405,8 @@ def intervento(request, intervento_id):
             testo = (request.POST.get('testo') or '').strip()
             if testo:
                 mn.evento(i, request.user, testo, nota=True)
+        elif azione == 'costi' and i.stato == Intervento.Stato.COMPLETATA and (permessi['resp'] or permessi['ordina']):
+            _salva_costi(request, i)
         return redirect('turni:intervento', i.pk)
 
     in_turno, altri = mn.manutentori_di_turno()
@@ -529,7 +573,7 @@ def ordini(request):
     if request.method == 'POST':
         o = get_object_or_404(OrdineRicambio, pk=request.POST.get('ordine'))
         if mn.avanza_ordine(request.user, o, request.POST.get('azione'), request.POST.get('fornitore') or '', request.POST.get('dove') or ''):
-            messages.success(request, f'{o.nome}: {o.get_stato_display().lower()}.')
+            messages.success(request, f'Ordine n. {o.numero} · {o.nome}: {o.get_stato_display().lower()}.')
         return redirect('turni:ordini')
     tutti = OrdineRicambio.objects.select_related('ricambio', 'macchina', 'intervento', 'richiesto_da', 'richiesto_da__dipendente', 'approvato_da__dipendente')
     S = OrdineRicambio.Stato
@@ -543,38 +587,109 @@ def ordini(request):
 
 
 @login_required
+def ordini_pdf(request):
+    """Richiesta d'ordine da allegare alla mail per il fornitore: gli ordini scelti (?o=) o tutti quelli da ordinare."""
+    from .pdf import Documento
+    from .views_archivio import chi
+
+    if not mn.puo_ordinare(request.user):
+        raise PermissionDenied
+    S = OrdineRicambio.Stato
+    elenco = OrdineRicambio.objects.filter(stato__in=[S.APPROVATO, S.ORDINATO]).select_related(
+        'ricambio', 'macchina', 'approvato_da__dipendente').order_by('pk')
+    scelti = [x for x in request.GET.getlist('o') if x.isdigit()]
+    elenco = list(elenco.filter(pk__in=scelti) if scelti else elenco.filter(stato=S.APPROVATO))
+    if not elenco:
+        raise Http404
+    oggi = timezone.localdate()
+    numero = elenco[0].numero if len(elenco) == 1 else f'{elenco[0].numero}-{elenco[-1].numero}'
+    fornitori = {o.fornitore or (o.ricambio.fornitore if o.ricambio else '') for o in elenco} - {''}
+    doc = Documento(f"Richiesta d'ordine {numero}")
+    doc.testo('SARCO S.r.l.', 11, True, (0.17, 0.48, 0.13))
+    doc.testo("Richiesta d'ordine", 20, True, (0.05, 0.2, 0.3))
+    doc.spazio(4)
+    doc.voce('Numero', numero)
+    doc.voce('Data', f'{oggi:%d/%m/%Y}')
+    doc.voce('Fornitore', fornitori.pop() if len(fornitori) == 1 else '')
+    doc.spazio(10)
+    doc.tabella(['N.', 'Codice', 'Articolo', 'Quantità', 'Note'],
+                [[o.numero, o.ricambio.codice if o.ricambio else '', o.nome + (f' (per {o.macchina.nome})' if o.macchina else ''),
+                  f'{o.quantita} {o.ricambio.unita if o.ricambio else "pz"}', ('URGENTE. ' if o.urgente else '') + o.nota]
+                 for o in elenco], [0.09, 0.14, 0.41, 0.13, 0.23])
+    doc.spazio(16)
+    doc.testo('Vi chiediamo conferma della disponibilità, del prezzo e dei tempi di consegna.', 10)
+    approvato = {chi(o.approvato_da) for o in elenco if o.approvato_da}
+    if approvato:
+        doc.spazio(10)
+        doc.voce('Approvato da', ', '.join(sorted(approvato)))
+    risposta = HttpResponse(doc.pdf(), content_type='application/pdf')
+    risposta['Content-Disposition'] = f'attachment; filename="Richiesta ordine {numero}.pdf"'
+    return risposta
+
+
+@login_required
 def nuovo_ordine(request):
     if not mn.puo_chiedere_pezzi(request.user):
         raise PermissionDenied
     sorgente = request.POST if request.method == 'POST' else request.GET
     i = Intervento.objects.filter(pk=sorgente.get('intervento')).select_related('macchina').first() if (sorgente.get('intervento') or '').isdigit() else None
     ricambio_scelto = sorgente.get('ricambio') or ''
+    avviso = None
     if request.method == 'POST':
-        ricambio = Ricambio.objects.filter(pk=ricambio_scelto).first() if ricambio_scelto.isdigit() else None
-        descrizione = (request.POST.get('descrizione') or '').strip()[:120]
-        foto = request.FILES.get('foto')
-        try:
-            quantita = max(1, min(9999, int(request.POST.get('quantita') or 1)))
-        except ValueError:
-            quantita = 1
-        if not (ricambio or descrizione):
-            messages.error(request, 'Scegli il pezzo dal magazzino o scrivi quale serve.')
-        elif not (i or foto):
-            messages.error(request, 'Serve la foto della macchina o del pezzo rotto.')
-        else:
+        def quanti(nome):
             try:
-                mn.chiedi_pezzo(request.user, ricambio, '' if ricambio else descrizione, quantita,
-                                request.POST.get('urgente') == '1', (request.POST.get('nota') or '').strip()[:300],
-                                intervento=i, foto=foto)
+                return max(1, min(9999, int(request.POST.get(nome) or 1)))
+            except ValueError:
+                return 1
+
+        # uno o più pezzi del magazzino, ognuno con la sua quantità, più un eventuale pezzo scritto a mano
+        descrizione = (request.POST.get('descrizione') or '').strip()[:120]
+        # la quantità del singolo pezzo può arrivare anche nel campo generico (link dalla scheda intervento)
+        pezzi = [(r, quanti(f'q{r.pk}' if request.POST.get(f'q{r.pk}') or descrizione else 'quantita'))
+                 for r in Ricambio.objects.filter(pk__in=[x for x in request.POST.getlist('ricambio') if x.isdigit()])]
+        if descrizione:
+            pezzi.append((None, quanti('quantita')))
+        foto = request.FILES.get('foto')
+        scelta = request.POST.get('doppioni')  # dopo l'avviso: 'aggiungi' ai pezzi già chiesti oppure 'nuovo' ordine
+        doppioni = mn.richieste_aperte(pezzi, descrizione)
+        if not pezzi:
+            messages.error(request, 'Scegli il pezzo dal magazzino o scrivi quale serve.')
+        elif descrizione and not (i or foto) and not (doppioni and scelta == 'aggiungi'):
+            messages.error(request, 'Per un pezzo che non è in magazzino serve la foto del pezzo o della macchina.')
+        elif doppioni and scelta not in ('aggiungi', 'nuovo'):
+            avviso = doppioni  # si mostra l'avviso e si chiede cosa fare
+        else:
+            nuovi = 0
+            try:
+                for ricambio, quantita in pezzi:
+                    gia = doppioni.get(ricambio.pk if ricambio else descrizione.lower())
+                    if gia and scelta == 'aggiungi' and gia.stato != OrdineRicambio.Stato.ORDINATO:
+                        mn.aggiungi_a_ordine(request.user, gia, quantita)
+                        continue
+                    mn.chiedi_pezzo(request.user, ricambio, '' if ricambio else descrizione, quantita,
+                                    request.POST.get('urgente') == '1', (request.POST.get('nota') or '').strip()[:300],
+                                    intervento=i, foto=foto if not ricambio or len(pezzi) == 1 else None)
+                    nuovi += 1
             except (ValueError, OSError):
                 messages.error(request, 'La foto non è valida: riprova.')
             else:
-                messages.success(request, 'Richiesta del pezzo inviata.')
+                aggiunti = len(pezzi) - nuovi
+                messages.success(request, ' '.join(x for x in [
+                    (f'{nuovi} pezz{"o" if nuovi == 1 else "i"} chiest{"o" if nuovi == 1 else "i"}.' if nuovi else ''),
+                    (f'{aggiunti} aggiunt{"o" if aggiunti == 1 else "i"} alla richiesta già aperta.' if aggiunti else '')] if x))
                 return redirect('turni:intervento', i.pk) if i else redirect('turni:ordini')
     compatibili = list(i.macchina.ricambi.all()) if i else []
+    altri = [r for r in Ricambio.objects.all() if r not in compatibili]
+    if request.method == 'POST':  # si ripresenta il modulo com'era
+        scelti = {x for x in request.POST.getlist('ricambio') if x.isdigit()}
+        for r in compatibili + altri:
+            r.scelto, r.q = str(r.pk) in scelti, request.POST.get(f'q{r.pk}') or 1
+    else:
+        for r in compatibili + altri:
+            r.scelto, r.q = str(r.pk) == ricambio_scelto, 1
     return render(request, 'turni/mn_ordine_nuovo.html', {
-        'i': i, 'ricambio_scelto': ricambio_scelto,
-        'compatibili': compatibili, 'altri': [r for r in Ricambio.objects.all() if r not in compatibili],
+        'i': i, 'compatibili': compatibili, 'altri': altri, 'avviso': list(avviso.values()) if avviso else [],
+        'dati': request.POST if request.method == 'POST' else {},
     })
 
 
@@ -658,7 +773,7 @@ def nuovo_fermo(request):
                     fine = _quando(request.POST.get('ripartito'))
                     if fine > f.fermo_dal:
                         mn.fai_ripartire(request.user, f, fine, '')
-                messages.success(request, 'Fermo registrato: responsabile, capo turno e manutentori sono avvisati.')
+                messages.success(request, 'Fermo registrato: responsabile, Capo Turno e manutentori sono avvisati.')
                 return redirect('turni:fermo', f.pk)
     return render(request, 'turni/mn_fermo_nuovo.html', {
         'impianto': impianto, 'nome_impianto': impianti[impianto], 'macchine': macchine,

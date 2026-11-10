@@ -48,6 +48,9 @@ class CodiceTurno:
     fascia: str
     postazione: str = ''
     capoturno: bool = False
+    ruolo: str = ''  # solo dal "Layout Turni": CT, OdL, Pal, Man, Aut…
+    posto: str = ''  # solo dal "Layout Turni": "Impianto 1 · Operatore di Linea"
+    incarichi: str = ''  # solo dal "Layout Turni": "IMP1/CT IMP1/Pal"
 
 
 def interpreta_codice(testo):
@@ -115,6 +118,8 @@ def pulisci(v):
 
 def leggi_file(file, lunedi):
     wb = openpyxl.load_workbook(file, data_only=True)
+    if FOGLIO_LAYOUT in wb.sheetnames:
+        return leggi_layout(wb, lunedi)
     anno, settimana, _ = lunedi.isocalendar()
     nome_foglio = f'Sett.{settimana}'
     if nome_foglio in wb.sheetnames:
@@ -167,6 +172,198 @@ def leggi_file(file, lunedi):
     return letta
 
 
+# ---------------------------------------------------------------- foglio "Layout Turni"
+#
+# Il file del responsabile turni ("Organizzazione Turni con Vista"): nel foglio "Layout Turni"
+# ogni riga è un posto (Area, Turno, Ruolo, sigla del ruolo) con i nomi da lunedì a domenica;
+# il turno è scritto solo sulla prima riga del blocco (celle unite). "Collegamento Nomi" dà il
+# nome completo di chi nel layout è scritto per cognome. Gli altri fogli dell'Excel non servono.
+
+FOGLIO_LAYOUT = 'Layout Turni'
+FOGLIO_NOMI = 'Collegamento Nomi'
+FOGLIO_VISTA = 'Vista Dipendenti'
+
+FASCE_LAYOUT = {'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE, 'G': Fascia.GIORNALIERO}
+
+# l'area decide la postazione (l'ordine conta: "Impianto 2 - Barrotti" prima di "Impianto 2")
+AREE = [
+    (r'BARR?OTTI', Postazione.BARROTTI),
+    (r'IMPIANTO\s*2|INCOLORE', Postazione.IMP2),
+    (r'IMPIANTO\s*1', Postazione.IMP1),
+    (r'ROTOVAGLIO', Postazione.ROTOVAGLIO),
+    (r'\bPALA\b', Postazione.PALISTA),
+    (r'PIAZZALE', Postazione.PIAZZALE),
+    (r'LABORATORIO|ANALISI', Postazione.ANALISI),
+    (r'METALLI', Postazione.METALLI),
+    (r'SUPERBI', Postazione.SUPERBI),
+    (r'MULINO', Postazione.MULINO),
+    (r'SABBIA', Postazione.SABBIA),
+    (r'MANUTENZ', Postazione.MANUT),
+    (r'TRASPORT|AUTIST', Postazione.AUTISTA),
+    (r'UFFICIO', Postazione.UFFICIO),
+    (r'MAGAZZINO', Postazione.MAGAZZINO),
+]
+
+def _postazione_area(area, sigla=''):
+    """La postazione è l'area; palista e manutentore dell'Impianto 1 si distinguono dal ruolo (le regole pulizie lo usano)."""
+    a = area.upper()
+    for modello, valore in AREE:
+        if re.search(modello, a):
+            return valore
+    return ''
+
+
+def lunedi_dal_file(file):
+    """Il lunedì scritto in "Vista Dipendenti" (cella C1), se il file è quello del Layout Turni."""
+    from datetime import datetime
+
+    v = None
+    try:
+        wb = openpyxl.load_workbook(file, data_only=True, read_only=True)
+        if FOGLIO_VISTA in wb.sheetnames:
+            v = wb[FOGLIO_VISTA]['C1'].value
+    except Exception:
+        v = None
+    finally:
+        if hasattr(file, 'seek'):
+            file.seek(0)
+    if isinstance(v, datetime):
+        return v.date()
+    return v if isinstance(v, date) else None
+
+
+def _collegamento_nomi(wb):
+    nomi = {}
+    if FOGLIO_NOMI not in wb.sheetnames:
+        return nomi
+    for breve, completo in wb[FOGLIO_NOMI].iter_rows(min_col=2, max_col=3, values_only=True):
+        breve, completo = pulisci(breve), pulisci(completo)
+        if breve and completo and breve.upper() != 'NOME NEL LAYOUT' and not completo.startswith('('):
+            nomi[breve.upper()] = completo.upper()
+    return nomi
+
+
+def leggi_layout(wb, lunedi):
+    ws = wb[FOGLIO_LAYOUT]
+    letta = SettimanaLetta(lunedi=lunedi, foglio=ws.title)
+
+    # intestazione: la riga con "Area" e "Turno"
+    col, riga_int = {}, None
+    for r in range(1, 15):
+        testi = {}
+        for c in range(1, 20):
+            t = pulisci(ws.cell(r, c).value).upper()
+            if t and t not in testi:
+                testi[t] = c
+        if 'AREA' in testi and 'TURNO' in testi:
+            riga_int, col = r, testi
+            break
+    if riga_int is None:
+        raise ValueError(f'Nel foglio "{ws.title}" non trovo l\'intestazione con "Area" e "Turno".')
+    c_area, c_turno = col['AREA'], col['TURNO']
+    c_ruolo, c_sigla = col.get('RUOLO'), col.get('RUOLO (ABBR.)')
+    # i giorni: "Lunedì" nella riga sopra l'intestazione (o nella stessa)
+    primo = None
+    for r in (riga_int - 1, riga_int):
+        for c in range(1, 25):
+            if r > 0 and pulisci(ws.cell(r, c).value).upper().startswith('LUN'):
+                primo = c
+                break
+        if primo:
+            break
+    if primo is None:
+        primo = max(col.values()) + 1
+
+    nomi = _collegamento_nomi(wb)
+    if not nomi:
+        letta.avvisi.append('Manca il foglio "Collegamento Nomi": uso i nomi come sono scritti nel layout.')
+
+    posti = {}  # (nome completo, giorno 0-6) -> assegnazioni
+    ordine = list(dict.fromkeys(nomi.values()))  # tutti quelli dell'elenco, anche se a riposo
+    area_prec, turno = None, ''
+    sconosciuti, saltati = set(), set()
+    for r in range(riga_int + 1, ws.max_row + 1):
+        area = pulisci(ws.cell(r, c_area).value)
+        if not area:
+            continue
+        t = pulisci(ws.cell(r, c_turno).value).upper()
+        if t:
+            turno = t
+        elif area != area_prec:
+            turno = ''
+        area_prec = area
+        ruolo = pulisci(ws.cell(r, c_ruolo).value) if c_ruolo else ''
+        sigla = pulisci(ws.cell(r, c_sigla).value) if c_sigla else ''
+        fascia = FASCE_LAYOUT.get(turno, Fascia.ALTRO)
+        for i in range(7):
+            v = pulisci(ws.cell(r, primo + i).value)
+            if v in ('', '-', '–'):
+                continue
+            if len(v) <= 2 or v.startswith('('):  # segnaposto (X, Y…)
+                saltati.add(v)
+                continue
+            completo = nomi.get(v.upper())
+            if completo is None:
+                completo = v.upper()
+                sconosciuti.add(v)
+            if completo not in ordine:
+                ordine.append(completo)
+            posti.setdefault((completo, i), []).append(
+                {'fascia': fascia, 'turno': turno, 'area': area, 'ruolo': ruolo or sigla, 'sigla': sigla}
+            )
+
+    if sconosciuti:
+        letta.avvisi.append('Nomi che non sono in "Collegamento Nomi": ' + ', '.join(sorted(sconosciuti)) + '.')
+    if saltati:
+        letta.avvisi.append('Caselle saltate perché non sono nomi: ' + ', '.join(sorted(saltati)) + '.')
+
+    for nome in ordine:
+        turni = [_unisci_posti(posti.get((nome, i), []), nome, lunedi + timedelta(days=i), letta.avvisi) for i in range(7)]
+        letta.righe.append(RigaDipendente(nome, turni))
+    return letta
+
+
+def _unisci_posti(lista, nome, giorno, avvisi):
+    """Le assegnazioni di una persona in un giorno diventano un solo turno: il primo posto
+    (quello da Capo Turno, se c'è) decide fascia e postazione, gli altri si aggiungono al nome del posto."""
+    if not lista:
+        return CodiceTurno('', Fascia.RIPOSO)
+    # "Piazzale - Pala" ripete il palista dell'impianto: se c'è già, non lo scrivo due volte
+    pala = [a for a in lista if re.search(r'\bPALA\b', a['area'].upper())]
+    if pala and len(lista) > len(pala):
+        fasce_pal = {a['fascia'] for a in lista if a not in pala and a['sigla'].upper() == 'PAL'}
+        lista = [a for a in lista if a not in pala or a['fascia'] not in fasce_pal]
+    capo = [a for a in lista if a['sigla'].upper() == 'CT']
+    principale = capo[0] if capo else lista[0]
+    lista = [principale] + [a for a in lista if a is not principale]
+
+    if len({a['fascia'] for a in lista}) > 1:
+        sigle = ' e '.join(a['turno'] or '?' for a in lista)
+        avvisi.append(f'{nome.title()} {giorno:%d/%m} è in due turni diversi ({sigle}): controlla.')
+
+    # "Impianto 1 · Capo Turno e Palista + Sabbia - Sarco · Operatore di Linea"
+    gruppi = {}
+    for a in lista:
+        etichetta = a['area'] if a['fascia'] == principale['fascia'] else f"{a['turno']} {a['area']}"
+        ruoli = gruppi.setdefault(etichetta, [])
+        if a['ruolo'] and a['ruolo'] not in ruoli:
+            ruoli.append(a['ruolo'])
+    posto = ' + '.join(f"{area} · {' e '.join(r)}" if r else area for area, r in gruppi.items())
+    codice = f"{principale['turno']} · {posto}" if principale['turno'] else posto
+    return CodiceTurno(
+        codice=codice[:60],
+        fascia=principale['fascia'],
+        postazione=_postazione_area(principale['area'], principale['sigla']),
+        capoturno=bool(capo),
+        ruolo=principale['sigla'][:10],
+        posto=posto[:200],
+        # gli incarichi dello stesso turno (le pulizie seguono tutti); la "Pala" doppione è già tolta
+        incarichi=' '.join(dict.fromkeys(
+            f"{_postazione_area(a['area'])}/{a['sigla'].replace(' ', '')}" for a in lista
+            if a['fascia'] == principale['fascia']))[:200],
+    )
+
+
 # ---------------------------------------------------------------- confronto nomi
 
 def _token(nome):
@@ -206,7 +403,10 @@ def in_sessione(letta):
         'lunedi': letta.lunedi.isoformat(),
         'foglio': letta.foglio,
         'avvisi': letta.avvisi,
-        'righe': [[r.nome, [[t.codice, t.fascia, t.postazione, t.capoturno] for t in r.turni]] for r in letta.righe],
+        'righe': [
+            [r.nome, [[t.codice, t.fascia, t.postazione, t.capoturno, t.ruolo, t.posto, t.incarichi] for t in r.turni]]
+            for r in letta.righe
+        ],
         'note': letta.note,
         'tutor': letta.tutor,
     }
@@ -263,15 +463,17 @@ def salva_settimana(letta, utente=None, nome_file=''):
                 vecchio = esistenti.get(giorno)
                 if vecchio and vecchio.nota_modifica:
                     # cambio turno o ferie approvati nell'app: hanno la precedenza sul file
-                    if (vecchio.fascia, vecchio.postazione, vecchio.capoturno) != (t.fascia, t.postazione, t.capoturno):
+                    if (vecchio.fascia, vecchio.postazione, vecchio.capoturno, vecchio.posto) != (
+                            t.fascia, t.postazione, t.capoturno, t.posto):
                         mantenuti.append(f'{dip.nome_breve} {giorno:%d/%m}: {vecchio.descrizione} ({vecchio.nota_modifica})')
                     continue
                 fascia = t.fascia
                 if (vecchio and t.capoturno and fascia == Fascia.ALTRO and vecchio.capoturno
                         and vecchio.postazione == t.postazione and vecchio.fascia != Fascia.ALTRO):
-                    fascia = vecchio.fascia  # capo turno: fascia già indicata nell'app
+                    fascia = vecchio.fascia  # Capo Turno: fascia già indicata nell'app
                 prima = vecchio.descrizione if vecchio else None
-                cambiato = vecchio and (vecchio.fascia, vecchio.postazione, vecchio.capoturno) != (fascia, t.postazione, t.capoturno)
+                cambiato = vecchio and (vecchio.fascia, vecchio.postazione, vecchio.capoturno, vecchio.posto) != (
+                    fascia, t.postazione, t.capoturno, t.posto)
                 nuovo, _ = Turno.objects.update_or_create(
                     dipendente=dip,
                     data=giorno,
@@ -281,6 +483,9 @@ def salva_settimana(letta, utente=None, nome_file=''):
                         'fascia': fascia,
                         'postazione': t.postazione,
                         'capoturno': t.capoturno,
+                        'ruolo': t.ruolo,
+                        'posto': t.posto,
+                        'incarichi': t.incarichi,
                     },
                 )
                 if cambiato and da_avvisare[0] <= giorno <= da_avvisare[1]:

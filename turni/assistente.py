@@ -57,9 +57,9 @@ def suggerimenti(utente):
     frasi = []
     if r['dipendente']:
         frasi += ['Che turno faccio sabato?', 'Impianto 1 fermo dalle 20 per rottura nastro', 'Ho finito la pulizia della pala',
-                  'Domani entro alle 9:30', 'Chiedo ferie dal 3 al 7 novembre', 'Vorrei cambiare il turno di giovedì con Drame']
+                  'Domani entro alle 9:30', 'Vorrei cambiare il turno di giovedì con Drame']
     if r['responsabile']:
-        frasi += ['Quali richieste devo approvare?', 'Approva le ferie di Rossi']
+        frasi += ['Quali richieste devo approvare?']
     if r['ufficio']:
         frasi += ['Chi lavora al 2° turno mercoledì?', 'Metti Crimi al 1° turno Impianto 1 venerdì']
     return frasi[:8]
@@ -68,6 +68,8 @@ def suggerimenti(utente):
 # ---------------------------------------------------------------- strumenti
 
 DATA = {'type': 'string', 'description': 'Data AAAA-MM-GG'}
+# ferie, permessi e malattia non passano più dall'app (Giulia, 10/11/2026)
+TIPI_AVVISO = ['RITARDO', 'USCITA', 'ALTRO']
 ORA = {'type': 'string', 'description': 'Ora HH:MM'}
 
 
@@ -87,18 +89,14 @@ def strumenti(utente):
     ]
     if r['dipendente']:
         t += [
-            _strumento('le_mie_richieste', 'Cambi, ferie, permessi e avvisi della persona che scrive, con lo stato.', {}, []),
-            _strumento('proponi_avviso', 'Prepara un avviso per l\'ufficio e il capo turno: malattia, ritardo '
+            _strumento('le_mie_richieste', 'Cambi turno e avvisi della persona che scrive, con lo stato.', {}, []),
+            _strumento('proponi_avviso', 'Prepara un avviso per l\'ufficio e il Capo Turno: ritardo '
                        '(alle = ora in cui entra), uscita anticipata (dalle = ora in cui esce) o altro. '
+                       'Ferie, permessi e malattia non si chiedono dall\'app: rimanda all\'ufficio. '
                        'Ore non usate = stringa vuota. Non lo invia: l\'utente conferma con un tasto.',
-                       {'tipo': {'type': 'string', 'enum': list(AvvisoAssenza.Tipo.values)}, 'giorno': DATA,
+                       {'tipo': {'type': 'string', 'enum': TIPI_AVVISO}, 'giorno': DATA,
                         'dalle': ORA, 'alle': ORA, 'nota': {'type': 'string'}},
                        ['tipo', 'giorno', 'dalle', 'alle', 'nota']),
-            _strumento('proponi_ferie', 'Prepara una richiesta di ferie (giorni interi) o di permesso '
-                       '(un giorno, con dalle/alle se a ore; altrimenti stringhe vuote). L\'utente conferma con un tasto.',
-                       {'tipo': {'type': 'string', 'enum': list(RichiestaFerie.Tipo.values)}, 'dal': DATA, 'al': DATA,
-                        'dalle': ORA, 'alle': ORA, 'motivo': {'type': 'string'}},
-                       ['tipo', 'dal', 'al', 'dalle', 'alle', 'motivo']),
             _strumento('proponi_cambio', 'Prepara una richiesta di cambio turno con un collega per un giorno da domani in poi: '
                        'prima risponde il collega, poi l\'ufficio. L\'utente conferma con un tasto.',
                        {'collega': {'type': 'string'}, 'giorno': DATA, 'motivo': {'type': 'string'}},
@@ -106,10 +104,10 @@ def strumenti(utente):
         ]
     if r['responsabile']:
         t += [
-            _strumento('richieste_da_approvare', 'Cambi turno (già accettati dal collega) e ferie/permessi in attesa dell\'ufficio.', {}, []),
+            _strumento('richieste_da_approvare', 'Cambi turno già accettati dal collega e in attesa dell\'ufficio.', {}, []),
             _strumento('proponi_decisione', 'Prepara l\'approvazione o il rifiuto di una richiesta (id da richieste_da_approvare). '
                        'L\'utente conferma con un tasto.',
-                       {'tipo': {'type': 'string', 'enum': ['cambio', 'ferie']}, 'id': {'type': 'integer'},
+                       {'tipo': {'type': 'string', 'enum': ['cambio']}, 'id': {'type': 'integer'},
                         'approva': {'type': 'boolean'}, 'nota': {'type': 'string'}},
                        ['tipo', 'id', 'approva', 'nota']),
         ]
@@ -226,7 +224,7 @@ def leggi(nome, dati, utente):
                  f'{c.giorno1:%d/%m}: {c.get_stato_display()}'
                  for c in CambioTurno.objects.filter(Q(richiedente=dip) | Q(collega=dip))[:8]]
         righe += [f'{f.get_tipo_display()} {f.dal:%d/%m}-{f.al:%d/%m} {f.orario}: {f.get_stato_display()}' for f in dip.richieste_ferie.all()[:8]]
-        righe += [f'Avviso {a.get_tipo_display()} {a.data:%d/%m} {a.orario}' for a in dip.avvisi.all()[:5]]
+        righe += [f'Avviso {a.get_tipo_display()} {a.data:%d/%m} {a.orario}' for a in dip.avvisi.filter(annullato_il__isnull=True)[:5]]
         return '\n'.join(righe) or 'nessuna richiesta'
     if nome == 'richieste_da_approvare':
         righe = [f'cambio id={c.pk}: {c.richiedente.nome_breve} ↔ {c.collega.nome_breve} il {c.giorno1:%d/%m}'
@@ -244,6 +242,8 @@ def prepara(nome, dati, utente):
         g, dalle, alle = _data(dati['giorno']), _ora(dati['dalle']), _ora(dati['alle'])
         if abs((g - timezone.localdate()).days) > 30:
             raise Errore('La data è troppo lontana.')
+        if dati['tipo'] not in TIPI_AVVISO:
+            raise Errore('Dall\'app si avvisano solo ritardi, uscite anticipate e altro.')
         tipo = AvvisoAssenza.Tipo(dati['tipo'])
         if tipo == AvvisoAssenza.Tipo.USCITA and not dalle:
             raise Errore('Serve l\'ora in cui esce.')
@@ -252,18 +252,7 @@ def prepara(nome, dati, utente):
         a = AvvisoAssenza(tipo=tipo, data=g, dalle=dalle if tipo != 'RITARDO' else None, alle=alle if tipo != 'USCITA' else None)
         return f'Avviso {tipo.label.lower()} · {giorno_it(g)}' + (f' · {a.orario}' if a.orario else '')
     if nome == 'proponi_ferie':
-        tipo = RichiestaFerie.Tipo(dati['tipo'])
-        dal, al = _data(dati['dal']), _data(dati['al'])
-        dalle, alle = _ora(dati['dalle']), _ora(dati['alle'])
-        if dal <= timezone.localdate():
-            raise Errore('Si chiede da domani in poi.')
-        if tipo == RichiestaFerie.Tipo.PERMESSO and dalle and alle:
-            if alle <= dalle:
-                raise Errore('L\'ora di fine deve essere dopo quella di inizio.')
-            return f'Permesso {giorno_it(dal)} dalle {dalle:%H:%M} alle {alle:%H:%M}'
-        if al < dal:
-            raise Errore('La data di fine è prima di quella di inizio.')
-        return f'{tipo.label} dal {giorno_it(dal)} al {giorno_it(al)} ({(al - dal).days + 1} giorni)'
+        raise Errore('Ferie e permessi non si chiedono più dall\'app: rivolgiti all\'ufficio.')
     if nome == 'proponi_cambio':
         collega = trova_persona(dati['collega'], utente)
         g = _data(dati['giorno'])
@@ -302,12 +291,8 @@ def esegui(nome, dati, utente):
         tipo = dati['tipo']
         AvvisoAssenza.objects.create(
             dipendente=r['dipendente'], data=_data(dati['giorno']), tipo=tipo, nota=dati['nota'][:300],
-            dalle=None if tipo in ('RITARDO', 'MALATTIA') else dalle, alle=None if tipo in ('USCITA', 'MALATTIA') else alle)
-        return "Avviso inviato all'ufficio e al capo turno."
-    if nome == 'proponi_ferie':
-        svc.crea_ferie(r['dipendente'], dati['tipo'], _data(dati['dal']), _data(dati['al']), dati['motivo'],
-                       _ora(dati['dalle']), _ora(dati['alle']))
-        return "Richiesta inviata all'ufficio."
+            dalle=None if tipo == 'RITARDO' else dalle, alle=None if tipo == 'USCITA' else alle)
+        return "Avviso inviato all'ufficio e al Capo Turno."
     if nome == 'proponi_cambio':
         c = svc.crea_cambio(r['dipendente'], trova_persona(dati['collega'], utente), _data(dati['giorno']), None, dati['motivo'])
         return f'Richiesta inviata a {c.collega.nome_breve}: prima risponde lui, poi l\'ufficio.'

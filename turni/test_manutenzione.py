@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from datetime import timedelta
+from decimal import Decimal
 from io import BytesIO
 from unittest import mock
 
@@ -75,6 +76,60 @@ class ManutenzioneTest(TestCase):
         dati = {'macchina': self.pala.pk, 'descrizione': 'Perde olio', 'ferma': '1', 'foto': foto(), **extra}
         return self.client.post(reverse('turni:segnala'), dati)
 
+    def test_piu_pezzi_doppioni_numero_e_pdf_per_il_fornitore(self):
+        filtro = Ricambio.objects.create(nome='Filtro olio', codice='F-01', fornitore='Volvo CE', costo=12)
+        cinghia = Ricambio.objects.create(nome='Cinghia', codice='C-02')
+        self.entra('vito')
+        url = reverse('turni:nuovo_ordine')
+        self.client.post(url, {'ricambio': [filtro.pk, cinghia.pk], f'q{filtro.pk}': '2', f'q{cinghia.pk}': '1'})
+        self.assertEqual(OrdineRicambio.objects.count(), 2)
+        # stesso pezzo di nuovo: avviso, nessun ordine finché non si sceglie
+        r = self.client.post(url, {'ricambio': [filtro.pk], f'q{filtro.pk}': '3'})
+        self.assertContains(r, 'Richiesta già presente')
+        self.assertEqual(OrdineRicambio.objects.count(), 2)
+        self.client.post(url, {'ricambio': [filtro.pk], f'q{filtro.pk}': '3', 'doppioni': 'aggiungi'})
+        o = OrdineRicambio.objects.get(ricambio=filtro)
+        self.assertEqual((OrdineRicambio.objects.count(), o.quantita), (2, 5))
+        self.client.post(url, {'ricambio': [filtro.pk], f'q{filtro.pk}': '1', 'doppioni': 'nuovo'})
+        self.assertEqual(OrdineRicambio.objects.count(), 3)
+        # approvazione: notifica a chi ha chiesto, col numero d'ordine
+        self.avvisati()
+        self.entra('marchese')
+        self.client.post(reverse('turni:ordini'), {'ordine': o.pk, 'azione': 'approva'})
+        self.assertIn('vito', self.avvisati())
+        self.assertEqual(o.numero, f'{o.pk:04d}')
+        # PDF per il fornitore: solo chi ordina
+        self.entra('vito')
+        self.assertEqual(self.client.get(reverse('turni:ordini_pdf')).status_code, 403)
+        self.entra('bonomo')
+        pdf = self.client.get(reverse('turni:ordini_pdf'), {'o': o.pk})
+        self.assertEqual(pdf['Content-Type'], 'application/pdf')
+        self.assertIn(b'Filtro olio', pdf.content)
+        self.assertIn(o.numero.encode(), pdf.content)
+
+    def test_costi_e_report_della_ditta_esterna(self):
+        filtro = Ricambio.objects.create(nome='Filtro olio', costo=12, scorta=5)
+        i = Intervento.objects.create(macchina=self.pala, descrizione='Tagliando', stato='IN_CORSO', assegnata_a=self.vito)
+        self.entra('vito')
+        self.client.post(reverse('turni:intervento', args=[i.pk]), {
+            'azione': 'completa', 'lavoro': 'Fatto', 'ore': '1', 'foto': foto(), 'pezzo_0': filtro.pk, 'quantita_0': '2'})
+        i.refresh_from_db()
+        self.assertEqual(i.costi['pezzi'], 24)
+        report = SimpleUploadedFile('report.pdf', b'%PDF-1.4 prova', content_type='application/pdf')
+        self.client.post(reverse('turni:intervento', args=[i.pk]), {'azione': 'costi', 'costo_esterno': '100', 'report': report})
+        i.refresh_from_db()
+        self.assertIsNone(i.costo_esterno)  # il manutentore non inserisce i costi
+        self.entra('marchese')
+        report = SimpleUploadedFile('report.pdf', b'%PDF-1.4 prova', content_type='application/pdf')
+        self.client.post(reverse('turni:intervento', args=[i.pk]),
+                         {'azione': 'costi', 'officina_esterna': 'Officina Enzo', 'costo_esterno': '1.250,50', 'report': report})
+        i.refresh_from_db()
+        self.assertEqual((i.costi['esterno'], i.costi['totale']), (Decimal('1250.50'), Decimal('1274.50')))
+        self.assertEqual(self.client.get(reverse('turni:report_esterno', args=[i.pk]))['Content-Type'], 'application/pdf')
+        filtro.costo = 99  # il costo resta quello del giorno in cui il pezzo è stato usato
+        filtro.save()
+        self.assertEqual(Intervento.objects.get(pk=i.pk).costi['pezzi'], 24)
+
     def test_nuova_manutenzione_aggiungi_richiedi_e_codice(self):
         self.entra('operaio')
         r = self.client.get(reverse('turni:mn_scelta'))
@@ -112,7 +167,7 @@ class ManutenzioneTest(TestCase):
         self.assertRedirects(r, reverse('turni:intervento', args=[i.pk]))
         self.assertEqual((i.stato, i.priorita, i.macchina_ferma), ('SEGNALATA', 4, True))
         self.assertTrue(i.foto_guasto)
-        self.assertEqual(self.avvisati(), ['capo', 'marchese'])  # capo turno di oggi e responsabile
+        self.assertEqual(self.avvisati(), ['capo', 'marchese'])  # Capo Turno di oggi e responsabile
         self.assertEqual(self.client.get(reverse('turni:foto_mn', args=['guasto', i.pk])).status_code, 200)
 
         # l'operaio non può approvare
@@ -120,7 +175,7 @@ class ManutenzioneTest(TestCase):
         i.refresh_from_db()
         self.assertEqual(i.stato, 'SEGNALATA')
 
-        # il capo turno vede il manutentore di turno già proposto e approva
+        # il Capo Turno vede il manutentore di turno già proposto e approva
         self.entra('capo')
         r = self.client.get(reverse('turni:intervento', args=[i.pk]))
         self.assertEqual([d.pk for d in r.context['in_turno']], [self.vito.pk])
@@ -153,7 +208,7 @@ class ManutenzioneTest(TestCase):
         # ordine: approva il responsabile, ordinano gli acquisti, all'arrivo la scorta sale e l'intervento riparte
         self.entra('marchese')
         self.client.post(reverse('turni:ordini'), {'ordine': o.pk, 'azione': 'approva'})
-        self.assertEqual(self.avvisati(), ['bonomo'])
+        self.assertEqual(self.avvisati(), ['bonomo', 'vito'])  # gli acquisti e chi ha chiesto il pezzo
         self.entra('operaio')
         self.client.post(reverse('turni:ordini'), {'ordine': o.pk, 'azione': 'ordinato'})
         o.refresh_from_db()
@@ -461,7 +516,7 @@ class ComunicazioniTest(TestCase):
         self.assertEqual((c.foto.count(), c.chi_ha_scritto, c.stato), (2, 'Marchese Leonardo', 'APERTA'))
         self.assertEqual(self.avvisati(), ['operaio', 'palista', 'vito'])
         self.client.login(username='vito', password='123456')
-        self.client.post(reverse('turni:comunicazione', args=[c.pk]), {'azione': 'gestione', 'testo': 'Già comunicato al capo turno'})
+        self.client.post(reverse('turni:comunicazione', args=[c.pk]), {'azione': 'gestione', 'testo': 'Già comunicato al Capo Turno'})
         c.refresh_from_db()
         self.assertEqual((c.stato, c.in_gestione_da), ('IN_GESTIONE', self.u['vito']))
         self.assertEqual(self.avvisati(), ['marchese'])
@@ -474,7 +529,7 @@ class ComunicazioniTest(TestCase):
         self.client.post(reverse('turni:comunicazione', args=[c.pk]), {'azione': 'risolta'})
         c.refresh_from_db()
         self.assertEqual(c.stato, 'RISOLTA')
-        self.assertEqual(list(c.risposte.values_list('testo', flat=True)), ['Già comunicato al capo turno', 'Risolta'])
+        self.assertEqual(list(c.risposte.values_list('testo', flat=True)), ['Già comunicato al Capo Turno', 'Risolta'])
 
     def test_pala_non_disponibile_per_i_palisti(self):
         pala = Macchina.objects.get(codice='PZ-PALA1')

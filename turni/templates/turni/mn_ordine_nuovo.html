@@ -7,14 +7,26 @@
   {% if i %}<p class="tenue piccolo">Per {{ i.macchina.nome }} · intervento #{{ i.pk }}</p>{% endif %}
 </div>
 <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
-  {% if i %}<input type="hidden" name="intervento" value="{{ i.pk }}">{% endif %}
-  <p class="mn-sottotitolo">Quale pezzo</p>
-  <div class="scegli lista">
-    {% for r in compatibili %}<label><input type="radio" name="ricambio" value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}checked{% endif %}><span>{{ r.nome }}</span></label>{% endfor %}
-    {% for r in altri %}<label><input type="radio" name="ricambio" value="{{ r.pk }}" {% if ricambio_scelto == r.pk|stringformat:'s' %}checked{% endif %}><span>{{ r.nome }}</span></label>{% endfor %}
+  {% if avviso %}
+  <div class="or-avviso" role="alert">
+    <b>⚠️ Richiesta già presente</b>
+    <ul>{% for o in avviso %}<li><b>{{ o.nome }}</b> (n. {{ o.numero }}): {{ o.quantita }} {{ o.ricambio.unita|default:'pz' }} chiest{{ o.quantita|pluralize:'o,i' }} da {{ o.richiesto_da.dipendente.nome_breve|default:'Ufficio' }} il {{ o.richiesto_il|date:'j/m' }} · {{ o.get_stato_display|lower }}{% if o.stato == 'ORDINATO' %} (già ordinato: si può solo fare un ordine nuovo){% endif %}</li>{% endfor %}</ul>
+    <p>Vuoi aggiungere i tuoi pezzi a quella richiesta o fare un ordine nuovo?</p>
+    <button class="bottone pieno piena-larghezza" name="doppioni" value="aggiungi">Aggiungi i miei pezzi a quella richiesta</button>
+    <button class="bottone piena-larghezza" name="doppioni" value="nuovo">Fai comunque un ordine nuovo</button>
   </div>
-  <input type="text" name="descrizione" maxlength="120" placeholder="Non c'è? Scrivilo qui">
-  <label>Quantità<input type="number" name="quantita" value="1" min="1" max="9999" inputmode="numeric"></label>
+  {% endif %}
+  {% if i %}<input type="hidden" name="intervento" value="{{ i.pk }}">{% endif %}
+  <p class="mn-sottotitolo">Quali pezzi <small class="tenue">(anche più di uno)</small></p>
+  <div class="or-pezzi">
+    {% for r in compatibili %}{% include 'turni/_ordine_pezzo.html' %}{% endfor %}
+    {% for r in altri %}{% include 'turni/_ordine_pezzo.html' %}{% endfor %}
+  </div>
+  <p class="mn-sottotitolo">Non è in magazzino?</p>
+  <div class="or-libero">
+    <input type="text" name="descrizione" maxlength="120" value="{{ dati.descrizione|default:'' }}" placeholder="Scrivi qui quale pezzo serve" aria-label="Pezzo non in magazzino">
+    <input type="number" name="quantita" value="{{ dati.quantita|default:'1' }}" min="1" max="9999" inputmode="numeric" aria-label="Quantità">
+  </div>
   <label class="mn-check"><input type="checkbox" name="urgente" value="1"> Urgente (macchina ferma)</label>
   <label>Nota per chi ordina<input type="text" name="nota" maxlength="300" placeholder="Es. codice sulla targhetta, fornitore abituale"></label>
   {% if i and i.foto_guasto %}
@@ -22,8 +34,8 @@
   <img class="pl-foto" src="{% url 'turni:foto_mn' 'guasto' i.pk %}" alt="Foto del guasto">
   {% endif %}
   <label class="bottone foto-btn mn-foto">
-    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci {% if not i %}required{% endif %}>
-    <span>📷 Foto del pezzo o della macchina rotta{% if i %} (facoltativa){% else %} (obbligatoria){% endif %}</span>
+    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+    <span>📷 Foto del pezzo o della macchina rotta{% if not i %} (obbligatoria per un pezzo non in magazzino){% endif %}</span>
   </label>
   <button class="bottone pieno piena-larghezza">Invia richiesta</button>
 </form>

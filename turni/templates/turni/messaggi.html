@@ -70,7 +70,7 @@
     </div>
 
     <div class="wa-sfondo" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}?chat={{ chat_aperta.pk }}" data-direzione="{{ direzione|yesno:'1,' }}">
-      <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e capo turno.</p>
+      <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e Capo Turno.</p>
       {% for m in chat %}
         {% if m.nuovo_giorno %}<div class="wa-data" data-giorno="{{ m.giorno }}"><span>{{ m.etichetta_giorno }}</span></div>{% endif %}
         <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}">
@@ -122,6 +122,6 @@
     </a>
     {% endfor %}
   </div>
-  <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e capo turno.</p>
+  <p class="wa-info">Per malattie e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Avviso assenza</a>: lo vedono solo ufficio e Capo Turno.</p>
 {% endif %}
 {% endblock %}

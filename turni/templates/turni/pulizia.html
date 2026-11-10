@@ -7,19 +7,35 @@
 {% if richieste %}
 <h2 class="rq-sezione">Da fare per te</h2>
 {% for v in richieste %}
+{% if not v.disponibile %}
+<div class="pl-riga pl-dopo">
+  <span class="home-icona">{{ v.icona }}</span>
+  <span class="rq-testo"><b>{{ v.titolo }}</b><small>Pulizia del turno</small></span>
+  <span class="stato-chip">Dalle {{ v.da_quando|time:'H:i' }}</span>
+</div>
+{% else %}
 <a class="pl-riga pl-{{ v.stato|lower }}" href="{% url 'turni:pulizie_turno' turno.pk %}?fai=assegnata&voce={{ v.pk }}">
-  <span class="home-icona">🧹</span>
+  <span class="home-icona">{{ v.icona }}</span>
   <span class="rq-testo"><b>{{ v.titolo }}</b><small>{% if v.stato == 'SEGNALATA' %}Da rifare{% if v.nota_verifica %}: {{ v.nota_verifica }}{% endif %}{% elif v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
   <span class="stato-chip {% if v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
 </a>
+{% endif %}
 {% endfor %}
 {% endif %}
 
-<div class="tasti-agg">
-  {% if turno %}
-  <a class="agg" href="{% url 'turni:pulizie_turno' turno.pk %}?fai=libera"><span class="piu">+</span><span class="txt">Aggiungi pulizia</span><span class="emo">🧹</span></a>
+<div class="ig-azioni">
+  {% if e_capo %}
+  <a href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span>Verifica{% if da_verificare %}<i class="home-badge">{{ da_verificare }}</i>{% endif %}</a>
   {% endif %}
-  <a class="agg" href="{% url 'turni:pulizie' %}?fai=richiedi"><span class="piu">+</span><span class="txt">Richiedi pulizia</span><span class="emo">🙋</span></a>
+  {% if turno %}
+  <a href="{% url 'turni:pulizie_turno' turno.pk %}?fai=libera"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>Aggiungi</a>
+  {% endif %}
+  {% if puo_richiedere %}
+  <a href="{% url 'turni:richiedi_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></span>Richiedi</a>
+  {% endif %}
+  {% if resp_piazzale %}
+  <a href="{% url 'turni:pulizie_piazzale' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h7a4 4 0 0 1 0 8H6"/></svg></span>Piazzale</a>
+  {% endif %}
 </div>
-{% if not turno %}<p class="tenue piccolo">Oggi non sei in turno: puoi solo chiedere una pulizia a chi lavora.</p>{% endif %}
+{% if not turno and puo_richiedere %}<p class="tenue piccolo">Oggi non sei in turno: puoi chiedere una pulizia a chi lavora.</p>{% endif %}
 {% endblock %}

@@ -11,7 +11,6 @@
   {% for a in anni %}<a href="?anno={{ a }}{% if not mio %}&dip={{ dip.pk }}{% endif %}" class="{% if a == anno %}attivo{% endif %}">{{ a }}</a>{% endfor %}
 </div>
 
-{% include 'turni/_saldo.html' %}
 
 <div class="rp-griglia quattro">
   {% for icona, nome, n in riquadri %}<div class="rp-box"><span>{{ icona }} {{ nome }}</span><b>{{ n }}</b></div>{% endfor %}

@@ -471,3 +471,47 @@ document.querySelectorAll('form[data-qr]').forEach(form => {
     }
   });
 });
+
+// ---------------------------------------------------------------- foto profilo: si invia appena scelta
+document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input => {
+  input.addEventListener('change', () => { if (input.files.length) input.form.submit(); });
+});
+
+// ---------------------------------------------------------------- tasto "indietro": torna da dove si è arrivati
+// Ogni pagina ricorda la schermata da cui è stata aperta (anche dopo aver inviato un modulo nella pagina stessa);
+// il tasto porta lì e dice il suo nome. Se la pagina è stata aperta direttamente, resta il tasto scritto nel template.
+(function () {
+  const NOMI = [
+    [/^\/turni\/(oggi\/)?$/, 'Oggi'],
+    [/^\/turni\/miei\/$/, 'Area personale'],
+    [/^\/turni\/pulizie\/piazzale\//, 'Piazzale'],
+    [/^\/turni\/pulizie\/$/, 'Pulizia'],
+    [/^\/turni\/capoturno\/$/, 'Verifica pulizie'],
+    [/^\/turni\/archivio\//, 'Archivio'],
+    [/^\/turni\/messaggi\//, 'Messaggi'],
+    [/^\/turni\/settimana\/$/, 'Turni di tutti'],
+  ];
+  const qui = location.pathname;
+  let da = null;
+  try {
+    const tornando = sessionStorage.getItem('indietro:tornando');
+    sessionStorage.removeItem('indietro:tornando');
+    if (tornando !== qui && document.referrer) {
+      const r = new URL(document.referrer);
+      if (r.origin === location.origin && r.pathname !== qui && !r.pathname.includes('/accesso/')) {
+        sessionStorage.setItem('indietro:' + qui, r.pathname + r.search);
+      }
+    }
+    da = sessionStorage.getItem('indietro:' + qui);
+  } catch (e) { return; }
+  if (!da) return;
+  const destinazione = new URL(da, location.origin).pathname;
+  const nome = (NOMI.find(([re]) => re.test(destinazione)) || [])[1] || 'Indietro';
+  document.querySelectorAll('a.tasto-indietro').forEach(a => {
+    a.href = da;
+    const testo = [...a.childNodes].reverse().find(n => n.nodeType === 3 && n.textContent.trim());
+    if (testo) testo.textContent = nome;
+    // tornando indietro, la pagina di arrivo non deve "ricordare" questa come provenienza
+    a.addEventListener('click', () => { try { sessionStorage.setItem('indietro:tornando', destinazione); } catch (e) {} });
+  });
+})();

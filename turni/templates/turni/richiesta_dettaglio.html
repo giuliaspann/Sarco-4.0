@@ -1,0 +1,55 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richiesta{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}#richieste"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Area personale</a>
+
+{% if tipo == 'cambio' %}
+<div class="intestazione"><h1>🔁 Cambio {% if r.mio %}con{% else %}da{% endif %} {{ r.altro.nome_breve }}</h1></div>
+<section class="scheda rq-dettaglio">
+  {% for x in r.righe %}
+  <div class="rq-scambio">
+    <span class="rq-giorno">{{ x.giorno|date:'D j M'|capfirst }}</span>
+    <span class="rq-da">{% include 'turni/_pillola.html' with t=x.prima %}</span>
+    <span class="rq-freccia">→</span>
+    <span class="rq-a">{% include 'turni/_pillola.html' with t=x.dopo %}</span>
+  </div>
+  {% endfor %}
+  <dl>
+    <dt>Stato</dt><dd>{% include 'turni/_stato_richiesta.html' %}</dd>
+    <dt>Chiesto il</dt><dd>{{ r.creato_il|date:'j M Y H:i' }}</dd>
+    {% if r.motivo %}<dt>Motivo</dt><dd>{{ r.motivo }}</dd>{% endif %}
+    {% if r.nota_ufficio %}<dt>Ufficio</dt><dd>{{ r.nota_ufficio }}</dd>{% endif %}
+  </dl>
+</section>
+
+{% elif tipo == 'ferie' %}
+<div class="intestazione"><h1>⏸️ {{ r.get_tipo_display }}</h1></div>
+<section class="scheda rq-dettaglio">
+  <dl>
+    <dt>Quando</dt><dd>{% if r.dal == r.al %}{{ r.dal|date:'l j F Y'|capfirst }}{% else %}Dal {{ r.dal|date:'j M' }} al {{ r.al|date:'j M Y' }}{% endif %}</dd>
+    <dt>Durata</dt><dd>{% if r.a_ore %}{{ r.orario }}{% else %}{{ r.giorni }} giorn{{ r.giorni|pluralize:'o,i' }}{% endif %}</dd>
+    <dt>Stato</dt><dd>{% include 'turni/_stato_richiesta.html' %}</dd>
+    {% if r.motivo %}<dt>Motivo</dt><dd>{{ r.motivo }}</dd>{% endif %}
+    {% if r.nota_ufficio %}<dt>Ufficio</dt><dd>{{ r.nota_ufficio }}</dd>{% endif %}
+  </dl>
+</section>
+
+{% else %}
+<div class="intestazione"><h1>📝 {{ r.get_tipo_display }}</h1></div>
+<section class="scheda rq-dettaglio">
+  <dl>
+    <dt>Giorno</dt><dd>{{ r.data|date:'l j F Y'|capfirst }}</dd>
+    {% if r.orario %}<dt>Orario</dt><dd>{{ r.orario }}</dd>{% endif %}
+    <dt>Stato</dt><dd>{% include 'turni/_stato_avviso.html' with a=r %}</dd>
+    {% if r.nota %}<dt>Nota</dt><dd>{{ r.nota }}</dd>{% endif %}
+  </dl>
+</section>
+{% endif %}
+
+{% if annullabile %}
+<form method="post" action="{% url 'turni:richieste' %}" class="rq-annulla">{% csrf_token %}
+  <input type="hidden" name="{{ tipo }}" value="{{ r.pk }}">
+  <button class="bottone avviso-btn piena-larghezza" name="azione" value="annulla_{{ tipo }}" data-conferma="Annullare questa richiesta?">Annulla richiesta</button>
+</form>
+{% endif %}
+{% endblock %}

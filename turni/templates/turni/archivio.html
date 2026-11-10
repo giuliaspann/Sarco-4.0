@@ -2,9 +2,16 @@
 {% block titolo %}Archivio{% endblock %}
 {% block contenuto %}
 <div class="intestazione"><h1>Archivio</h1></div>
+<div class="archivio-voci">
 <a class="sg-macchina" href="{% url 'turni:archivio_pulizie' %}"><span class="home-icona">🧹</span><span class="rq-testo"><b>Pulizie</b><small>per giorno, turno e impianto</small></span><span class="sg-freccia">›</span></a>
 <a class="sg-macchina" href="{% url 'turni:interventi' %}"><span class="home-icona">🔧</span><span class="rq-testo"><b>Manutenzione</b><small>interventi fatti e richieste</small></span><span class="sg-freccia">›</span></a>
 <a class="sg-macchina" href="{% url 'turni:produzione' %}"><span class="home-icona">⚖️</span><span class="rq-testo"><b>Dati produzione</b><small>per giorno e turno</small></span><span class="sg-freccia">›</span></a>
 <a class="sg-macchina" href="{% url 'turni:archivio_analisi' %}"><span class="home-icona">🧪</span><span class="rq-testo"><b>Analisi</b><small>per giorno e campione</small></span><span class="sg-freccia">›</span></a>
 <a class="sg-macchina" href="{% url 'turni:fermi' %}"><span class="home-icona">⛔</span><span class="rq-testo"><b>Fermi impianto</b><small>quando, quanto e perché</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:macchine' %}"><span class="home-icona">🚜</span><span class="rq-testo"><b>Mezzi e attrezzature</b><small>macchinari, mezzi, schede e storico</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:archivio_componenti' %}"><span class="home-icona">⚙️</span><span class="rq-testo"><b>Componenti</b><small>i pezzi di ogni mezzo e attrezzatura</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:macchine' %}?gruppo=segnaletica"><span class="home-icona">🪧</span><span class="rq-testo"><b>Piazzale</b><small>segnaletica, specchi, illuminazione</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:ricambi' %}"><span class="home-icona">📦</span><span class="rq-testo"><b>Ricambi (magazzino)</b><small>scorte e richiesta d'ordine</small></span><span class="sg-freccia">›</span></a>
+<a class="sg-macchina" href="{% url 'turni:archivio_dipendenti' %}"><span class="home-icona">👷</span><span class="rq-testo"><b>Dipendenti</b><small>turni, ore, attività, ferie e ROL</small></span><span class="sg-freccia">›</span></a>
+</div>
 {% endblock %}

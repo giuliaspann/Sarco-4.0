@@ -1,0 +1,16 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Componenti{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Archivio</a>
+<div class="intestazione"><h1>Componenti</h1><p class="tenue piccolo">I pezzi di ogni mezzo e attrezzatura</p></div>
+<form method="get" class="ac-cerca"><input type="text" name="q" value="{{ q }}" placeholder="Cerca macchina o pezzo" aria-label="Cerca macchina o pezzo"><button class="bottone pieno">Cerca</button></form>
+{% for m in elenco %}
+<details class="scheda ac-dettaglio">
+  <summary>{{ m.nome }} <small class="tenue">· {{ m.get_luogo_display }} · {{ m.ricambi.all|length }} pezz{{ m.ricambi.all|length|pluralize:'o,i' }}</small></summary>
+  <ul class="elenco">{% for r in m.ricambi.all %}<li><span>{{ r.nome }}{% if r.codice %} <small class="tenue">{{ r.codice }}</small>{% endif %}</span><small{% if r.sotto_scorta %} class="ac-poca"{% endif %}>{{ r.scorta }} {{ r.unita }}{% if r.ubicazione %} · {{ r.ubicazione }}{% endif %}</small></li>{% empty %}<li class="tenue">Nessun componente registrato.</li>{% endfor %}</ul>
+  <p class="ac-azioni"><a class="link-piccolo" href="{% url 'turni:macchina' m.pk %}">Scheda della macchina</a></p>
+</details>
+{% empty %}
+<div class="vuoto"><p>Nessuna macchina trovata.</p></div>
+{% endfor %}
+{% endblock %}

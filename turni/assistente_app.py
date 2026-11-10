@@ -258,7 +258,7 @@ def _e_fermo(d, u, foto):
     if d.get('ripartito_alle'):
         mn.fai_ripartire(u, f, _momento(d.get('giorno'), d['ripartito_alle']), '')
         return 'Fermo registrato (già ripartito).'
-    return 'Fermo segnalato: responsabile, capo turno e manutentori sono avvisati.'
+    return 'Fermo segnalato: responsabile, Capo Turno e manutentori sono avvisati.'
 
 
 def _fermo(pk):
@@ -408,7 +408,7 @@ def _e_impedimento(d, u, foto):
     p.save()
     mn.avvisa(mn.capiturno_oggi(), u, f'🧹 Pulizia non eseguibile · {p.turno.dipendente.nome_breve}',
               f'{p.titolo}: {p.nota}', reverse('turni:capoturno'))
-    return 'Impedimento segnalato al capo turno.'
+    return 'Impedimento segnalato al Capo Turno.'
 
 
 def _righe_produzione(d):

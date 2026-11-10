@@ -36,7 +36,7 @@ def navigazione(request):
         contesto['nav_da_approvare'] = (
             CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_UFFICIO).count()
             + RichiestaFerie.objects.filter(stato=RichiestaFerie.Stato.ATTESA).count()
-            + AvvisoAssenza.objects.filter(visto_il__isnull=True).count()
+            + AvvisoAssenza.objects.filter(visto_il__isnull=True, annullato_il__isnull=True).count()
         )
         # volontari che aspettano la conferma dell'ufficio
         contesto['nav_volontari'] = Disponibilita.objects.filter(

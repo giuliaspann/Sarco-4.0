@@ -48,7 +48,7 @@ class ChatAziendaliTest(TestCase):
         self.assertEqual(self.client.get(reverse('turni:home')).context['nav_messaggi'], 1)
 
     def test_chat_riservata_e_storico_per_la_direzione(self):
-        riservata = Chat.objects.create(nome='Capi turno', tutti=False)
+        riservata = Chat.objects.create(nome='Capi Turno', tutti=False)
         m = MessaggioChat.objects.create(chat=riservata, autore=self.titolare, testo='solo per i capi', eliminato=True)
         self.client.login(username='drame', password='123456')
         self.assertRedirects(self.client.get(reverse(URL), {'vista': 'chat', 'chat': riservata.pk}), reverse(URL))

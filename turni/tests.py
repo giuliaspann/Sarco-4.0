@@ -110,6 +110,8 @@ class ImportTest(TestCase):
     def test_ricaricare_non_perde_le_pulizie(self):
         importa.salva_settimana(importa.leggi_file(file_turni(RIGHE), LUNEDI))
         turno = Turno.objects.get(dipendente__nome="SPANO' A. MAURO", data=LUNEDI)
+        # le voci vere (migrazione 0048) restano fuori: qui le regole sono quelle del test
+        ElementoPulizia.objects.update(attivo=False)
         el = ElementoPulizia.objects.create(nome='Nastro', tipo='ZONA')
         Pulizia.objects.create(turno=turno, elemento=el, stato=Pulizia.Stato.FATTA)
 
@@ -130,6 +132,8 @@ class ImportTest(TestCase):
 class PulizieTest(TestCase):
     def setUp(self):
         importa.salva_settimana(importa.leggi_file(file_turni(RIGHE), LUNEDI))
+        # le voci vere (migrazione 0048) restano fuori: qui le regole sono quelle del test
+        ElementoPulizia.objects.update(attivo=False)
         self.nastro = ElementoPulizia.objects.create(nome='Nastro Imp. 1', tipo='ZONA')
         self.pala = ElementoPulizia.objects.create(nome='Pala gommata', tipo='MEZZO')
         self.ufficio = ElementoPulizia.objects.create(nome='Sala controllo', tipo='ZONA')
@@ -177,10 +181,16 @@ class PulizieTest(TestCase):
             # Drame non è capoturno: niente pagina verifica
             self.assertEqual(self.client.get(reverse('turni:capoturno')).status_code, 403)
 
-            # Spano giovedì è 1T, ma mercoledì era capoturno: vale anche il giorno dopo (turni di notte)
+            # Spano giovedì è 1T, ma mercoledì era capoturno: la pagina lo porta a mercoledì (turni di notte)
             self.client.login(username='spano.mauro', password='123456')
             r = self.client.get(reverse('turni:capoturno'))
-            self.assertEqual(r.status_code, 200)
+            self.assertRedirects(r, reverse('turni:capoturno') + f'?giorno={LUNEDI + timedelta(days=2)}')
+            # giovedì non è Capo Turno: le pulizie di giovedì non le verifica lui
+            self.client.post(reverse('turni:capoturno') + f'?giorno={p.turno.data}', {'pulizia': p.pk, 'azione': 'segnala', 'nota': 'rifare angolo'})
+            p.refresh_from_db()
+            self.assertEqual(p.stato, Pulizia.Stato.FATTA)
+            # l'ufficio sì
+            self.client.force_login(get_user_model().objects.create_user('uff', is_staff=True))
             self.client.post(reverse('turni:capoturno') + f'?giorno={p.turno.data}', {'pulizia': p.pk, 'azione': 'segnala', 'nota': 'rifare angolo'})
             p.refresh_from_db()
             self.assertEqual(p.stato, Pulizia.Stato.SEGNALATA)
@@ -238,7 +248,7 @@ class PulizieTest(TestCase):
         url = reverse('turni:pulizie_turno', args=[turno.pk])
         with self.settings(MEDIA_ROOT=self._tmp()):
             r = self.client.get(url)
-            for t in ('Aggiungi pulizia', 'Richiedi pulizia', 'Nastro Imp. 1'):
+            for t in ('Aggiungi</a>', 'Nastro Imp. 1'):  # «Richiedi pulizia» solo per i responsabili
                 self.assertContains(r, t)
             # una sola pulizia assegnata: si apre subito il modulo con foto prima e dopo
             r = self.client.get(url + '?fai=assegnata')
@@ -255,7 +265,7 @@ class PulizieTest(TestCase):
             self.client.post(url, {'azione': 'aggiuntiva', 'elemento': self.pala.pk, 'foto': jpg()})
             extra = turno.pulizie.get(elemento=self.pala)
             self.assertEqual((extra.stato, extra.aggiunta_da_operaio), (Pulizia.Stato.FATTA, True))
-            # "Aggiungi pulizia" della nuova app: solo foto prima/dopo e commento, va al capo turno
+            # "Aggiungi pulizia" della nuova app: solo foto prima/dopo e commento, va al Capo Turno
             self.assertContains(self.client.get(url + '?fai=libera'), 'Dove e cosa hai pulito?')
             self.client.post(url, {'azione': 'libera', 'nota': ''})
             self.assertFalse(turno.pulizie.filter(elemento__isnull=True).exists())  # senza commento non vale
@@ -266,7 +276,7 @@ class PulizieTest(TestCase):
             # se ne possono aggiungere più d'una nello stesso turno
             self.client.post(url, {'azione': 'libera', 'nota': 'Pavimento cabina'})
             self.assertEqual(turno.pulizie.filter(elemento__isnull=True).count(), 2)
-            # il capo turno la approva e finisce nell'archivio, con le foto visibili a tutti
+            # il Capo Turno la approva e finisce nell'archivio, con le foto visibili a tutti
             libera.stato = Pulizia.Stato.VERIFICATA
             libera.save()
             r = self.client.get(reverse('turni:archivio_pulizie') + f'?giorno={LUNEDI}&fascia={turno.fascia}&posto={turno.postazione}')
@@ -274,27 +284,45 @@ class PulizieTest(TestCase):
             self.assertIn(libera, r.context['pulizie'])
 
     def test_richiedi_pulizia_a_un_collega(self):
+        from PIL import Image
+
+        def foto():
+            buf = BytesIO()
+            Image.new('RGB', (20, 20), 'blue').save(buf, 'JPEG')
+            from django.core.files.uploadedfile import SimpleUploadedFile
+
+            return SimpleUploadedFile('f.jpg', buf.getvalue(), content_type='image/jpeg')
+
+        url = reverse('turni:richiedi_pulizia')
         self.client.login(username='spano.mauro', password='123456')
-        with self.a(LUNEDI), mock.patch('pywebpush.webpush'):
-            r = self.client.get(reverse('turni:pulizie') + '?fai=richiedi')
-            self.assertContains(r, 'Richiedi pulizia')
-            t = next(c for c in r.context['colleghi'] if c.dipendente == self.drame)
-            self.assertNotIn(self.spano, [c.dipendente for c in r.context['colleghi']])
-            self.client.post(reverse('turni:pulizie'), {'azione': 'richiedi', 'turno': t.pk, 'elemento': self.ufficio.pk})
-            p = Pulizia.objects.get(turno=t, elemento=self.ufficio)
-            self.assertEqual(p.richiesta_da.username, 'spano.mauro')
-            # la seconda volta no: è già nella sua lista
-            self.client.post(reverse('turni:pulizie'), {'azione': 'richiedi', 'turno': t.pk, 'elemento': self.ufficio.pk})
-            self.assertEqual(Pulizia.objects.filter(turno=t, elemento=self.ufficio).count(), 1)
-            # Drame la vede in alto tra le cose da pulire
+        with self.a(LUNEDI), mock.patch('pywebpush.webpush'), self.settings(MEDIA_ROOT=self._tmp()):
+            # solo il responsabile impianto e il responsabile piazzale
+            self.assertEqual(self.client.get(url).status_code, 403)
+            self.assertNotContains(self.client.get(reverse('turni:pulizie')), 'Richiedi</a>')
+            self.spano.resp_impianto = True
+            self.spano.save()
+            self.assertContains(self.client.get(reverse('turni:pulizie')), 'Richiedi</a>')
+            # 1 · area, 2 · giorno e turno, 3 · chi la fa (con la foto)
+            self.assertContains(self.client.get(url), 'Dove va fatta la pulizia?')
+            self.assertContains(self.client.get(url, {'area': 'IMP2'}), 'Che giorno?')
+            t = Turno.objects.get(dipendente=self.drame, data=LUNEDI)
+            r = self.client.get(url, {'area': 'IMP1', 'giorno': LUNEDI, 'fascia': t.fascia})
+            self.assertIn(t, r.context['vicini'])
+            dati = {'area': 'IMP1', 'giorno': LUNEDI, 'fascia': t.fascia, 'turno': t.pk, 'nota': 'Sotto il nastro 3'}
+            self.client.post(url, dati)
+            self.assertFalse(t.pulizie.exists())  # senza foto no
+            self.client.post(url, {**dati, 'foto': foto()})
+            p = t.pulizie.get()
+            self.assertEqual((p.nota, p.richiesta_da.username), ('Impianto 1: Sotto il nastro 3', 'spano.mauro'))
+            self.assertTrue(p.foto_richiesta)
+            # Drame la vede in alto tra le cose da pulire, con la foto
             self.client.login(username='drame.bouba', password='654321')
             r = self.client.get(reverse('turni:pulizie'))
             self.assertContains(r, 'Chiesta da')
             self.assertIn(p, r.context['richieste'])
-            # nuova app: si chiede scrivendo solo dove e cosa, senza scegliere dall'elenco
-            self.client.login(username='spano.mauro', password='123456')
-            self.client.post(reverse('turni:pulizie'), {'azione': 'richiedi', 'turno': t.pk, 'nota': 'Sotto il nastro 3'})
-            self.assertTrue(Pulizia.objects.filter(turno=t, elemento__isnull=True, nota='Sotto il nastro 3').exists())
+            r = self.client.get(reverse('turni:pulizie_turno', args=[t.pk]) + f'?fai=assegnata&voce={p.pk}')
+            self.assertContains(r, 'quale=richiesta')
+            self.assertEqual(self.client.get(reverse('turni:foto', args=[p.pk]) + '?quale=richiesta').status_code, 200)
 
     def test_impedimento_pulizia_con_foto(self):
         from PIL import Image
@@ -391,7 +419,7 @@ class CalendarioTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI])  # una settimana per volta
         sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
-        self.assertEqual(sigle, ['N', 'CTN', 'N', 'N', 'G', 'G', '1T'])  # il capo turno di notte è CTN
+        self.assertEqual(sigle, ['N', 'CTN', 'N', 'N', 'G', 'G', '1T'])  # il Capo Turno di notte è CTN
         posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
         self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2', '', 'ANAL.', 'MUL.', 'PALA'])
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
@@ -426,20 +454,23 @@ class HomeTest(TestCase):
         self.client.login(username='drame', password='123456')
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
-        # si apre "Oggi": turno, con chi lavoro, i quattro tasti e i fermi impianto
-        for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', 'Dati produzione', 'Dati analisi',
-                      'Fermo impianto', 'Ripartenza impianto', 'Area personale', 'Archivio'):
+        # si apre "Oggi" (stile Instagram): storie di chi lavora con me, turno, quattro tasti e i fermi impianto
+        for testo in ('Con chi lavoro oggi', 'Pulizia', 'Manutenzione', '>Produzione<', '>Analisi<',
+                      '>Fermo<', '>Ripartenza<', 'Area personale', 'Archivio'):
             self.assertContains(r, testo)
         self.assertNotContains(r, '>Home<')
         r2 = self.client.get(reverse('turni:miei_turni'))
-        for testo in ('Turni della settimana', 'Turni di tutti', 'Cambio turno', 'Ferie / permesso', 'Avviso assenza'):
+        # Area personale come un profilo: niente ferie, permessi né malattia (10/11/2026)
+        for testo in ('Turni di tutti', 'Cambio turno', 'Ritardo / uscita'):
             self.assertContains(r2, testo)
-        self.assertNotContains(r2, 'Pulizie da verificare')  # non è capo turno
+        for testo in ('Ferie', 'Ferie residue', 'Avviso assenza'):
+            self.assertNotContains(r2, testo)
+        self.assertNotContains(r2, 'Pulizie da verificare')  # non è Capo Turno
         self.assertEqual(r.context['turno_oggi'].data, LUNEDI + timedelta(days=1))  # martedì: 2T Imp. 2
         self.assertEqual(r.context['domani'].fascia, Fascia.RIPOSO)
 
     def test_capo_turno_vede_la_verifica(self):
-        self.client.login(username='crimi', password='123456')  # martedì capo turno di notte
+        self.client.login(username='crimi', password='123456')  # martedì Capo Turno di notte
         self.assertContains(self.client.get(reverse('turni:miei_turni')), 'Pulizie da verificare')
 
 
@@ -576,7 +607,7 @@ class MansioniTest(TestCase):
 
 
 class CapoTurnoSenzaFasciaTest(TestCase):
-    """Il file scrive solo «CAPO T. - Imp. 1»: la fascia la indica il capo turno o l'ufficio, e resta anche ricaricando."""
+    """Il file scrive solo «CAPO T. - Imp. 1»: la fascia la indica il Capo Turno o l'ufficio, e resta anche ricaricando."""
 
     def setUp(self):
         User = get_user_model()

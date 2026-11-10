@@ -3,13 +3,14 @@ from datetime import date, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.db.models import Q
 from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import richieste as svc, saldi
+from . import push, richieste as svc
 from .models import AvvisoAssenza, CambioTurno, Dipendente, Disponibilita, Postazione, RichiestaFerie, Turno, TurnoExtra
 from .views import dipendente_di
 
@@ -56,19 +57,54 @@ def richieste(request):
                 )
             elif azione == 'annulla_cambio':
                 cambio = get_object_or_404(
-                    CambioTurno, pk=request.POST.get('cambio'), richiedente=dip, stato__in=CambioTurno.IN_CORSO
+                    CambioTurno.objects.filter(Q(richiedente=dip) | Q(collega=dip)), pk=request.POST.get('cambio'),
+                    stato__in=CambioTurno.IN_CORSO,
                 )
                 cambio.stato = CambioTurno.Stato.ANNULLATO
                 cambio.save()
+                altro = cambio.collega if cambio.richiedente_id == dip.pk else cambio.richiedente
+                if altro.utente_id:
+                    push.invia([altro.utente_id], '🔁 Cambio annullato', f'{dip.nome_breve} ha annullato il cambio del '
+                               f'{cambio.giorno1:%d/%m}.', reverse('turni:miei_turni') + '#richieste')
+                messages.success(request, 'Richiesta di cambio annullata.')
             elif azione == 'annulla_ferie':
                 f = get_object_or_404(
                     RichiestaFerie, pk=request.POST.get('ferie'), dipendente=dip, stato=RichiestaFerie.Stato.ATTESA
                 )
                 f.stato = RichiestaFerie.Stato.ANNULLATA
                 f.save()
+                messages.success(request, 'Richiesta annullata.')
+            elif azione == 'annulla_avviso':
+                a = get_object_or_404(AvvisoAssenza, pk=request.POST.get('avviso'), dipendente=dip, annullato_il__isnull=True,
+                                      data__gte=timezone.localdate())
+                a.annullato_il = timezone.now()
+                a.save(update_fields=['annullato_il'])
+                messages.success(request, 'Avviso annullato.')
         except svc.RichiestaNonValida as e:
             messages.error(request, str(e))
     return redirect(reverse('turni:miei_turni') + '#richieste')
+
+
+@login_required
+def richiesta(request, tipo, pk):
+    """Il dettaglio di una delle mie richieste, con «Annulla richiesta» se è ancora aperta."""
+    dip = _serve_dipendente(request)
+    oggi = timezone.localdate()
+    if tipo == 'cambio':
+        r = get_object_or_404(CambioTurno.objects.filter(Q(richiedente=dip) | Q(collega=dip)).select_related('richiedente', 'collega'), pk=pk)
+        r.altro = r.collega if r.richiedente_id == dip.pk else r.richiedente
+        r.mio = r.richiedente_id == dip.pk
+        r.righe = _righe_cambio(r, dip)
+        annullabile = r.in_corso and not r.scaduto and (r.mio or r.stato == CambioTurno.Stato.ATTESA_UFFICIO)
+    elif tipo == 'ferie':
+        r = get_object_or_404(RichiestaFerie, pk=pk, dipendente=dip)
+        annullabile = r.stato == RichiestaFerie.Stato.ATTESA
+    elif tipo == 'avviso':
+        r = get_object_or_404(AvvisoAssenza, pk=pk, dipendente=dip)
+        annullabile = not r.annullato_il and r.data >= oggi
+    else:
+        raise Http404
+    return render(request, 'turni/richiesta_dettaglio.html', {'tipo': tipo, 'r': r, 'annullabile': annullabile})
 
 
 def contesto_richieste(dip):
@@ -182,28 +218,10 @@ def nuovo_cambio(request):
 
 @login_required
 def nuove_ferie(request):
-    dip = _serve_dipendente(request)
-    if request.method == 'POST':
-        tipo = request.POST.get('tipo')
-        dal = _data(request.POST.get('dal'))
-        al = dal if tipo == RichiestaFerie.Tipo.PERMESSO else _data(request.POST.get('al'))
-        if not dal or not al or tipo not in RichiestaFerie.Tipo.values:
-            messages.error(request, 'Indica tipo, data di inizio e di fine.')
-        else:
-            try:
-                dalle, alle = _ora(request.POST.get('dalle')), _ora(request.POST.get('alle'))
-                svc.crea_ferie(dip, tipo, dal, al, request.POST.get('motivo', ''), dalle, alle)
-            except svc.RichiestaNonValida as e:
-                messages.error(request, str(e))
-            else:
-                messages.success(request, 'Richiesta inviata all\'ufficio.')
-                return redirect(reverse('turni:miei_turni') + '#richieste')
-    return render(
-        request,
-        'turni/ferie_nuove.html',
-        {'tipi': RichiestaFerie.Tipo.choices, 'domani': timezone.localdate() + timedelta(days=1), 'dati': request.POST,
-         'saldo': saldi.residuo(dip)},
-    )
+    """Richieste di ferie e permessi tolte dall'app (Giulia, 10/11/2026): le vecchie restano nel database."""
+    _serve_dipendente(request)
+    messages.info(request, "Ferie e permessi non si chiedono più dall'app: rivolgiti all'ufficio.")
+    return redirect('turni:miei_turni')
 
 
 # ---------------------------------------------------------------- ufficio
@@ -254,7 +272,7 @@ def ufficio_richieste(request):
     storico_ferie = RichiestaFerie.objects.exclude(stato=RichiestaFerie.Stato.ATTESA).select_related('dipendente')[:15]
     in_attesa_collega = CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_COLLEGA).count()
     avvisi = AvvisoAssenza.objects.filter(
-        Q(visto_il__isnull=True) | Q(data__gte=timezone.localdate() - timedelta(days=2))
+        Q(visto_il__isnull=True) | Q(data__gte=timezone.localdate() - timedelta(days=2)), annullato_il__isnull=True
     ).select_related('dipendente', 'visto_da')
     return render(
         request,
@@ -291,6 +309,10 @@ def rispondi_extra(request, extra_id):
     return redirect('turni:miei_turni')
 
 
+# la malattia non si segnala più dall'app (Giulia, 10/11/2026): restano ritardo, uscita anticipata e altro
+TIPI_AVVISO = [AvvisoAssenza.Tipo.RITARDO, AvvisoAssenza.Tipo.USCITA, AvvisoAssenza.Tipo.ALTRO]
+
+
 @login_required
 def nuovo_avviso(request):
     dip = _serve_dipendente(request)
@@ -298,7 +320,7 @@ def nuovo_avviso(request):
     if request.method == 'POST':
         giorno = _data(request.POST.get('data')) or oggi
         tipo = request.POST.get('tipo')
-        if tipo not in AvvisoAssenza.Tipo.values:
+        if tipo not in TIPI_AVVISO:
             messages.error(request, 'Scegli il tipo di avviso.')
         elif abs((giorno - oggi).days) > 30:
             messages.error(request, 'La data è troppo lontana.')
@@ -308,8 +330,6 @@ def nuovo_avviso(request):
                 alle = None
             elif tipo == AvvisoAssenza.Tipo.RITARDO:
                 dalle = None
-            elif tipo == AvvisoAssenza.Tipo.MALATTIA:
-                dalle = alle = None
             if tipo == AvvisoAssenza.Tipo.USCITA and not dalle:
                 messages.error(request, 'Scrivi a che ora esci.')
             elif tipo == AvvisoAssenza.Tipo.RITARDO and not alle:
@@ -320,10 +340,11 @@ def nuovo_avviso(request):
                 AvvisoAssenza.objects.create(
                     dipendente=dip, data=giorno, tipo=tipo, nota=request.POST.get('nota', '')[:300], dalle=dalle, alle=alle
                 )
-                messages.success(request, "Avviso inviato all'ufficio e al capo turno.")
+                messages.success(request, "Avviso inviato all'ufficio e al Capo Turno.")
                 return redirect(reverse('turni:miei_turni') + '#richieste')
     return render(
-        request, 'turni/avviso_nuovo.html', {'tipi': AvvisoAssenza.Tipo.choices, 'oggi': oggi, 'dati': request.POST}
+        request, 'turni/avviso_nuovo.html',
+        {'tipi': [(v, l) for v, l in AvvisoAssenza.Tipo.choices if v in TIPI_AVVISO], 'oggi': oggi, 'dati': request.POST}
     )
 
 

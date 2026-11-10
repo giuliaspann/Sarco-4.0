@@ -15,10 +15,62 @@ def genera_pulizie(turno):
     """Crea le voci di pulizia previste dalle regole per il turno (una volta sola per elemento)."""
     if not turno.lavora:
         return
-    regole = RegolaPulizia.objects.filter(elemento__attivo=True).select_related('elemento')
+    # le voci "promemoria" (es. controllo vagli zig-zag) non si creano da sole: le regole dicono solo chi vede l'avviso,
+    # il controllo lo assegna il Capo Turno a una persona
+    regole = RegolaPulizia.objects.filter(elemento__attivo=True, elemento__promemoria=False).select_related('elemento')
     for regola in regole:
         if regola.si_applica(turno):
             Pulizia.objects.get_or_create(turno=turno, elemento=regola.elemento)
+
+
+def promemoria_di(turno):
+    """Gli avvisi del turno (es. «13:00 fermo produzione · controllo vagli zig-zag») per chi lavora lì,
+    con il controllo, se il Capo Turno l'ha già assegnato a qualcuno."""
+    if not turno or not turno.lavora:
+        return []
+    avvisi = []
+    for regola in RegolaPulizia.objects.filter(elemento__attivo=True, elemento__promemoria=True).select_related('elemento'):
+        if regola.si_applica(turno) and regola.elemento not in [a['elemento'] for a in avvisi]:
+            e = regola.elemento
+            controllo = Pulizia.objects.filter(elemento=e, turno__data=turno.data, turno__fascia=turno.fascia).select_related(
+                'turno__dipendente').first()
+            if controllo is None:
+                controllo = _al_manutentore(e, turno)
+            avvisi.append({
+                'elemento': e,
+                'ora': timezone.localtime(turno.fine - timedelta(minutes=e.minuti_prima_fine or 0)),
+                'controllo': controllo,
+            })
+    # chi ha il controllo senza lavorare all'impianto (es. il manutentore) vede comunque l'avviso
+    for p in turno.pulizie.filter(elemento__promemoria=True).select_related('elemento', 'turno__dipendente'):
+        if p.elemento not in [a['elemento'] for a in avvisi]:
+            avvisi.append({'elemento': p.elemento, 'ora': timezone.localtime(p.da_quando), 'controllo': p})
+    return avvisi
+
+
+def manutentore_del_turno(turno):
+    from .models import Mansione, Postazione
+
+    for t in Turno.objects.filter(data=turno.data, fascia=turno.fascia, dipendente__attivo=True).select_related('dipendente'):
+        if (t.postazione == Postazione.MANUT or any(r.upper() == 'MAN' for _, r in t.lista_incarichi)
+                or Mansione.MANUTENTORE in t.dipendente.mansioni):
+            return t
+    return None
+
+
+def _al_manutentore(elemento, turno):
+    """Il controllo (es. vagli zig-zag) va al manutentore di turno; se non c'è, lo assegna il Capo Turno."""
+    from . import push
+
+    t = manutentore_del_turno(turno)
+    if t is None:
+        return None
+    p, nuova = Pulizia.objects.get_or_create(turno=t, elemento=elemento)
+    if nuova and t.dipendente.utente_id:
+        push.invia([t.dipendente.utente_id], f'⏸️ {elemento.nome}',
+                   f'Alle {timezone.localtime(p.da_quando):%H:%M} fermo produzione: il controllo è tuo.', f'/turni/pulizie/{t.pk}/')
+    return p
+
 
 
 def turno_attuale(dipendente):
@@ -95,6 +147,27 @@ def richiedi_pulizia(utente, turno, elemento, nota=''):
 
 LUOGHI_PULIZIA = ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA', 'MEZZI', 'ANALISI']
 
+# "Richiedi pulizia": per ogni area, le postazioni di chi ci lavora (li mostro per primi)
+POSTAZIONI_AREA = {
+    'IMP1': ['IMP1', 'PALISTA', 'MULINO'], 'IMP2': ['IMP2', 'BARROTTI'], 'PIAZZALE': ['PIAZZALE', 'PALISTA'],
+    'METALLI': ['METALLI'], 'SABBIA': ['SABBIA'], 'MEZZI': ['PALISTA', 'AUTISTA'], 'ANALISI': ['ANALISI'],
+}
+
+
+def puo_richiedere(utente):
+    """Le pulizie le chiedono il responsabile impianto e il responsabile piazzale (e l'ufficio)."""
+    dip = getattr(utente, 'dipendente', None)
+    return utente.is_staff or bool(dip and (dip.resp_impianto or dip.resp_piazzale))
+
+
+def in_turno(giorno, fascia, area):
+    """Chi lavora quel giorno in quel turno: prima chi è nell'area, poi gli altri."""
+    fasce = [Fascia.MATTINA, Fascia.ALTRO] if fascia == Fascia.MATTINA else [fascia]
+    turni = [t for t in Turno.objects.filter(data=giorno, fascia__in=fasce, settimana__pubblicata=True, dipendente__attivo=True)
+             .select_related('dipendente').order_by('dipendente__nome') if t.lavora]
+    vicini = POSTAZIONI_AREA.get(area, [])
+    return [t for t in turni if t.postazione in vicini], [t for t in turni if t.postazione not in vicini]
+
 
 def scelte_pulizia(escludi=()):
     """Per "Cosa hai pulito / cosa è da pulire": prima il luogo (come in Manutenzione), poi la cosa.
@@ -135,3 +208,76 @@ def elemento_da_scelta(valore):
     if valore.isdigit():
         return ElementoPulizia.objects.filter(pk=valore, attivo=True).first()
     return None
+
+
+# ---------------------------------------------------------------- Capo Turno e responsabile piazzale
+
+ORA_NOTTE = 17  # entro quest'ora il responsabile piazzale assegna le pulizie della notte ai Capi Turno
+
+
+def e_resp_piazzale(utente):
+    return utente.is_staff or bool(getattr(getattr(utente, 'dipendente', None), 'resp_piazzale', False))
+
+
+def resp_piazzale():
+    from django.contrib.auth import get_user_model
+
+    return list(get_user_model().objects.filter(is_active=True, dipendente__resp_piazzale=True).values_list('pk', flat=True))
+
+
+def squadra(turno):
+    """Chi lavora nello stesso turno del Capo Turno: prima la sua postazione, poi le altre."""
+    fascia = Fascia.MATTINA if turno.fascia == Fascia.ALTRO else turno.fascia
+    fasce = [Fascia.MATTINA, Fascia.ALTRO] if fascia == Fascia.MATTINA else [fascia]
+    altri = Turno.objects.filter(data=turno.data, fascia__in=fasce, settimana__pubblicata=True, dipendente__attivo=True
+                                 ).exclude(pk=turno.pk).select_related('dipendente')
+    return sorted(altri, key=lambda t: (t.postazione != turno.postazione, t.postazione == '', t.postazione, t.dipendente.nome))
+
+
+def capi_della_notte(giorno=None):
+    giorno = giorno or timezone.localdate()
+    return list(Turno.objects.filter(data=giorno, fascia=Fascia.NOTTE, capoturno=True, settimana__pubblicata=True)
+                .select_related('dipendente').order_by('postazione', 'dipendente__nome'))
+
+
+def passa_pulizia(utente, p, turno):
+    """Il Capo Turno della notte passa a un operatore una pulizia ricevuta dal responsabile piazzale."""
+    from . import push
+
+    if p.elemento_id and turno.pulizie.filter(elemento=p.elemento).exists():
+        raise ValueError(f'{p.titolo} è già nella lista di {turno.dipendente.nome_breve}.')
+    da = p.richiesta_da.dipendente.nome_breve if p.richiesta_da_id and hasattr(p.richiesta_da, 'dipendente') else ''
+    if da and 'da ' + da not in p.nota:
+        p.nota = (f'{p.nota} (da {da})' if p.nota else f'Da {da}')[:300]
+    p.turno, p.richiesta_da = turno, utente
+    p.save()
+    if turno.dipendente.utente_id:
+        push.invia([turno.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (dal Capo Turno)', f'/turni/pulizie/{turno.pk}/')
+
+
+def pulizia_generale_in_attesa():
+    """La decisione sulla pulizia generale dell'Impianto 2, se è il momento (ogni 2 settimane). Avvisa il responsabile."""
+    from . import push
+    from .models import PuliziaGenerale
+
+    ultima = PuliziaGenerale.objects.first()
+    if ultima and not ultima.esito:
+        return ultima
+    oggi = timezone.localdate()
+    if ultima and ultima.data > oggi - timedelta(days=PuliziaGenerale.OGNI_GIORNI):
+        return None
+    nuova = PuliziaGenerale.objects.create(data=oggi)
+    push.invia(resp_piazzale(), '🧹 Pulizia generale Impianto 2', 'È da fare? Rispondi «sì» e assegnala, oppure «non necessaria».',
+               '/turni/pulizie/piazzale/')
+    return nuova
+
+
+def da_convalidare_piazzale():
+    """Quelle che convalida solo lui e quelle che hanno già l'ok del Capo Turno."""
+    from django.db.models import Q
+
+    C = ElementoPulizia.Convalida
+    return Pulizia.objects.filter(
+        Q(elemento__convalida=C.PIAZZALE) | Q(elemento__convalida=C.CT_RP, ok_capoturno_il__isnull=False),
+        stato=Pulizia.Stato.FATTA, turno__data__gte=timezone.localdate() - timedelta(days=3),
+    ).select_related('turno__dipendente', 'elemento', 'ok_capoturno_da__dipendente')

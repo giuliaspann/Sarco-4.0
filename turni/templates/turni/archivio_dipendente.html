@@ -1,0 +1,52 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ dip.nome_breve }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% if tutti %}{% url 'turni:archivio_dipendenti' %}{% else %}{% url 'turni:archivio' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>{% if tutti %}Dipendenti{% else %}Archivio{% endif %}</a>
+<div class="intestazione"><h1>{{ dip.nome_breve }}</h1><p class="tenue piccolo">{{ dip.mansioni_display }}</p></div>
+
+<div class="filtri tre-filtri">
+  {% for k, nome, a, b in scelte %}<a href="?periodo={{ k }}" class="{% if k == chiave %}attivo{% endif %}">{{ nome }}</a>{% endfor %}
+</div>
+<form method="get" class="ac-periodo">
+  <label>Dal<input type="date" name="dal" value="{{ dal|date:'Y-m-d' }}" required></label>
+  <label>Al<input type="date" name="al" value="{{ al|date:'Y-m-d' }}" required></label>
+  <button class="bottone">Mostra</button>
+</form>
+
+<div class="rp-griglia due-col">
+  <div class="rp-box"><span>📅 Turni lavorati</span><b>{{ s.turni|length }}</b></div>
+  <div class="rp-box"><span>⏱️ Ore di lavoro</span><b>{{ s.ore|floatformat:"-1" }} h</b></div>
+  <div class="rp-box"><span>➕ Straordinari</span><b>{{ s.ore_extra|floatformat:"-1" }} h</b></div>
+  <div class="rp-box"><span>🏖️ Ferie e permessi</span><b>{{ s.assenze }} g</b></div>
+  <div class="rp-box"><span>🧹 Pulizie fatte</span><b>{{ s.pulizie|length }}</b></div>
+  <div class="rp-box"><span>🔧 Manutenzioni</span><b>{{ s.manutenzioni|length }}</b></div>
+  <div class="rp-box"><span>📣 Segnalazioni</span><b>{{ s.n_segnalazioni }}</b></div>
+  <div class="rp-box"><span>🧪 Analisi fatte</span><b>{{ s.analisi|length }}</b></div>
+</div>
+<p class="tenue piccolo">Ore stimate dai turni (8 ore a turno) in attesa dei dati del badge. Straordinari: turni extra confermati.</p>
+{# saldo di ferie e ROL tolto dall'app (Giulia, 10/11/2026) #}
+
+<a class="bottone pieno piena-larghezza cb-invia ac-scarica" href="{% url 'turni:archivio_dipendente_pdf' dip.pk %}?dal={{ dal|date:'Y-m-d' }}&al={{ al|date:'Y-m-d' }}">⬇ Scarica il PDF con il dettaglio</a>
+
+<details class="scheda ac-dettaglio"><summary>Turni ({{ s.turni|length }})</summary>
+  {% if s.per_fascia %}<p class="tenue piccolo">{% for sigla, nome, n in s.per_fascia %}{{ n }} {{ nome }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  <ul class="elenco">{% for t in s.turni %}<li><span>{{ t.data|date:'D j M'|capfirst }}</span><small>{{ t.get_fascia_display }}{% if t.postazione %} · {{ t.get_postazione_display }}{% endif %}{% if t.capoturno %} · CT{% endif %}</small></li>{% empty %}<li class="tenue">Nessun turno.</li>{% endfor %}</ul>
+</details>
+<details class="scheda ac-dettaglio"><summary>Straordinari ({{ s.extra|length }})</summary>
+  <ul class="elenco">{% for d in s.extra %}<li><span>{{ d.extra.data|date:'D j M'|capfirst }}</span><small>{{ d.extra.get_fascia_display }}</small></li>{% empty %}<li class="tenue">Nessun turno extra.</li>{% endfor %}</ul>
+</details>
+<details class="scheda ac-dettaglio"><summary>Pulizie ({{ s.pulizie|length }}{% if s.da_rifare %}, {{ s.da_rifare }} da rifare{% endif %})</summary>
+  <ul class="elenco">{% for p in s.pulizie %}<li><span>{{ p.turno.data|date:'D j M'|capfirst }}</span><small>{{ p.elemento.nome|default:'Pulizia' }} · {{ p.get_stato_display }}</small></li>{% empty %}<li class="tenue">Nessuna pulizia.</li>{% endfor %}</ul>
+</details>
+<details class="scheda ac-dettaglio"><summary>Manutenzioni ({{ s.manutenzioni|length }}{% if s.ore_manutenzione %}, {{ s.ore_manutenzione|floatformat:"-1" }} h{% endif %})</summary>
+  <ul class="elenco">{% for i in s.manutenzioni %}<li><span>{{ i.completata_il|date:'D j M'|capfirst }}</span><small>{{ i.macchina.nome }}{% if i.ore_lavoro %} · {{ i.ore_lavoro|floatformat:"-1" }} h{% endif %}</small></li>{% empty %}<li class="tenue">Nessuna manutenzione.</li>{% endfor %}</ul>
+</details>
+<details class="scheda ac-dettaglio"><summary>Segnalazioni ({{ s.n_segnalazioni }})</summary>
+  <ul class="elenco">{% for i in s.segnalazioni %}<li><span>{{ i.segnalata_il|date:'D j M'|capfirst }}</span><small>{{ i.macchina.nome }}</small></li>{% endfor %}
+  {% for f in s.fermi %}<li><span>{{ f.fermo_dal|date:'D j M'|capfirst }}</span><small>Fermo {{ f.get_impianto_display }}</small></li>{% endfor %}
+  {% if not s.n_segnalazioni %}<li class="tenue">Nessuna segnalazione.</li>{% endif %}</ul>
+</details>
+<details class="scheda ac-dettaglio"><summary>Analisi ({{ s.analisi|length }})</summary>
+  <ul class="elenco">{% for a in s.analisi %}<li><span>{{ a.data|date:'D j M'|capfirst }}</span><small>{{ a.get_campione_display }}{% if a.fuori_limite %} · ⚠️ fuori limite{% endif %}</small></li>{% empty %}<li class="tenue">Nessuna analisi.</li>{% endfor %}</ul>
+</details>
+{% endblock %}

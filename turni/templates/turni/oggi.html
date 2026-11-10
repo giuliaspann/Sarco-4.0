@@ -1,13 +1,25 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Oggi{% endblock %}
 {% block contenuto %}
-<p class="home-saluto">Buongiorno, <b>{{ dip.nome_breve }}</b></p>
-<p class="oggi-data">{{ oggi_data|date:'l j F'|capfirst }}</p>
+<div class="ig-saluto">
+  <h1>Ciao {{ dip.nome_breve.split|last }}</h1>
+  <span>{{ oggi_data|date:'D j M' }}</span>
+</div>
 
-<div class="oggi-due">
-  <a class="riq-turno" href="{% url 'turni:miei_turni' %}">
+<div class="oggi-due ig-turno-riga">
+  <a class="riq-turno ig-turno" href="{% url 'turni:miei_turni' %}">
     {% if turno_oggi %}
+      {% if turno_oggi.lavora and turno_oggi.posti %}
+        {% with p=turno_oggi.posti %}
+        {# "Capo Turno" non si scrive: c'è già il badge CT ("Capo Turno e Palista" → "Palista") #}
+        {% with ruolo=p.0.1|cut:'Capo Turno e '|cut:'Capo Turno' %}
+        <b>{{ p.0.0 }}</b>{% if ruolo %}<span class="riq-ruolo">{{ ruolo }}</span>{% endif %}
+        {% endwith %}
+        {% for a in p|slice:'1:' %}<span class="riq-anche">+ {{ a.0 }}{% if a.1 %} · {{ a.1 }}{% endif %}</span>{% endfor %}
+        {% endwith %}
+      {% else %}
       <b>{{ turno_oggi.nome_postazione|default:turno_oggi.descrizione_fascia }}</b>
+      {% endif %}
       <span>{% if turno_oggi.sigla_fascia %}<span class="cal-sigla {{ turno_oggi.classe_solo_fascia }}">{{ turno_oggi.sigla_fascia }}</span>{% endif %}{% if turno_oggi.capoturno and turno_oggi.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}</span>
     {% else %}
       <b>Turno non pubblicato</b>
@@ -18,17 +30,34 @@
 
 {% include 'turni/_capi_da_completare.html' %}
 
-<div class="tasti-agg">
-  <a class="agg" href="{% url 'turni:pulizie' %}"><span class="piu">+</span><span class="txt">Pulizia</span><span class="emo">🧹</span>{% if pulizie_da_fare %}<i class="home-badge">{{ pulizie_da_fare }}</i>{% endif %}</a>
-  <a class="agg" href="{% url 'turni:mn_scelta' %}"><span class="piu">+</span><span class="txt">Manutenzione</span><span class="emo">🔧</span></a>
-  <a class="agg" href="{% url 'turni:produzione_nuova' %}"><span class="piu">+</span><span class="txt">Dati produzione</span><span class="emo">⚖️</span></a>
-  <a class="agg" href="{% url 'turni:analisi_nuova' %}"><span class="piu">+</span><span class="txt">Dati analisi</span><span class="emo">🧪</span></a>
+{% for a in promemoria %}
+{% with c=a.controllo %}
+<div class="pr-avviso {% if c.stato == 'FATTA' or c.stato == 'VERIFICATA' %}fatto{% elif c.stato == 'IMPEDITA' %}problema{% endif %}">
+  <span class="pr-ora">{{ a.ora|time:'H:i' }}</span>
+  <span><b>⏸️ Fermo produzione · {{ a.elemento.nome|lower }}</b>
+  <small>{% if not c %}Controllo da assegnare{% elif c.stato == 'IMPEDITA' %}{{ c.turno.dipendente.nome_breve }}: problema segnalato{% elif c.stato == 'FATTA' %}{{ c.turno.dipendente.nome_breve }}: tutto ok · da convalidare{% elif c.stato == 'VERIFICATA' %}{{ c.turno.dipendente.nome_breve }}: tutto ok ✓{% else %}Lo fa {{ c.turno.dipendente.nome_breve }}{% endif %}</small></span>
+</div>
+{% if c and c.turno.dipendente_id == dip.pk and c.stato == 'DA_FARE' or c and c.turno.dipendente_id == dip.pk and c.stato == 'SEGNALATA' %}
+<a class="bottone pieno piena-larghezza pr-tasto" href="{% url 'turni:pulizie_turno' c.turno_id %}?fai=assegnata&voce={{ c.pk }}&da=oggi">🔍 Fai il controllo</a>
+{% elif not c and turno_oggi.capoturno %}
+<a class="bottone leggero piena-larghezza pr-tasto" href="{% url 'turni:pulizie' %}?fai=richiedi&squadra=1">👷 Assegna il controllo</a>
+{% endif %}
+{% endwith %}
+{% endfor %}
+
+<div class="ig-azioni">
+  <a href="{% url 'turni:pulizie' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/></svg></span>Pulizia{% if badge_pulizia %}<i class="home-badge">{{ badge_pulizia }}</i>{% endif %}</a>
+  {% if piazzale %}
+  <a href="{% url 'turni:pulizie_piazzale' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h7a4 4 0 0 1 0 8H6"/></svg></span>Piazzale{% if piazzale.da_fare %}<i class="home-badge">{{ piazzale.da_fare }}</i>{% endif %}</a>
+  {% endif %}
+  <a href="{% url 'turni:mn_scelta' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/></svg></span>Manutenzione</a>
+  <a href="{% url 'turni:produzione_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg></span>Produzione</a>
+  <a href="{% url 'turni:analisi_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg></span>Analisi</a>
 </div>
 
-<h2 class="ap-sezione">Impianti</h2>
-<div class="imp-due">
-  <a class="imp-btn fermo" href="{% url 'turni:nuovo_fermo' %}">⛔<span>Fermo impianto</span></a>
-  <a class="imp-btn riparte" href="{% url 'turni:ripartenza' %}">▶️<span>Ripartenza impianto</span></a>
+<div class="ig-impianti">
+  <a class="fermo" href="{% url 'turni:nuovo_fermo' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Fermo</a>
+  <a class="riparte" href="{% url 'turni:ripartenza' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Ripartenza</a>
 </div>
 {% for f in fermi_aperti %}
 <a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>

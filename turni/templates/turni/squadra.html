@@ -25,7 +25,7 @@
       {% for t in turni %}
         <li class="{% if mio and t.dipendente_id == mio.pk %}io{% endif %}{% if t.capoturno %} capo{% endif %}">
           {{ t.dipendente.nome_breve }}
-          {% if t.capoturno %}<span class="pillola f-capo">Capo turno</span>{% endif %}
+          {% if t.capoturno %}<span class="pillola f-capo">Capo Turno</span>{% endif %}
         </li>
       {% endfor %}
     </ul>

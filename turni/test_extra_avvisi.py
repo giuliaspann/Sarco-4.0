@@ -100,26 +100,31 @@ class TurnoExtraTest(BaseTest):
 
 class AvvisoTest(BaseTest):
     def test_avviso_visto_da_ufficio_e_capoturno_non_dai_colleghi(self):
-        martedi = LUNEDI + timedelta(days=1)  # Crimi è capo turno di notte martedì
+        martedi = LUNEDI + timedelta(days=1)  # Crimi è Capo Turno di notte martedì
         self.client.login(username='drame', password='123456')
+        # la malattia non si segnala più dall'app (10/11/2026)
+        r = self.client.post(reverse('turni:nuovo_avviso'), {'tipo': 'MALATTIA', 'data': martedi, 'nota': 'febbre'})
+        self.assertContains(r, 'Scegli il tipo di avviso')
+        self.assertNotContains(r, 'value="MALATTIA"')
+        self.assertFalse(AvvisoAssenza.objects.exists())
         r = self.client.post(
-            reverse('turni:nuovo_avviso'), {'tipo': 'MALATTIA', 'data': martedi, 'nota': 'febbre'}, follow=True
+            reverse('turni:nuovo_avviso'), {'tipo': 'ALTRO', 'data': martedi, 'nota': 'visita medica'}, follow=True
         )
         self.assertContains(r, 'Avviso inviato')
         avviso = AvvisoAssenza.objects.get()
 
-        # il capo turno lo vede nella Verifica di quel giorno
+        # il Capo Turno lo vede nella Verifica di quel giorno
         self.client.login(username='crimi', password='123456')
         r = self.client.get(reverse('turni:capoturno'), {'giorno': martedi})
-        self.assertContains(r, 'febbre')
-        # un collega che non è capo turno quel giorno no
+        self.assertContains(r, 'visita medica')
+        # un collega che non è Capo Turno quel giorno no
         self.client.login(username='spano', password='123456')
         self.assertEqual(self.client.get(reverse('turni:capoturno'), {'giorno': LUNEDI + timedelta(days=5)}).status_code, 403)
-        self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'febbre')
+        self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'visita medica')
 
         # l'ufficio lo vede e lo segna come visto
         self.client.login(username='resp', password='x')
-        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), 'febbre')
+        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), 'visita medica')
         self.client.post(reverse('turni:ufficio_richieste'), {'avviso': avviso.pk})
         avviso.refresh_from_db()
         self.assertIsNotNone(avviso.visto_il)

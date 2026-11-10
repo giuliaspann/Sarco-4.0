@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
 
-from . import views, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import views, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
 
 app_name = 'turni'
 
@@ -16,16 +16,26 @@ urlpatterns = [
     path('settimana/', views.settimana_tutti, name='settimana_tutti'),
     path('pulizie/', views.pulizie, name='pulizie'),
     path('pulizie/<int:turno_id>/', views.pulizie, name='pulizie_turno'),
+    path('pulizie/piazzale/', views.pulizie_piazzale, name='pulizie_piazzale'),
+    path('pulizie/richiedi/', views.richiedi_pulizia_vista, name='richiedi_pulizia'),
     path('capoturno/', views.capoturno, name='capoturno'),
     path('archivio/', views.archivio, name='archivio'),
     path('archivio/analisi/', views.archivio_analisi, name='archivio_analisi'),
     path('archivio/pulizie/', views.archivio_pulizie, name='archivio_pulizie'),
+    path('archivio/dipendenti/', views_archivio.dipendenti, name='archivio_dipendenti'),
+    path('archivio/dipendenti/<int:dip_id>/', views_archivio.dipendente, name='archivio_dipendente'),
+    path('archivio/dipendenti/<int:dip_id>/pdf/', views_archivio.dipendente_pdf, name='archivio_dipendente_pdf'),
+    path('archivio/<str:sezione>/cerca/', views_archivio.cerca, name='archivio_cerca'),
+    path('archivio/<str:sezione>/pdf/', views_archivio.scarica, name='archivio_pdf'),
     path('capoturno/fascia/', views.fascia_capo, name='fascia_capo'),
     path('foto/<int:pulizia_id>/', views.foto, name='foto'),
+    path('profilo/foto/', views.foto_profilo, name='foto_profilo'),
+    path('profilo/foto/<int:dip_id>/', views.foto_profilo_img, name='foto_profilo_img'),
     path('richieste/', views_richieste.richieste, name='richieste'),
     path('richieste/cambio/', views_richieste.nuovo_cambio, name='nuovo_cambio'),
     path('richieste/ferie/', views_richieste.nuove_ferie, name='nuove_ferie'),
     path('richieste/avviso/', views_richieste.nuovo_avviso, name='nuovo_avviso'),
+    path('richieste/<str:tipo>/<int:pk>/', views_richieste.richiesta, name='richiesta'),
     path('extra/<int:extra_id>/', views_richieste.rispondi_extra, name='rispondi_extra'),
     path('ufficio/extra/', views_richieste.ufficio_extra, name='ufficio_extra'),
     path('messaggi/', views_messaggi.messaggi, name='messaggi'),
@@ -59,11 +69,14 @@ urlpatterns = [
     path('manutenzione/a-chi/', views_manutenzione.a_chi, name='mn_a_chi'),
     path('manutenzione/codice/', views_manutenzione.codice, name='mn_codice'),
     path('manutenzione/interventi/<int:intervento_id>/', views_manutenzione.intervento, name='intervento'),
+    path('manutenzione/interventi/<int:intervento_id>/report/', views_manutenzione.report_esterno, name='report_esterno'),
     path('manutenzione/macchine/', views_manutenzione.macchine, name='macchine'),
     path('manutenzione/macchine/<int:macchina_id>/', views_manutenzione.macchina, name='macchina'),
     path('manutenzione/ricambi/', views_manutenzione.ricambi, name='ricambi'),
     path('manutenzione/ordini/', views_manutenzione.ordini, name='ordini'),
     path('manutenzione/ordini/nuovo/', views_manutenzione.nuovo_ordine, name='nuovo_ordine'),
+    path('manutenzione/ordini/pdf/', views_manutenzione.ordini_pdf, name='ordini_pdf'),
+    path('archivio/componenti/', views_archivio.componenti, name='archivio_componenti'),
     path('manutenzione/programmate/', views_manutenzione.programmate, name='programmate'),
     path('manutenzione/etichette/', views_manutenzione.etichette, name='etichette'),
     path('manutenzione/foto/<str:tipo>/<int:oggetto_id>/', views_manutenzione.foto, name='foto_mn'),

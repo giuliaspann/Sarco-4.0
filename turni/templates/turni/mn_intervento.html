@@ -39,6 +39,8 @@
     {% if i.ricambi_usati.all %}<ul>{% for p in i.ricambi_usati.all %}<li>🔩 {{ p.nome }} × {{ p.quantita }}</li>{% endfor %}</ul>{% endif %}
   </div>
   {% endif %}
+  {% if i.stato == 'COMPLETATA' %}{% include 'turni/_mn_costi.html' %}{% endif %}
+  {% url 'admin:turni_intervento_change' i.pk as admin_url %}{% include 'turni/_admin_modifica.html' %}
   {% if i.stato == 'RIFIUTATA' and i.motivo_rifiuto %}<p class="avviso avviso-warning">Non approvata: {{ i.motivo_rifiuto }}</p>{% endif %}
 </section>
 

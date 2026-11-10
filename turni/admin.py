@@ -24,7 +24,7 @@ class RegolaInline(admin.TabularInline):
 
 @admin.register(ElementoPulizia)
 class ElementoPuliziaAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'tipo', 'attivo']
+    list_display = ['nome', 'tipo', 'modo', 'convalida', 'minuti_prima_fine', 'attivo']
     list_filter = ['tipo', 'attivo']
     inlines = [RegolaInline]
 
@@ -82,7 +82,7 @@ class RichiestaFerieAdmin(admin.ModelAdmin):
     search_fields = ['dipendente__nome']
 
 
-from .models import Intervento, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio  # noqa: E402
+from .models import FotoIntervento, Intervento, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio, RicambioUsato  # noqa: E402
 
 
 @admin.register(Macchina)
@@ -99,22 +99,40 @@ class RicambioAdmin(admin.ModelAdmin):
     filter_horizontal = ['macchine']
 
 
+class RicambioUsatoInline(admin.TabularInline):
+    model = RicambioUsato
+    extra = 0
+    verbose_name_plural = 'pezzi usati (il costo si copia dal magazzino, si può correggere)'
+
+
+class FotoInterventoInline(admin.TabularInline):
+    model = FotoIntervento
+    extra = 0
+
+
 @admin.register(Intervento)
 class InterventoAdmin(admin.ModelAdmin):
-    list_display = ['pk', 'macchina', 'tipo', 'stato', 'priorita', 'macchina_ferma', 'assegnata_a', 'segnalata_il']
+    list_display = ['pk', 'macchina', 'tipo', 'stato', 'priorita', 'macchina_ferma', 'assegnata_a', 'segnalata_il', 'costo_esterno']
     list_filter = ['stato', 'tipo', 'macchina__luogo']
+    search_fields = ['descrizione', 'lavoro_svolto', 'macchina__nome']
+    inlines = [RicambioUsatoInline, FotoInterventoInline]
 
 
 @admin.register(OrdineRicambio)
 class OrdineRicambioAdmin(admin.ModelAdmin):
-    list_display = ['pk', 'ricambio', 'descrizione', 'quantita', 'stato', 'urgente', 'richiesto_il']
+    list_display = ['numero', 'ricambio', 'descrizione', 'quantita', 'stato', 'urgente', 'richiesto_il', 'fornitore']
     list_filter = ['stato']
+    search_fields = ['descrizione', 'ricambio__nome', 'fornitore']
 
 
 admin.site.register(ManutenzioneProgrammata)
 
 
-from .models import ProdottoProduzione, ProduzioneTurno  # noqa: E402
+from .models import (  # noqa: E402
+    AnalisiProdotto, Annuncio, AvvisoAssenza, Comunicazione, Disponibilita, EventoIntervento, FermoImpianto, FotoComunicazione,
+    FotoIntervento, ModificaTurno, ProdottoProduzione, ProduzioneTurno, RicambioUsato, RigaProduzione, RispostaComunicazione,
+    PuliziaGenerale, SaldoFerie, TurnoExtra,
+)
 
 
 @admin.register(ProdottoProduzione)
@@ -123,4 +141,27 @@ class ProdottoProduzioneAdmin(admin.ModelAdmin):
     list_editable = ['categoria', 'ordine', 'attivo']
 
 
-admin.site.register(ProduzioneTurno)
+class RigaProduzioneInline(admin.TabularInline):
+    model = RigaProduzione
+    extra = 0
+
+
+@admin.register(ProduzioneTurno)
+class ProduzioneTurnoAdmin(admin.ModelAdmin):
+    list_display = ['data', 'fascia', 'inserita_da', 'inserita_il']
+    list_filter = ['fascia']
+    date_hierarchy = 'data'
+    inlines = [RigaProduzioneInline]
+
+
+# tutti gli altri dati inseriti dall'app: l'amministratore li può correggere da qui.
+# Restano fuori di proposito le chat private, le iscrizioni alle notifiche e i blocchi d'accesso.
+for modello, colonne in [
+    (NotaSettimana, None), (PuliziaGenerale, ['data', 'esito', 'deciso_da', 'deciso_il']), (ModificaTurno, None), (SaldoFerie, ['dipendente', 'al', 'ferie_ore', 'rol_ore']),
+    (TurnoExtra, ['data', 'fascia', 'postazione', 'posti', 'chiusa']), (Disponibilita, ['extra', 'dipendente', 'confermata']),
+    (AvvisoAssenza, ['dipendente', 'data', 'tipo']), (Annuncio, None),
+    (EventoIntervento, None), (FermoImpianto, ['impianto', 'causa', 'fermo_dal', 'ripartito_il', 'segnalato_da']),
+    (Comunicazione, None), (FotoComunicazione, None), (RispostaComunicazione, None),
+    (AnalisiProdotto, ['data', 'fascia', 'campione', 'inserita_da']),
+]:
+    admin.site.register(modello, type(f'{modello.__name__}Admin', (admin.ModelAdmin,), {'list_display': colonne or ['__str__']}))

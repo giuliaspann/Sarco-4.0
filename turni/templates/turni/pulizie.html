@@ -8,30 +8,65 @@
     <b>Nessuna pulizia da fare</b>
     <small>{% if turno %}Oggi: {% include 'turni/_pillola.html' with t=turno %}{% else %}Oggi non hai turni.{% endif %}</small>
   </div>
-  <div class="home-griglia pl-tasti">
-    <a class="home-tasto tasto-richiedi" href="?fai=richiedi"><span class="home-icona">📣</span><b>Richiedi pulizia</b></a>
-  </div>
 
 {% elif fai == 'assegnata' %}
+  {% if da == 'oggi' %}
+  <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Oggi</a>
+  {% else %}
   <a class="tasto-indietro" href="{% url 'turni:pulizie_turno' turno.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizie</a>
-  <div class="intestazione"><h1>Segnala completamento pulizia assegnata</h1></div>
+  {% endif %}
+  <div class="intestazione"><h1>{% if voce.elemento.promemoria %}Controllo{% elif voce.elemento.controllo %}Controllo di fine turno{% else %}Segnala completamento pulizia assegnata{% endif %}</h1></div>
   {% if voce %}
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ voce.pk }}">
-    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.titolo }}</h2>
+    {% if da == 'oggi' %}<input type="hidden" name="da" value="oggi">{% endif %}
+    <h2>{{ voce.icona }} {{ voce.titolo }}</h2>
     {% if voce.elemento.istruzioni %}<p class="pl-istruzioni">{{ voce.elemento.istruzioni|linebreaksbr }}</p>{% endif %}
-    {% if voce.stato == 'SEGNALATA' and voce.nota_verifica %}<p class="pl-segnalazione">Capo turno: {{ voce.nota_verifica }}</p>{% endif %}
+    {% if voce.richiesta_da and voce.nota %}<p class="pl-istruzioni">{{ voce.nota }}</p>{% endif %}
+    {% if voce.foto_richiesta %}<a href="{% url 'turni:foto' voce.pk %}?quale=richiesta" target="_blank" class="pl-foto-richiesta"><img src="{% url 'turni:foto' voce.pk %}?quale=richiesta" alt="Cosa va pulito"></a>{% endif %}
+    {% if voce.stato == 'SEGNALATA' and voce.nota_verifica %}<p class="pl-segnalazione">Da rifare: {{ voce.nota_verifica }}</p>{% endif %}
+    {% if not voce.disponibile %}
+    <p class="rp-avviso">Si fa dalle {{ voce.da_quando|time:'H:i' }}, un'ora prima della fine del turno.</p>
+    {% elif voce.elemento.modo == 'CONTROLLO' %}
+    <input type="text" name="nota" placeholder="Se c'è un problema, scrivilo qui" maxlength="250" class="pl-campo-nota">
+    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto{% if voce.elemento.macchina %} del problema{% else %} (facoltativa){% endif %}</span></label>
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta" formnovalidate>✓ {{ voce.elemento.tasto|default:'Controllo fatto' }}</button>
+    <button class="bottone avviso-btn piena-larghezza pl-invia" name="azione" value="problema">⚠️ Segnala un problema</button>
+    {% elif voce.elemento.modo == 'CONTROLLO_FOTO' %}
+    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto del controllo</span></label>
+    <input type="text" name="nota" placeholder="Nota (facoltativa; se c'è un problema scrivilo qui)" maxlength="250" class="pl-campo-nota">
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Controllo fatto' }}</button>
+    <button class="bottone avviso-btn piena-larghezza pl-invia" name="azione" value="problema" formnovalidate>⚠️ Segnala un problema</button>
+    {% elif voce.elemento.modo == 'SOLO_TASTO' %}
+    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Segnala completata' }}</button>
+    {% elif voce.elemento.modo == 'FOTO_DOPO' %}
+    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto dopo</span></label>
+    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Segnala completata' }}</button>
+    {% else %}
     <div class="pl-due-foto">
-      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Foto prima</span></label>
-      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto dopo</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci {% if voce.elemento.modo == 'PULIZIA_FOTO' %}required{% endif %}><span>📷 Foto prima</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci {% if voce.elemento.modo == 'PULIZIA_FOTO' %}required{% endif %}><span>📷 Foto dopo</span></label>
     </div>
     <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
-    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ Segnala completata</button>
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Segnala completata' }}</button>
+    {% endif %}
   </form>
+  {% if squadra %}
+  <form method="post" class="scheda pl-modulo">{% csrf_token %}
+    <input type="hidden" name="pulizia" value="{{ voce.pk }}">
+    <p class="mn-sottotitolo">Oppure passala a un operatore</p>
+    <div class="scegli lista">
+      {% for t in squadra %}<label><input type="radio" name="a" value="{{ t.pk }}" required><span>{{ t.dipendente.nome_breve }}{% if t.postazione %} · {{ t.get_postazione_display }}{% endif %}</span></label>{% endfor %}
+    </div>
+    <button class="bottone leggero piena-larghezza" name="azione" value="passa">👷 Passa la pulizia</button>
+  </form>
+  {% endif %}
   {% elif da_fare %}
   <div class="home-griglia">
     {% for v in da_fare %}
-    <a class="home-tasto" href="?fai=assegnata&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.titolo }}</b></a>
+    <a class="home-tasto" href="?fai=assegnata&voce={{ v.pk }}"><span class="home-icona">{{ v.icona }}</span><b>{{ v.titolo }}</b></a>
     {% endfor %}
   </div>
   {% else %}
@@ -44,7 +79,7 @@
   {% if voce %}
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ voce.pk }}">
-    <h2>{% if voce.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %} {{ voce.titolo }}</h2>
+    <h2>{{ voce.icona }} {{ voce.titolo }}</h2>
     <p class="mn-sottotitolo">Perché non si può fare?</p>
     <div class="scegli">
       {% for m in motivi %}<label><input type="radio" name="motivo" value="{{ m }}" required><span>{{ m }}</span></label>{% endfor %}
@@ -56,7 +91,7 @@
   {% elif da_fare %}
   <div class="home-griglia">
     {% for v in da_fare %}
-    <a class="home-tasto" href="?fai=impedimento&voce={{ v.pk }}"><span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span><b>{{ v.titolo }}</b></a>
+    <a class="home-tasto" href="?fai=impedimento&voce={{ v.pk }}"><span class="home-icona">{{ v.icona }}</span><b>{{ v.titolo }}</b></a>
     {% endfor %}
   </div>
   {% else %}
@@ -87,7 +122,7 @@
   <h2 class="rq-sezione">Da pulire</h2>
   {% for v in da_fare %}
   <a class="pl-riga pl-{{ v.stato|lower }}" href="?fai=assegnata&voce={{ v.pk }}">
-    <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
+    <span class="home-icona">{{ v.icona }}</span>
     <span class="rq-testo"><b>{{ v.titolo }}</b><small>{% if v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
     <span class="stato-chip {% if v.stato == 'SEGNALATA' %}no{% else %}attesa{% endif %}">{% if v.stato == 'SEGNALATA' %}Da rifare{% else %}Da fare{% endif %}</span>
   </a>
@@ -103,9 +138,6 @@
     <a class="home-tasto tasto-aggiuntiva" href="?fai=aggiuntiva">
       <span class="home-icona">➕</span><b>Segnala completamento pulizia aggiuntiva</b>
     </a>
-    <a class="home-tasto tasto-richiedi" href="?fai=richiedi">
-      <span class="home-icona">📣</span><b>Richiedi pulizia</b>
-    </a>
     <a class="home-tasto tasto-impedimento" href="?fai=impedimento">
       <span class="home-icona">⚠️</span><b>Segnala impedimento pulizia</b>
     </a>
@@ -115,7 +147,7 @@
   <h2 class="rq-sezione">Segnalate</h2>
   {% for v in completate %}
   <div class="pl-riga pl-{{ v.stato|lower }}">
-    <span class="home-icona">{% if v.elemento.tipo == 'MEZZO' %}🚜{% else %}🧹{% endif %}</span>
+    <span class="home-icona">{{ v.icona }}</span>
     <span class="rq-testo"><b>{{ v.titolo }}</b><small>{% if v.aggiunta_da_operaio %}Aggiuntiva{% elif v.richiesta_da %}Chiesta da {{ v.richiesta_da.dipendente.nome_breve|default:v.richiesta_da.username }}{% else %}Pulizia del turno{% endif %}</small></span>
     <span class="stato-chip {% if v.stato == 'IMPEDITA' %}no{% else %}ok{% endif %}">{% if v.stato == 'VERIFICATA' %}Verificata{% elif v.stato == 'IMPEDITA' %}Non eseguibile{% else %}Fatta{% endif %}</span>
     {% if v.stato == 'IMPEDITA' and v.nota %}<small class="pl-motivo">{{ v.nota }}</small>{% endif %}

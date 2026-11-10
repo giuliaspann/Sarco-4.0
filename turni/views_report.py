@@ -60,7 +60,7 @@ def report_assenze(request):
             notti[t.dipendente] += 1
 
     righe = defaultdict(lambda: {'malattia': 0, 'ritardi': 0, 'uscite': 0, 'altro': 0, 'ferie': 0, 'permessi_ore': Decimal('0')})
-    for a in AvvisoAssenza.objects.filter(data__range=(dal, al), dipendente__attivo=True).select_related('dipendente'):
+    for a in AvvisoAssenza.objects.filter(data__range=(dal, al), dipendente__attivo=True, annullato_il__isnull=True).select_related('dipendente'):
         chiave_tipo = {'MALATTIA': 'malattia', 'RITARDO': 'ritardi', 'USCITA': 'uscite'}.get(a.tipo, 'altro')
         righe[a.dipendente][chiave_tipo] += 1
     for r in RichiestaFerie.objects.filter(stato=RichiestaFerie.Stato.APPROVATA, dal__lte=al, al__gte=dal,
@@ -130,7 +130,7 @@ def storico_assenze(request):
     oggi = timezone.localdate()
     anno = int(request.GET.get('anno') or oggi.year)
     voci = []
-    for a in dip.avvisi.filter(data__year=anno):
+    for a in dip.avvisi.filter(data__year=anno, annullato_il__isnull=True):
         voci.append({'data': a.data, 'icona': {'MALATTIA': '🤒', 'RITARDO': '⏰', 'USCITA': '🚪'}.get(a.tipo, '📝'),
                      'titolo': a.get_tipo_display() + (f' · {a.orario}' if a.orario else ''), 'nota': a.nota, 'tipo': a.tipo})
     for r in dip.richieste_ferie.filter(stato=RichiestaFerie.Stato.APPROVATA, dal__year=anno):

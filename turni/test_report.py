@@ -40,8 +40,8 @@ class SaldoReportTest(TestCase):
         self.assertEqual((r['ferie'], r['rol'], r['attesa_rol']), (Decimal('52'), Decimal('17.5'), Decimal('1')))
         self.client.login(username='rossi', password='x')
         pagina = self.client.get(reverse('turni:miei_turni'))
-        self.assertContains(pagina, 'Ferie residue')
-        self.assertContains(pagina, '6,5 giorni')
+        # il saldo si calcola ancora ma non si mostra più nell'app (10/11/2026)
+        self.assertNotContains(pagina, 'Ferie residue')
 
     def test_storico_solo_il_proprio(self):
         AvvisoAssenza.objects.create(dipendente=self.op, data=date(2026, 10, 1), tipo='RITARDO', alle=time(6, 30))

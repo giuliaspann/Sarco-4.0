@@ -33,7 +33,7 @@ class ImportaForm(forms.Form):
     lunedi = forms.DateField(
         label='Lunedì della settimana',
         required=False,
-        help_text='Lascia vuoto: lo prendo dal nome del file ("DAL 12-10-2026 AL ...").',
+        help_text='Lascia vuoto: lo prendo dal file (cella «Lunedì della settimana» o nome del file).',
         widget=forms.DateInput(attrs={'type': 'date'}),
     )
 

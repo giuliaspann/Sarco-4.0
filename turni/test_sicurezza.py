@@ -66,6 +66,8 @@ class PermessiTest(TestCase):
         self.a = Dipendente.objects.create(nome='ROSSI MARIO', utente=User.objects.create_user('a', password='12345678'))
         self.b = Dipendente.objects.create(nome='VERDI LUCA', utente=User.objects.create_user('b', password='12345678'))
         self.turno_a = Turno.objects.create(settimana=s, dipendente=self.a, data=lun, fascia='1T')
+        # le voci vere (migrazione 0048) restano fuori: qui le regole sono quelle del test
+        ElementoPulizia.objects.update(attivo=False)
         el = ElementoPulizia.objects.create(nome='Nastro', tipo='ZONA')
         self.pulizia_a = Pulizia.objects.create(turno=self.turno_a, elemento=el)
         self.avviso_a = AvvisoAssenza.objects.create(dipendente=self.a, data=lun, tipo='MALATTIA', nota='riservato')

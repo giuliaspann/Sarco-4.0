@@ -1,0 +1,49 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Responsabile piazzale{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Pulizia</a>
+<div class="intestazione"><h1>Responsabile piazzale</h1></div>
+
+{% if generale %}
+<section class="scheda rp-generale">
+  <h2>🧹 Pulizia generale Impianto 2</h2>
+  <p class="tenue piccolo">Arriva ogni 2 settimane. È da fare?</p>
+  <form method="post" class="rp-due">{% csrf_token %}
+    <button class="bottone pieno" name="azione" value="generale_si">Sì, è da fare</button>
+    <button class="bottone leggero" name="azione" value="generale_no">Non necessaria</button>
+  </form>
+</section>
+{% endif %}
+
+<h2 class="rq-sezione">Pulizie della notte · entro le {{ ora_notte }}:00</h2>
+{% if in_ritardo %}<p class="rp-avviso">Sono passate le {{ ora_notte }}:00: mancano ancora delle assegnazioni.</p>{% endif %}
+{% for c in capi %}
+<a class="pl-riga" href="{% url 'turni:richiedi_pulizia' %}?torna=piazzale&giorno={{ c.data|date:'Y-m-d' }}&fascia=N&turno={{ c.pk }}">
+  <span class="home-icona">🌙</span>
+  <span class="rq-testo"><b>{{ c.dipendente.nome_breve }}</b><small>Capo Turno {{ c.get_postazione_display|default:'notte' }}{% for p in c.ricevute %}{% if forloop.first %} · {% else %}, {% endif %}{{ p.titolo }}{% endfor %}</small></span>
+  <span class="stato-chip {% if c.ricevute %}ok{% else %}attesa{% endif %}">{% if c.ricevute %}{{ c.ricevute|length }} assegnat{{ c.ricevute|length|pluralize:'a,e' }}{% else %}Assegna{% endif %}</span>
+</a>
+{% empty %}
+<p class="tenue piccolo">Stanotte non ci sono Capi Turno nel file dei turni.</p>
+{% endfor %}
+
+<h2 class="rq-sezione">Pulizie da convalidare</h2>
+{% for p in da_convalidare %}
+<div class="scheda rp-voce">
+  <b>{{ p.icona }} {{ p.titolo }}</b>
+  <small class="tenue">{{ p.turno.dipendente.nome_breve }} · {{ p.fatta_il|date:'D j M H:i'|capfirst }}{% if p.ok_capoturno_il %} · ok di {{ p.ok_capoturno_da.dipendente.nome_breve|default:'Capo Turno' }}{% endif %}</small>
+  {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
+  {% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto" loading="lazy"></a>{% endif %}
+  <form method="post" class="form-voce">{% csrf_token %}
+    <input type="hidden" name="pulizia" value="{{ p.pk }}">
+    <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">
+    <button class="bottone pieno" name="azione" value="convalida">Convalida</button>
+    <button class="bottone avviso-btn" name="azione" value="rifare">Da rifare</button>
+  </form>
+</div>
+{% empty %}
+<p class="tenue piccolo">Niente da convalidare.</p>
+{% endfor %}
+
+{% if ultima_generale %}<p class="tenue piccolo rp-ultima">Ultima pulizia generale Impianto 2: {{ ultima_generale.get_esito_display|lower }} il {{ ultima_generale.deciso_il|date:'j/m/Y' }}.</p>{% endif %}
+{% endblock %}

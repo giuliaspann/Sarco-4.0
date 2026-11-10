@@ -5,7 +5,7 @@
 
 <form method="post" enctype="multipart/form-data" class="scheda">{% csrf_token %}
   <h2>Carica il file della settimana</h2>
-  <p class="tenue piccolo">Lo stesso Excel che mandate su WhatsApp. Prima di pubblicarlo vedi l'anteprima.</p>
+  <p class="tenue piccolo">Il file «Organizzazione Turni»: l'app legge solo i fogli «Layout Turni» e «Collegamento Nomi». Va bene anche il vecchio file di WhatsApp. Prima di pubblicarlo vedi l'anteprima.</p>
   {{ form.non_field_errors }}
   <label>{{ form.file.label }}{{ form.file }}</label>
   {% for e in form.file.errors %}<p class="errore">{{ e }}</p>{% endfor %}

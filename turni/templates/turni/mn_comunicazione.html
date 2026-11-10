@@ -33,7 +33,7 @@
 
 {% if c.stato != 'RISOLTA' %}
 <form method="post" class="scheda mn-form">{% csrf_token %}
-  <label>Rispondi<input type="text" name="testo" maxlength="500" placeholder="Es. già comunicato al capo turno e al manutentore"></label>
+  <label>Rispondi<input type="text" name="testo" maxlength="500" placeholder="Es. già comunicato al Capo Turno e al manutentore"></label>
   <div class="cm-azioni">
     <button class="bottone" name="azione" value="">💬 Invia</button>
     {% if c.stato == 'APERTA' %}<button class="bottone pieno" name="azione" value="gestione">🔧 Me ne occupo</button>{% endif %}

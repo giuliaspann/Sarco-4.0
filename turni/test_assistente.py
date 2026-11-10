@@ -73,7 +73,7 @@ class AssistenteTest(TestCase):
 
     def test_leggere_turni(self):
         testo = assistente.leggi('turni_di', {'nome': 'io', 'dal': self.MAR.isoformat(), 'al': self.MER.isoformat()}, self.spano.utente)
-        self.assertIn('Capo turno', testo)
+        self.assertIn('Capo Turno', testo)
         self.assertIn('Riposo', testo)
         with self.assertRaises(assistente.Errore):
             assistente.trova_persona('Nessuno Inesistente', self.spano.utente)

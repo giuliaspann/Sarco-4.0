@@ -1,0 +1,66 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richiedi pulizia{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% if torna == 'piazzale' %}{% url 'turni:pulizie_piazzale' %}{% else %}{% url 'turni:pulizie' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>{% if torna == 'piazzale' %}Responsabile piazzale{% else %}Pulizia{% endif %}</a>
+<div class="intestazione"><h1>Richiedi pulizia</h1></div>
+<div class="rp-passi">
+  <span class="ok">1 · Area</span>
+  <span class="{% if area %}ok{% endif %}">2 · Giorno e turno</span>
+  <span class="{% if area and giorno and fascia %}ok{% endif %}">3 · Chi la fa</span>
+</div>
+
+{% if not area %}
+<p class="mn-sottotitolo">Dove va fatta la pulizia?</p>
+<div class="rp-aree">
+  {% for v, nome, icona in aree %}
+  <a href="?area={{ v }}{% if giorno %}&giorno={{ giorno|date:'Y-m-d' }}{% endif %}{% if fascia %}&fascia={{ fascia }}{% endif %}{% if scelto %}&turno={{ scelto }}{% endif %}{% if torna %}&torna={{ torna }}{% endif %}{% if nota %}&nota={{ nota|urlencode }}{% endif %}"><span>{{ icona }}</span>{{ nome }}</a>
+  {% endfor %}
+</div>
+
+{% elif not giorno or not fascia %}
+<form method="get" class="scheda pl-modulo">
+  <input type="hidden" name="area" value="{{ area }}">
+  {% if torna %}<input type="hidden" name="torna" value="{{ torna }}">{% endif %}
+  {% if nota %}<input type="hidden" name="nota" value="{{ nota }}">{% endif %}
+  <p class="rp-riepilogo"><b>📍 {{ nome_area }}</b><a class="link-piccolo" href="?{% if torna %}torna={{ torna }}{% endif %}">Cambia</a></p>
+  <p class="mn-sottotitolo">Che giorno?</p>
+  {% with base='?area='|add:area %}
+  <div class="naviga rp-naviga">
+    {% if prec %}<a class="freccia" href="{{ base }}&settimana={{ prec|date:'Y-m-d' }}{% if torna %}&torna={{ torna }}{% endif %}" aria-label="Settimana prima">‹</a>{% else %}<span class="freccia spento">‹</span>{% endif %}
+    <b>{{ giorni.0|date:'j' }} – {{ giorni.6|date:'j F' }}</b>
+    <a class="freccia" href="{{ base }}&settimana={{ succ|date:'Y-m-d' }}{% if torna %}&torna={{ torna }}{% endif %}" aria-label="Settimana dopo">›</a>
+  </div>
+  {% endwith %}
+  <div class="rp-sett">
+    {% for g in giorni %}<label><input type="radio" name="giorno" value="{{ g|date:'Y-m-d' }}" required {% if g == giorno %}checked{% endif %} {% if g < oggi %}disabled{% endif %}><span class="{% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span></label>{% endfor %}
+  </div>
+  <p class="mn-sottotitolo">In che turno?</p>
+  <div class="rp-fasce">
+    {% for v, sigla, ore, classe in fasce %}<label><input type="radio" name="fascia" value="{{ v }}" required {% if v == fascia %}checked{% endif %}><span class="{{ classe }}"><b>{{ sigla }}</b><small>{{ ore }}</small></span></label>{% endfor %}
+  </div>
+  <button class="bottone pieno piena-larghezza pl-invia">Avanti</button>
+</form>
+
+{% else %}
+<form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
+  <input type="hidden" name="area" value="{{ area }}">
+  <input type="hidden" name="giorno" value="{{ giorno|date:'Y-m-d' }}">
+  <input type="hidden" name="fascia" value="{{ fascia }}">
+  {% if torna %}<input type="hidden" name="torna" value="{{ torna }}">{% endif %}
+  <p class="rp-riepilogo"><b>📍 {{ nome_area }} · {{ giorno|date:'D j M'|capfirst }} · {% for v, sigla, ore, classe in fasce %}{% if v == fascia %}<span class="cal-sigla {{ classe }} rp-sigla">{{ sigla }}</span>{% endif %}{% endfor %}</b><a class="link-piccolo" href="?area={{ area }}{% if torna %}&torna={{ torna }}{% endif %}">Cambia</a></p>
+  {% if vicini %}
+  <p class="mn-sottotitolo">A chi la assegni?</p>
+  <div class="scegli lista">
+    {% for t in vicini %}<label><input type="radio" name="turno" value="{{ t.pk }}" required {% if scelto == t.pk|stringformat:'s' %}checked{% endif %}><span>{{ t.dipendente.nome_breve }}</span></label>{% endfor %}
+  </div>
+  <label>Note
+    <textarea name="nota" rows="2" maxlength="250" placeholder="Facoltative">{{ nota }}</textarea>
+  </label>
+  <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto di cosa va pulito</span></label>
+  <button class="bottone pieno piena-larghezza pl-invia">🧹 Assegna la pulizia</button>
+  {% else %}
+  <div class="pl-vuoto"><span class="home-icona">🕒</span><b>Nessuno in {{ nome_area }} in quel turno</b><small>Controlla che i turni della settimana siano pubblicati.</small></div>
+  {% endif %}
+</form>
+{% endif %}
+{% endblock %}

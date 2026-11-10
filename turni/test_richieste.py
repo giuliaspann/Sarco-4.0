@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -15,7 +15,7 @@ from .tests import LUNEDI, RIGHE, file_turni
 
 class RichiesteTest(TestCase):
     """Spano e Drame si scambiano martedì (Spano riposa, Drame 2T Imp. 2) con mercoledì
-    (Spano capo turno, Drame riposa). "Oggi" è lunedì 12/10 alle 8."""
+    (Spano Capo Turno, Drame riposa). "Oggi" è lunedì 12/10 alle 8."""
 
     MAR, MER = LUNEDI + timedelta(days=1), LUNEDI + timedelta(days=2)
 
@@ -138,18 +138,17 @@ class RichiesteTest(TestCase):
 
     def test_ferie(self):
         self.client.login(username='drame', password='123456')
-        # da giovedì 15 a martedì 20: in parte nella settimana caricata, in parte no
-        self.client.post(
+        # ferie e permessi non si chiedono più dall'app (10/11/2026): la pagina rimanda all'Area personale
+        r = self.client.post(
             reverse('turni:nuove_ferie'),
             {'tipo': 'FERIE', 'dal': LUNEDI + timedelta(days=3), 'al': LUNEDI + timedelta(days=8)},
         )
-        f = RichiestaFerie.objects.get()
-        self.assertEqual(f.stato, RichiestaFerie.Stato.ATTESA)
-        r = self.client.post(
-            reverse('turni:nuove_ferie'),
-            {'tipo': 'FERIE', 'dal': LUNEDI + timedelta(days=4), 'al': LUNEDI + timedelta(days=5)},
+        self.assertRedirects(r, reverse('turni:miei_turni'), fetch_redirect_response=False)
+        self.assertFalse(RichiestaFerie.objects.exists())
+        # una richiesta vecchia ancora in attesa (da giovedì 15 a martedì 20) l'ufficio la può ancora decidere
+        f = RichiestaFerie.objects.create(
+            dipendente=self.drame, tipo='FERIE', dal=LUNEDI + timedelta(days=3), al=LUNEDI + timedelta(days=8)
         )
-        self.assertContains(r, 'una richiesta per alcuni')
 
         self.client.login(username='resp', password='x')
         self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), 'non sono ancora nei turni caricati')
@@ -172,17 +171,14 @@ class OrariEPresaVisioneTest(RichiesteTest):
 
     def test_permesso_a_ore(self):
         self.client.login(username='spano', password='123456')
-        r = self.client.post(reverse('turni:nuove_ferie'), {'tipo': 'PERMESSO', 'dal': self.MER, 'dalle': '08:00', 'alle': '10:30'})
-        self.assertEqual(r.status_code, 302)
-        f = RichiestaFerie.objects.get()
+        # i permessi non si chiedono più dall'app: qui una richiesta vecchia rimasta in attesa
+        f = RichiestaFerie.objects.create(dipendente=self.spano, tipo='PERMESSO', dal=self.MER, al=self.MER,
+                                          dalle=time(8), alle=time(10, 30))
         self.assertEqual((f.dal, f.al, f.orario), (self.MER, self.MER, 'dalle 8:00 alle 10:30'))
         svc.decisione_ufficio_ferie(f, self.resp, True)
         t = self.turno(self.spano, self.MER)
         self.assertTrue(t.capoturno)  # il turno resta, solo annotato
         self.assertIn('8:00', t.nota_modifica)
-        # fine prima dell'inizio: rifiutato
-        r = self.client.post(reverse('turni:nuove_ferie'), {'tipo': 'PERMESSO', 'dal': self.MER + timedelta(days=1), 'dalle': '10:00', 'alle': '09:00'})
-        self.assertEqual(RichiestaFerie.objects.count(), 1)
 
     def test_orari_di_ritardo_e_uscita(self):
         from .models import AvvisoAssenza
@@ -218,3 +214,39 @@ class OrariEPresaVisioneTest(RichiesteTest):
         # ricaricare lo stesso file non crea altre richieste
         importa.salva_settimana(importa.leggi_file(file_turni(corrette), LUNEDI))
         self.assertEqual(ModificaTurno.objects.count(), 1)
+
+
+class AnnullaRichiesteTest(RichiesteTest):
+    """«Annulla richiesta» sta nel dettaglio di ogni richiesta, non nell'elenco."""
+
+    def test_annulla_dal_dettaglio(self):
+        from .models import AvvisoAssenza
+
+        cambio = self.chiedi()
+        self.assertNotContains(self.client.get(reverse('turni:miei_turni')), 'Annulla richiesta')
+        r = self.client.get(reverse('turni:richiesta', args=['cambio', cambio.pk]))
+        self.assertContains(r, 'Annulla richiesta')
+        # il collega che ha accettato può annullare finché l'ufficio non decide
+        self.client.login(username='drame', password='123456')
+        self.client.post(reverse('turni:richieste'), {'cambio': cambio.pk, 'azione': 'accetta'})
+        self.assertContains(self.client.get(reverse('turni:richiesta', args=['cambio', cambio.pk])), 'Annulla richiesta')
+        self.client.post(reverse('turni:richieste'), {'cambio': cambio.pk, 'azione': 'annulla_cambio'})
+        cambio.refresh_from_db()
+        self.assertEqual(cambio.stato, CambioTurno.Stato.ANNULLATO)
+        self.assertNotContains(self.client.get(reverse('turni:richiesta', args=['cambio', cambio.pk])), 'Annulla richiesta')
+
+        f = RichiestaFerie.objects.create(dipendente=self.drame, tipo=RichiestaFerie.Tipo.FERIE, dal=self.MER, al=self.MER)
+        self.assertContains(self.client.get(reverse('turni:richiesta', args=['ferie', f.pk])), 'Annulla richiesta')
+        self.client.post(reverse('turni:richieste'), {'ferie': f.pk, 'azione': 'annulla_ferie'})
+        f.refresh_from_db()
+        self.assertEqual(f.stato, RichiestaFerie.Stato.ANNULLATA)
+
+        a = AvvisoAssenza.objects.create(dipendente=self.drame, data=self.MAR, tipo=AvvisoAssenza.Tipo.RITARDO)
+        self.client.post(reverse('turni:richieste'), {'avviso': a.pk, 'azione': 'annulla_avviso'})
+        a.refresh_from_db()
+        self.assertIsNotNone(a.annullato_il)
+        self.assertContains(self.client.get(reverse('turni:richiesta', args=['avviso', a.pk])), 'Annullato')
+
+        # le richieste degli altri non si aprono
+        self.client.login(username='crimi', password='123456')
+        self.assertEqual(self.client.get(reverse('turni:richiesta', args=['ferie', f.pk])).status_code, 404)

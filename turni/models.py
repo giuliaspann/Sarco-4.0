@@ -1,4 +1,5 @@
-from datetime import timedelta
+from decimal import Decimal
+from datetime import datetime, time, timedelta
 
 from django.conf import settings
 from django.db import models
@@ -35,6 +36,8 @@ class Postazione(models.TextChoices):
     AUTISTA = 'AUTISTA', 'Autista'
     MANUT = 'MANUT', 'Manutentore'
     UFFICIO = 'UFFICIO', 'Ufficio'
+    ROTOVAGLIO = 'ROTOVAGLIO', 'Rotovaglio'
+    MAGAZZINO = 'MAGAZZINO', 'Magazzino'
 
 
 # Orari dei turni (dal foglio dell'ufficio)
@@ -83,8 +86,14 @@ class Dipendente(models.Model):
     # il responsabile turni ha le pagine dell'ufficio
     ruolo_app = models.CharField('ruolo nell\'app', max_length=12, choices=RuoloApp.choices, default=RuoloApp.OPERAIO)
     qualifica = models.CharField('ruolo in azienda', max_length=150, blank=True)
+    # foto profilo (cerchietto in Area personale, barra in basso, "storie" di Oggi)
+    foto = models.ImageField('foto profilo', upload_to='profili/', blank=True)
     # incarichi per la manutenzione
     resp_manutenzione = models.BooleanField('responsabile manutenzione', default=False)
+    # assegna le pulizie della notte ai Capi Turno, convalida il piazzale, decide la pulizia generale dell'Impianto 2
+    resp_piazzale = models.BooleanField('responsabile piazzale', default=False)
+    # può chiedere pulizie a chiunque (con il responsabile piazzale)
+    resp_impianto = models.BooleanField('responsabile impianto', default=False)
     acquisti = models.BooleanField('ordina i ricambi (acquisti)', default=False)
     # Il PIN è corto: dopo troppi tentativi sbagliati l'accesso si blocca per un po'
     tentativi_falliti = models.PositiveSmallIntegerField(default=0, editable=False)
@@ -159,6 +168,13 @@ class Turno(models.Model):
     fascia = models.CharField(max_length=10, choices=Fascia.choices)
     postazione = models.CharField(max_length=10, choices=Postazione.choices, blank=True)
     capoturno = models.BooleanField(default=False)
+    # Dal foglio "Layout Turni": sigla del ruolo (CT, OdL, Pal, Man, Aut…) e posto completo,
+    # es. "Impianto 1 · Operatore di Linea" o, con due posti nello stesso turno, "… + Sabbia - Sarco · Operatore di Linea"
+    ruolo = models.CharField(max_length=10, blank=True)
+    posto = models.CharField(max_length=200, blank=True)
+    # tutti gli incarichi del turno, "postazione/ruolo" separati da spazio (es. "IMP1/CT IMP1/Pal"):
+    # chi è Capo Turno e palista riceve le pulizie di tutti e due
+    incarichi = models.CharField(max_length=200, blank=True)
     # Cambiato dall'app (cambio turno o ferie approvati): ricaricando l'Excel non viene sovrascritto
     nota_modifica = models.CharField(max_length=200, blank=True)
 
@@ -180,7 +196,11 @@ class Turno(models.Model):
             return self.get_fascia_display()
         parti = []
         if self.capoturno:
-            parti.append('Capo turno')
+            parti.append('Capo Turno')
+        if self.posto:
+            # il posto dice già "Capo Turno" quando lo è
+            parti = [self.get_fascia_display()] if self.fascia != Fascia.ALTRO else []
+            return ' · '.join(parti + [self.posto])
         if self.fascia != Fascia.ALTRO:
             parti.append(self.get_fascia_display())
         if self.postazione:
@@ -193,15 +213,15 @@ class Turno(models.Model):
         if not self.lavora:
             return self.get_fascia_display()
         parti = []
-        if self.capoturno:
-            parti.append('Capo turno')
+        if self.capoturno and 'Capo Turno' not in self.posto:  # il posto del Layout Turni lo dice già
+            parti.append('Capo Turno')
         if self.fascia != Fascia.ALTRO:
             parti.append(self.get_fascia_display())
         elif self.capoturno:
             parti.append('turno da indicare')
         return ' · '.join(parti) or self.codice
 
-    # il file a volte scrive solo "CAPO T. - Imp. 1": la fascia la indica poi il capo turno o l'ufficio
+    # il file a volte scrive solo "CAPO T. - Imp. 1": la fascia la indica poi il Capo Turno o l'ufficio
     SIGLE_CAPO = {Fascia.MATTINA: 'CT1', Fascia.POMERIGGIO: 'CT2', Fascia.NOTTE: 'CTN', Fascia.GIORNALIERO: 'CTG'}
 
     @property
@@ -210,7 +230,9 @@ class Turno(models.Model):
 
     @property
     def nome_postazione(self):
-        return self.get_postazione_display() if self.lavora and self.postazione else ''
+        if not self.lavora:
+            return ''
+        return self.posto or (self.get_postazione_display() if self.postazione else '')
 
     @property
     def orario(self):
@@ -219,6 +241,13 @@ class Turno(models.Model):
     @property
     def orario_pulizie(self):
         return ORARI_PULIZIE.get(self.fascia, '') if self.lavora else ''
+
+    @property
+    def fine(self):
+        """Quando finisce il turno (la notte finisce il mattino dopo); il Capo Turno senza fascia come il 1° turno."""
+        ore = {Fascia.POMERIGGIO: (22, 0), Fascia.NOTTE: (6, 0), Fascia.GIORNALIERO: (17, 30)}.get(self.fascia, (14, 0))
+        giorno = self.data + timedelta(days=1) if self.fascia == Fascia.NOTTE else self.data
+        return timezone.make_aware(datetime.combine(giorno, time(*ore)))
 
     SIGLE = {
         Fascia.MATTINA: '1T',
@@ -233,8 +262,20 @@ class Turno(models.Model):
     }
 
     @property
+    def lista_incarichi(self):
+        """[(postazione, ruolo), …]; per i turni del vecchio file c'è solo la postazione principale."""
+        if self.incarichi:
+            return [tuple((i.split('/', 1) + [''])[:2]) for i in self.incarichi.split()]
+        return [(self.postazione, self.ruolo)]
+
+    @property
+    def posti(self):
+        """Il posto dal Layout Turni diviso in (area, ruolo): il primo è quello principale."""
+        return [tuple((p.split(' · ', 1) + [''])[:2]) for p in self.posto.split(' + ')] if self.posto else []
+
+    @property
     def sigla(self):
-        """Sigla corta per la casella del calendario. Capo turno: CT1, CT2, CTN (CT? se manca la fascia)."""
+        """Sigla corta per la casella del calendario. Capo Turno: CT1, CT2, CTN (CT? se manca la fascia)."""
         if self.capoturno and self.lavora:
             return self.SIGLE_CAPO.get(self.fascia, 'CT?')
         return self.SIGLE.get(self.fascia, '?')
@@ -253,6 +294,8 @@ class Turno(models.Model):
         Postazione.MULINO: 'MUL.',
         Postazione.BARROTTI: 'BARR.',
         Postazione.PALISTA: 'PALA',
+        Postazione.ROTOVAGLIO: 'ROT.',
+        Postazione.MAGAZZINO: 'MAG.',
     }
 
     @property
@@ -262,7 +305,7 @@ class Turno(models.Model):
 
     @property
     def sigla_fascia(self):
-        """Solo il turno (1T, 2T, N, G, R, F…), senza CT: il capo turno ha un quadratino suo accanto."""
+        """Solo il turno (1T, 2T, N, G, R, F…), senza CT: il Capo Turno ha un quadratino suo accanto."""
         return '' if self.fascia == Fascia.ALTRO else self.SIGLE.get(self.fascia, '?')
 
     @property
@@ -312,10 +355,43 @@ class ElementoPulizia(models.Model):
     attivo = models.BooleanField(default=True)
     luogo = models.CharField(max_length=10, blank=True, help_text='Impianto 1, piazzale, mezzi… (come in Manutenzione)')
 
+    class Modo(models.TextChoices):
+        PULIZIA = 'PULIZIA', 'Pulizia (foto facoltative)'
+        PULIZIA_FOTO = 'PULIZIA_FOTO', 'Pulizia con foto prima e dopo'
+        CONTROLLO = 'CONTROLLO', 'Controllo: solo conferma'
+        CONTROLLO_FOTO = 'CONTROLLO_FOTO', 'Controllo con foto'
+        SOLO_TASTO = 'SOLO_TASTO', 'Pulizia: solo tasto'
+        FOTO_DOPO = 'FOTO_DOPO', 'Pulizia con foto dopo'
+
+    class Convalida(models.TextChoices):
+        CT = 'CT', 'Capo Turno'
+        PIAZZALE = 'PIAZZALE', 'Responsabile piazzale'
+        CT_RP = 'CT_RP', 'Capo Turno, poi responsabile piazzale'
+        NESSUNA = 'NESSUNA', 'Nessuna (va subito in archivio)'
+
+    modo = models.CharField(max_length=15, choices=Modo.choices, default=Modo.PULIZIA)
+    convalida = models.CharField('chi la convalida', max_length=10, choices=Convalida.choices, default=Convalida.CT)
+    tasto = models.CharField('scritta del tasto', max_length=40, blank=True, help_text='es. «Piazzale pulito»; vuoto = «Segnala completata»')
+    minuti_prima_fine = models.PositiveSmallIntegerField(
+        'si fa da … minuti prima della fine del turno', null=True, blank=True, help_text='vuoto = in qualsiasi momento')
+    ordine = models.PositiveSmallIntegerField(default=50, help_text='più basso = più in alto nella lista')
+    # es. il fermo per il controllo dei vagli zig-zag: in Oggi compare un promemoria con l'ora
+    promemoria = models.BooleanField('ricordalo in Oggi', default=False)
+    # se al controllo c'è un problema, diventa una segnalazione di guasto di questa macchina (con la foto)
+    macchina = models.ForeignKey('Macchina', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
     class Meta:
         verbose_name = 'mezzo / zona da pulire'
         verbose_name_plural = 'mezzi e zone da pulire'
-        ordering = ['tipo', 'nome']
+        ordering = ['ordine', 'tipo', 'nome']
+
+    @property
+    def controllo(self):
+        return self.modo in (self.Modo.CONTROLLO, self.Modo.CONTROLLO_FOTO)
+
+    @property
+    def icona(self):
+        return '🔍' if self.controllo else '🚜' if self.tipo == self.Tipo.MEZZO else '🧹'
 
     def __str__(self):
         return self.nome
@@ -333,6 +409,12 @@ class RegolaPulizia(models.Model):
         help_text='vuoto = tutte',
     )
     solo_capoturno = models.BooleanField(default=False)
+    GIORNI = [(0, 'Lunedì'), (1, 'Martedì'), (2, 'Mercoledì'), (3, 'Giovedì'), (4, 'Venerdì'), (5, 'Sabato'), (6, 'Domenica')]
+    giorno = models.PositiveSmallIntegerField('solo il', choices=GIORNI, null=True, blank=True, help_text='vuoto = tutti i giorni')
+    # sigla del ruolo nel Layout Turni (CT, OdL, Pal, Man…)
+    ruolo = models.CharField('solo il ruolo', max_length=10, blank=True, help_text='sigla del Layout Turni (CT, OdL, Pal, Man…); vuoto = tutti')
+    # es. i pozzetti: una sola persona al giorno, a turno tra quelli che corrispondono alla regola
+    a_rotazione = models.BooleanField('a turno tra gli addetti', default=False)
 
     class Meta:
         verbose_name = 'regola pulizia'
@@ -343,24 +425,44 @@ class RegolaPulizia(models.Model):
             filter(
                 None,
                 [
-                    'Capo turno' if self.solo_capoturno else '',
+                    'Capo Turno' if self.solo_capoturno else '',
+                    self.ruolo,
                     self.get_fascia_display() if self.fascia else '',
                     self.get_postazione_display() if self.postazione else 'tutte le postazioni',
+                    self.get_giorno_display().lower() if self.giorno is not None else '',
+                    'a turno' if self.a_rotazione else '',
                 ],
             )
         )
         return f'{chi} → {self.elemento}'
 
-    def si_applica(self, turno):
+    def corrisponde(self, turno):
         return (
-            (not self.postazione or self.postazione == turno.postazione)
-            and (not self.fascia or self.fascia == turno.fascia)
+            (not self.fascia or self.fascia == turno.fascia)
             and (not self.solo_capoturno or turno.capoturno)
+            and (self.giorno is None or self.giorno == turno.data.weekday())
+            # basta uno degli incarichi del turno (es. Capo Turno e palista: le pulizie di tutti e due)
+            and any((not self.postazione or self.postazione == p) and (not self.ruolo or self.ruolo.upper() == r.upper())
+                    for p, r in turno.lista_incarichi)
         )
+
+    def si_applica(self, turno):
+        if not self.corrisponde(turno):
+            return False
+        if not self.a_rotazione:
+            return True
+        # una persona al giorno: si gira tra chi corrisponde, in ordine di nome
+        candidati = [t for t in Turno.objects.filter(data=turno.data, fascia=turno.fascia).order_by('dipendente__nome', 'pk')
+                     if self.corrisponde(t)]
+        return bool(candidati) and candidati[turno.data.toordinal() % len(candidati)].pk == turno.pk
 
 
 def percorso_foto(istanza, nome):
     return f'pulizie/{istanza.turno.data:%Y/%m}/{istanza.turno_id}-{istanza.elemento_id}-{timezone.now():%H%M%S}.jpg'
+
+
+def percorso_foto_richiesta(istanza, nome):
+    return f'pulizie/{istanza.turno.data:%Y/%m}/{istanza.turno_id}-richiesta-{timezone.now():%H%M%S}.jpg'
 
 
 def percorso_foto_prima(istanza, nome):
@@ -381,11 +483,13 @@ class Pulizia(models.Model):
     # vuoto per le pulizie scritte solo nel commento ("Aggiungi pulizia" / "Richiedi pulizia" della nuova app)
     elemento = models.ForeignKey(ElementoPulizia, on_delete=models.PROTECT, null=True, blank=True)
     aggiunta_da_operaio = models.BooleanField(default=False, help_text='mezzo usato aggiunto a mano')
-    # "Richiedi pulizia": un collega (di solito il capo turno) la chiede a chi è in turno
+    # "Richiedi pulizia": un collega (di solito il Capo Turno) la chiede a chi è in turno
     richiesta_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     stato = models.CharField(max_length=12, choices=Stato.choices, default=Stato.DA_FARE)
     fatta_il = models.DateTimeField(null=True, blank=True)
     foto_prima = models.ImageField('foto prima', upload_to=percorso_foto_prima, blank=True)
+    # "Richiedi pulizia": la foto di cosa va pulito, scattata da chi la chiede
+    foto_richiesta = models.ImageField('foto della richiesta', upload_to=percorso_foto_richiesta, blank=True)
     foto = models.ImageField('foto dopo', upload_to=percorso_foto, blank=True)
     nota = models.CharField(max_length=300, blank=True)
     verificata_da = models.ForeignKey(
@@ -393,15 +497,35 @@ class Pulizia(models.Model):
     )
     verificata_il = models.DateTimeField(null=True, blank=True)
     nota_verifica = models.CharField(max_length=300, blank=True)
+    # convalida in due passaggi (voci "Capo Turno, poi responsabile piazzale"): l'ok del Capo Turno
+    ok_capoturno_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    ok_capoturno_il = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name_plural = 'pulizie'
-        ordering = ['elemento__tipo', 'elemento__nome']
+        ordering = ['elemento__ordine', 'elemento__tipo', 'elemento__nome']
         constraints = [models.UniqueConstraint(fields=['turno', 'elemento'], condition=models.Q(elemento__isnull=False),
                                                name='una_pulizia_per_elemento')]
 
     def __str__(self):
         return f'{self.turno} — {self.titolo} ({self.get_stato_display()})'
+
+    @property
+    def da_quando(self):
+        """Da che ora si può fare (es. Linea incolore: un'ora prima della fine del turno); None = subito."""
+        if self.elemento_id and self.elemento.minuti_prima_fine:
+            return self.turno.fine - timedelta(minutes=self.elemento.minuti_prima_fine)
+        return None
+
+    @property
+    def disponibile(self):
+        return self.da_quando is None or timezone.now() >= self.da_quando
+
+    @property
+    def icona(self):
+        return self.elemento.icona if self.elemento_id else '🧹'
 
     @property
     def titolo(self):
@@ -410,6 +534,29 @@ class Pulizia(models.Model):
             return self.elemento.nome
         testo = (self.nota or '').strip()
         return (testo[:40] + '…') if len(testo) > 40 else (testo or 'Pulizia')
+
+
+class PuliziaGenerale(models.Model):
+    """Ogni 2 settimane il responsabile piazzale decide se la pulizia generale dell'Impianto 2 è da fare."""
+
+    OGNI_GIORNI = 14
+
+    class Esito(models.TextChoices):
+        DA_FARE = 'DA_FARE', 'Da fare'
+        NON_NECESSARIA = 'NON_NECESSARIA', 'Non necessaria'
+
+    data = models.DateField()
+    esito = models.CharField(max_length=15, choices=Esito.choices, blank=True)
+    deciso_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    deciso_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'pulizia generale Impianto 2'
+        verbose_name_plural = 'pulizie generali Impianto 2'
+        ordering = ['-data']
+
+    def __str__(self):
+        return f'{self.data:%d/%m/%Y} · {self.get_esito_display() or "da decidere"}'
 
 
 # ---------------------------------------------------------------- Richieste
@@ -645,7 +792,7 @@ class Disponibilita(models.Model):
 
 
 class AvvisoAssenza(models.Model):
-    """Malattia, uscita anticipata, ritardo: lo vedono solo il responsabile turni e il capo turno."""
+    """Malattia, uscita anticipata, ritardo: lo vedono solo il responsabile turni e il Capo Turno."""
 
     class Tipo(models.TextChoices):
         MALATTIA = 'MALATTIA', 'Malattia'
@@ -663,6 +810,7 @@ class AvvisoAssenza(models.Model):
     creato_il = models.DateTimeField(auto_now_add=True)
     visto_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     visto_il = models.DateTimeField(null=True, blank=True)
+    annullato_il = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'avviso di assenza'
@@ -891,6 +1039,9 @@ class Intervento(models.Model):
     video = models.FileField(upload_to='manutenzione/video/%Y/%m/', blank=True)
     officina_esterna = models.CharField('riparazione esterna presso', max_length=80, blank=True)
     piano = models.ForeignKey('ManutenzioneProgrammata', null=True, blank=True, on_delete=models.SET_NULL, related_name='interventi')
+    # costi: i pezzi si calcolano dai ricambi usati; qui la manutenzione o il servizio della ditta esterna
+    costo_esterno = models.DecimalField('costo ditta esterna €', max_digits=9, decimal_places=2, null=True, blank=True)
+    report_esterno = models.FileField('report della ditta esterna', upload_to='manutenzione/report/%Y/%m/', blank=True)
 
     class Meta:
         verbose_name_plural = 'interventi'
@@ -965,6 +1116,18 @@ class Intervento(models.Model):
         return round((fine - self.segnalata_il).total_seconds() / 3600, 1)
 
 
+def _costi_intervento(self):
+    """{'pezzi', 'esterno', 'totale', 'senza_prezzo'}: senza_prezzo = pezzi usati di cui non si conosce il costo."""
+    usati = list(self.ricambi_usati.all())
+    pezzi = sum((p.costo for p in usati if p.costo is not None), Decimal('0'))
+    esterno = self.costo_esterno or Decimal('0')
+    return {'pezzi': pezzi, 'esterno': esterno, 'totale': pezzi + esterno,
+            'senza_prezzo': [p.nome for p in usati if p.costo is None]}
+
+
+Intervento.costi = property(_costi_intervento)
+
+
 class FotoIntervento(models.Model):
     """Foto in più di un intervento (es. prima, durante e dopo una sostituzione)."""
 
@@ -1018,10 +1181,17 @@ class RicambioUsato(models.Model):
     ricambio = models.ForeignKey(Ricambio, null=True, blank=True, on_delete=models.SET_NULL, related_name='usi')
     descrizione = models.CharField(max_length=100, blank=True)
     quantita = models.PositiveIntegerField(default=1)
+    # copiato dal magazzino quando il pezzo viene usato (se il costo cambia dopo, l'intervento resta com'era)
+    costo_unitario = models.DecimalField('costo unitario €', max_digits=9, decimal_places=2, null=True, blank=True)
 
     @property
     def nome(self):
         return self.ricambio.nome if self.ricambio else self.descrizione
+
+    @property
+    def costo(self):
+        unitario = self.costo_unitario if self.costo_unitario is not None else (self.ricambio.costo if self.ricambio else None)
+        return unitario * self.quantita if unitario is not None else None
 
 
 class OrdineRicambio(models.Model):
@@ -1057,6 +1227,11 @@ class OrdineRicambio(models.Model):
     @property
     def nome(self):
         return self.ricambio.nome if self.ricambio else self.descrizione
+
+    @property
+    def numero(self):
+        """Numero dell'ordine da citare al fornitore e in ufficio (es. 0042)."""
+        return f'{self.pk:04d}' if self.pk else ''
 
     @property
     def classe_stato(self):
@@ -1153,7 +1328,7 @@ class FermoImpianto(models.Model):
 
 
 class Comunicazione(models.Model):
-    """Comunicazione del responsabile (o di capi turno e manutentori): qualità, procedure, controlli,
+    """Comunicazione del responsabile (o di Capi Turno e manutentori): qualità, procedure, controlli,
     mezzi non disponibili. Si segue fino a "risolta", con le risposte di chi se ne occupa."""
 
     class Tipo(models.TextChoices):
@@ -1171,7 +1346,7 @@ class Comunicazione(models.Model):
 
     class A(models.TextChoices):
         TUTTI = 'TUTTI', 'Tutti'
-        CAPITURNO = 'CAPITURNO', 'Capi turno'
+        CAPITURNO = 'CAPITURNO', 'Capi Turno'
         MANUTENTORI = 'MANUTENTORI', 'Manutentori'
         PALISTI = 'PALISTI', 'Utilizzatori delle pale'
 

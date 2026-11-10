@@ -52,6 +52,7 @@
       <form method="post" class="prova-turni">{% csrf_token %}
         <input type="hidden" name="dipendente" value="{{ d.pk }}">
         <button class="link-piccolo" name="azione" value="turni_prova">Genera turni di prova (per far vedere l'app)</button>
+        <button class="link-piccolo" name="azione" value="turni_prova_capo">Genera turni di prova da Capo Turno</button>
       </form>
       {% endif %}
     </li>

@@ -1,7 +1,7 @@
 """Regole della manutenzione: chi fa cosa, notifiche, manutenzioni programmate.
 
 Percorso di un guasto (come nei software CMMS, ma snello):
-  segnalato (chiunque, con foto) → approvato dal capo turno o dal responsabile manutenzione
+  segnalato (chiunque, con foto) → approvato dal Capo Turno o dal responsabile manutenzione
   e assegnato al manutentore di turno → in lavorazione → (attesa pezzi) → riparato (con foto).
 I pezzi da ordinare li chiede il manutentore o il responsabile; il responsabile approva,
 gli acquisti ordinano, all'arrivo la scorta di magazzino sale da sola.
@@ -212,7 +212,8 @@ def completa(utente, i, lavoro, foto, ore, pezzi):
     i.foto_riparazione.save('riparazione.jpg', comprimi_foto(foto), save=False)
     i.save()
     for ricambio, descrizione, quantita in pezzi:
-        i.ricambi_usati.create(ricambio=ricambio, descrizione=descrizione, quantita=quantita)
+        i.ricambi_usati.create(ricambio=ricambio, descrizione=descrizione, quantita=quantita,
+                               costo_unitario=ricambio.costo if ricambio else None)
         if ricambio:
             ricambio.scorta -= quantita
             ricambio.save(update_fields=['scorta'])
@@ -240,16 +241,43 @@ def chiedi_pezzo(utente, ricambio, descrizione, quantita, urgente, nota, interve
             intervento.save(update_fields=['stato'])
         evento(intervento, utente, f'Chiesto pezzo: {o.nome} × {quantita}')
     if o.stato == OrdineRicambio.Stato.RICHIESTO:
-        avvisa(responsabili(), utente, 'Pezzo da approvare', f'{o.nome} × {quantita}', reverse('turni:ordini'))
+        avvisa(responsabili(), utente, f'Pezzo da approvare · n. {o.numero}', f'{o.nome} × {quantita}', reverse('turni:ordini'))
     else:
-        avvisa(acquisti(), utente, 'Pezzo da ordinare', f'{o.nome} × {quantita}', reverse('turni:ordini'))
+        avvisa(acquisti(), utente, f'Pezzo da ordinare · n. {o.numero}', f'{o.nome} × {quantita}', reverse('turni:ordini'))
     return o
+
+
+def richieste_aperte(pezzi, descrizione=''):
+    """Le richieste ancora aperte per gli stessi pezzi: {ricambio_id o descrizione: ordine}."""
+    S = OrdineRicambio.Stato
+    aperte = OrdineRicambio.objects.filter(stato__in=[S.RICHIESTO, S.APPROVATO, S.ORDINATO]).select_related(
+        'ricambio', 'richiesto_da__dipendente').order_by('richiesto_il')
+    trovate = {}
+    ids = [r.pk for r, _ in pezzi if r]
+    for o in aperte.filter(ricambio_id__in=ids):
+        trovate.setdefault(o.ricambio_id, o)
+    if descrizione:
+        o = aperte.filter(ricambio__isnull=True, descrizione__iexact=descrizione).first()
+        if o:
+            trovate[descrizione.lower()] = o
+    return trovate
+
+
+def aggiungi_a_ordine(utente, o, quantita):
+    """Invece di un secondo ordine, si aumentano i pezzi della richiesta già aperta (se non è ancora ordinata)."""
+    o.quantita += quantita
+    o.nota = (o.nota + f' · +{quantita} chiesti da {Intervento._nome(utente)}').strip(' ·')[:300]
+    o.save(update_fields=['quantita', 'nota'])
+    chi = responsabili() if o.stato == OrdineRicambio.Stato.RICHIESTO else acquisti()
+    avvisa(chi + [o.richiesto_da_id], utente, 'Pezzi aggiunti a una richiesta', f'{o.nome}: ora {o.quantita}', reverse('turni:ordini'))
 
 
 def avanza_ordine(utente, o, azione, fornitore='', dove=''):
     if azione == 'approva' and o.stato == OrdineRicambio.Stato.RICHIESTO and e_resp(utente):
         o.stato, o.approvato_da = OrdineRicambio.Stato.APPROVATO, utente
-        avvisa(acquisti(), utente, 'Pezzo da ordinare', f'{o.nome} × {o.quantita}', reverse('turni:ordini'))
+        avvisa(acquisti(), utente, f'Pezzo da ordinare · n. {o.numero}', f'{o.nome} × {o.quantita}', reverse('turni:ordini'))
+        avvisa([o.richiesto_da_id], utente, f'✅ Richiesta approvata · ordine n. {o.numero}', f'{o.nome} × {o.quantita}',
+               reverse('turni:ordini'))
     elif azione == 'ordinato' and o.stato == OrdineRicambio.Stato.APPROVATO and puo_ordinare(utente):
         o.stato, o.ordinato_il, o.fornitore = OrdineRicambio.Stato.ORDINATO, timezone.now(), fornitore[:80]
     elif azione == 'arrivato' and o.stato == OrdineRicambio.Stato.ORDINATO and (puo_ordinare(utente) or e_manutentore(utente)):
@@ -257,6 +285,8 @@ def avanza_ordine(utente, o, azione, fornitore='', dove=''):
         if o.ricambio:
             o.ricambio.scorta += o.quantita
             o.ricambio.save(update_fields=['scorta'])
+        avvisa([o.richiesto_da_id], utente, f'📦 Arrivato · ordine n. {o.numero}', o.nome + (f' · si trova {o.dove}' if o.dove else ''),
+               reverse('turni:ordini'))
         i = o.intervento
         if i:
             evento(i, utente, f'Arrivato: {o.nome}' + (f' · si trova {o.dove}' if o.dove else ''))
@@ -416,7 +446,8 @@ def registra_lavoro(utente, macchina, testo, foto, ore, pezzi, tipo_lavoro='', p
     for c in compresse[1:]:
         FotoIntervento.objects.create(intervento=i, foto=c)
     for ricambio, descrizione, quantita in pezzi:
-        i.ricambi_usati.create(ricambio=ricambio, descrizione=descrizione, quantita=quantita)
+        i.ricambi_usati.create(ricambio=ricambio, descrizione=descrizione, quantita=quantita,
+                               costo_unitario=ricambio.costo if ricambio else None)
         if ricambio:
             ricambio.scorta -= quantita
             ricambio.save(update_fields=['scorta'])

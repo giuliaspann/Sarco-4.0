@@ -8,10 +8,11 @@
 {% for titolo, elenco in gruppi %}
 {% if elenco %}
 <h2 class="rq-sezione">{{ titolo }} <span class="mn-conta">{{ elenco|length }}</span></h2>
+{% if ordina and titolo == 'Da ordinare' %}<a class="bottone leggero piena-larghezza or-pdf" href="{% url 'turni:ordini_pdf' %}">⬇ PDF per il fornitore (tutti i pezzi da ordinare)</a>{% endif %}
 {% for o in elenco %}
 <div class="scheda mn-ordine{% if o.urgente %} urgente{% endif %}">
   <div class="mn-ordine-testa">
-    <b>{{ o.nome }} × {{ o.quantita }}</b>
+    <b><span class="or-numero">n. {{ o.numero }}</span> {{ o.nome }} × {{ o.quantita }}</b>
     <span class="stato-chip {{ o.classe_stato }}">{% if o.urgente and o.aperto %}Urgente · {% endif %}{{ o.get_stato_display }}</span>
   </div>
   <small class="tenue">{% if o.macchina %}{{ o.macchina.nome }} · {% endif %}chiesto da {{ o.richiesto_da.dipendente.nome_breve|default:'Ufficio' }} il {{ o.richiesto_il|date:'j M' }}{% if o.approvato_da %} · approvato da {{ o.approvato_da.dipendente.nome_breve|default:'Ufficio' }}{% endif %}{% if o.fornitore %} · fornitore {{ o.fornitore }}{% endif %}{% if o.dove %} · 📍 {{ o.dove }}{% endif %}</small>
@@ -19,6 +20,8 @@
   <div class="mn-ordine-prove">
     {% if o.intervento %}<a href="{% url 'turni:intervento' o.intervento.pk %}">🛠️ Intervento #{{ o.intervento.pk }}{% if o.intervento.foto_guasto %} · foto del guasto{% endif %}</a>{% endif %}
     {% if o.foto %}<a href="{% url 'turni:foto_mn' 'ordine' o.pk %}">📷 Foto allegata</a>{% endif %}
+    {% url 'admin:turni_ordinericambio_change' o.pk as admin_url %}{% include 'turni/_admin_modifica.html' %}
+    {% if ordina and o.stato == 'APPROVATO' or ordina and o.stato == 'ORDINATO' %}<a href="{% url 'turni:ordini_pdf' %}?o={{ o.pk }}">⬇ PDF per il fornitore</a>{% endif %}
   </div>
   <form method="post" class="mn-ordine-azioni">{% csrf_token %}<input type="hidden" name="ordine" value="{{ o.pk }}">
     {% if o.stato == 'RICHIESTO' and resp %}<button class="bottone pieno" name="azione" value="approva">Approva</button>{% endif %}

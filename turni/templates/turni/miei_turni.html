@@ -1,11 +1,27 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Area personale{% endblock %}
 {% block contenuto %}
-<div class="intestazione"><h1>Area personale</h1></div>
+{# stile profilo Instagram: cerchietto, nome, tasti delle richieste, poi la settimana su una riga #}
+<div class="ig-profilo">
+  {# tocca il cerchietto per cambiare la foto: si invia appena scelta #}
+  <form method="post" action="{% url 'turni:foto_profilo' %}" enctype="multipart/form-data">{% csrf_token %}
+    <label class="ig-profilo-foto" title="Cambia foto profilo">
+      {% if dip.foto %}<img src="{% url 'turni:foto_profilo_img' dip.pk %}?v={{ dip.foto.name|slice:'-12:' }}" alt="La tua foto profilo">{% else %}<span>{{ dip.nome_breve|slice:':1' }}{{ dip.nome_breve.split|last|slice:':1' }}</span>{% endif %}
+      <i class="ig-piu" aria-hidden="true">+</i>
+      <input class="ig-scegli-foto" type="file" name="foto" accept="image/*" data-invia-subito aria-label="{% if dip.foto %}Cambia{% else %}Aggiungi{% endif %} la foto profilo">
+    </label>
+    <noscript><button class="bottone">Salva foto</button></noscript>
+  </form>
+  <h1>{{ dip.nome_breve }}</h1>
+</div>
+<div class="ig-tasti">
+  <a href="{% url 'turni:settimana_tutti' %}">Cambio turno</a>
+  <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita</a>
+</div>
 
-<div class="tit-riga">
-  <h2 class="ap-sezione">Turni della settimana</h2>
-  <a class="tasto-piccolo" href="{% url 'turni:settimana_tutti' %}?settimana={{ inizio|date:'Y-m-d' }}">👥 Turni di tutti ›</a>
+<div class="ig-schede">
+  <span class="attiva">Settimana</span>
+  <a href="{% url 'turni:settimana_tutti' %}?settimana={{ inizio|date:'Y-m-d' }}">Turni di tutti</a>
 </div>
 <div class="naviga mese ap-naviga">
   <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
@@ -49,15 +65,9 @@
 </section>
 {% endfor %}
 
-<h2 class="ap-sezione" id="richieste">Richieste</h2>
-{% include 'turni/_saldo.html' %}
-<div class="tre">
-  <a class="home-tasto" href="{% url 'turni:settimana_tutti' %}"><span class="home-icona">🔄</span><b>Cambio turno</b></a>
-  <a class="home-tasto" href="{% url 'turni:nuove_ferie' %}"><span class="home-icona">🏖️</span><b>Ferie / permesso</b></a>
-  <a class="home-tasto" href="{% url 'turni:nuovo_avviso' %}"><span class="home-icona">🤒</span><b>Avviso assenza</b></a>
-</div>
-<a class="sg-macchina" href="{% url 'turni:storico_assenze' %}">
-  <span class="home-icona">📒</span><span class="rq-testo"><b>Le mie assenze</b><small>ritardi, malattie, uscite anticipate, ferie e permessi</small></span><span class="sg-freccia">›</span>
+{# ferie, permessi, saldo e malattia tolti dall'app su richiesta di Giulia (10/11/2026): i dati vecchi restano nel database #}
+<a class="sg-macchina" id="richieste" href="{% url 'turni:storico_assenze' %}">
+  <span class="home-icona">📒</span><span class="rq-testo"><b>Le mie assenze</b><small>ritardi e uscite anticipate</small></span><span class="sg-freccia">›</span>
 </a>
 {% if nav_report %}
 <a class="sg-macchina" href="{% url 'turni:report_assenze' %}">
@@ -69,7 +79,7 @@
 <h2 class="ap-sezione">Da approvare</h2>
 {% if nav_capoturno %}
 <a class="sg-macchina" href="{% url 'turni:capoturno' %}">
-  <span class="home-icona">🧹</span><span class="rq-testo"><b>Pulizie da verificare</b><small>capo turno</small></span>
+  <span class="home-icona">🧹</span><span class="rq-testo"><b>Pulizie da verificare</b><small>Capo Turno</small></span>
   {% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}
 </a>
 {% endif %}
