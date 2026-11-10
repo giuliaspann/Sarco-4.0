@@ -7,15 +7,15 @@
   --spento: #7f8588;
   --bordo: #dcdfe0;
   --marchio: #4fac25;        /* verde del logo: solo superfici, mai testo bianco sopra */
-  --primario: #2e7a14;       /* verde scuro: pulsanti e testo */
-  --primario-scuro: #215a0e;
+  --primario: #3aaa35;       /* il verde della campana del logo: uno solo in tutta l'app (Giulia, 10/11) */
+  --primario-scuro: #3aaa35;
   --primario-chiaro: #e8f4e2;
   --imp1: #fbe7b5;
   --imp2: #f9d9a6;
   --notte: #dce6f2;
   --notte-testo: #00384f;
   --altro: #eef0f1;
-  --ok: #2e7a14;
+  --ok: #3aaa35;
   --attenzione: #c2410c;
   --errore: #b3261e;
   --raggio: 12px;
@@ -34,15 +34,15 @@
     --tenue: #9fb0b8;
     --spento: #6f8089;
     --bordo: #26363f;
-    --primario: #7cc95b;
-    --primario-scuro: #9bd981;
+    --primario: #3aaa35;
+    --primario-scuro: #3aaa35;
     --primario-chiaro: #1a3320;
     --imp1: #4a4019;
     --imp2: #4d3615;
     --notte: #17304a;
     --notte-testo: #cfe0f5;
     --altro: #1d2c34;
-    --ok: #7cc95b;
+    --ok: #3aaa35;
     --attenzione: #f08a55;
     --errore: #f2867e;
     color-scheme: dark;
@@ -810,8 +810,8 @@ p.orario { margin: 2px 0 6px; }
 .senza-rientro { margin-left: 0; }
 .barra-avanzamento { width: 100%; height: 14px; border: 0; border-radius: 99px; overflow: hidden; background: var(--bordo); appearance: none; -webkit-appearance: none; }
 .barra-avanzamento::-webkit-progress-bar { background: var(--bordo); border-radius: 99px; }
-.barra-avanzamento::-webkit-progress-value { background: var(--ok, #2e7a14); border-radius: 99px; }
-.barra-avanzamento::-moz-progress-bar { background: var(--ok, #2e7a14); border-radius: 99px; }
+.barra-avanzamento::-webkit-progress-value { background: var(--ok, #3aaa35); border-radius: 99px; }
+.barra-avanzamento::-moz-progress-bar { background: var(--ok, #3aaa35); border-radius: 99px; }
 
 /* ------------------------------------------------ tessere di accesso (anche stampabili) */
 .accessi-tutti { border: 2px solid var(--primario); }
