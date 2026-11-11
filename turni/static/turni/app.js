@@ -161,31 +161,59 @@ async function iscrivi(riquadro) {
       chat.appendChild(d);
     }
     const primo = nuovoGiorno || prec.dataset.autore !== String(m.autore_id);
+    const riga = document.createElement('div');
+    riga.className = 'wa-riga' + (m.mio ? ' mia' : '');
+    riga.id = 'm' + m.id;
+    if (!m.mio) {
+      const tondo = document.createElement('span');
+      tondo.className = 'wa-tondo' + (primo ? '' : ' vuoto');
+      if (primo && m.tondo.foto) { const i = document.createElement('img'); i.src = m.tondo.foto; i.alt = ''; tondo.appendChild(i); }
+      else if (primo) tondo.textContent = m.tondo.iniziali;
+      riga.appendChild(tondo);
+    }
     const b = document.createElement('div');
-    b.className = 'wa-msg' + (m.mio ? ' mio' : '') + (primo ? ' primo' : '');
+    b.className = 'wa-msg' + (m.mio ? ' mio' : '') + (primo ? ' primo' : '') + (m.foto ? ' con-foto' : '');
     b.dataset.id = m.id; b.dataset.autore = m.autore_id; b.dataset.giorno = m.giorno;
+    if (m.info) b.dataset.info = m.info;
     if (!m.mio && primo) {
       const a = document.createElement('span');
       a.className = 'wa-autore c' + m.colore;
       a.textContent = m.autore;
       b.appendChild(a);
     }
-    const t = document.createElement('span');
-    t.className = 'wa-testo' + (m.eliminato ? ' eliminato' : '');
-    t.textContent = m.eliminato ? (m.testo ? m.testo + ' · eliminato' : 'Messaggio eliminato') : m.testo;
-    b.appendChild(t);
+    if (m.foto) {
+      const l = document.createElement('a'); l.className = 'wa-foto'; l.href = m.foto; l.target = '_blank';
+      const i = document.createElement('img'); i.src = m.foto; i.alt = 'Foto di ' + m.autore; l.appendChild(i); b.appendChild(l);
+    }
+    if (m.sondaggio) {
+      const l = document.createElement('a'); l.className = 'wa-testo'; l.href = location.pathname + location.search + '#m' + m.id;
+      l.textContent = 'Sondaggio: ' + m.sondaggio.domanda + ' · tocca per votare';
+      l.addEventListener('click', () => setTimeout(() => location.reload(), 0));
+      b.appendChild(l);
+    } else if (m.testo || m.eliminato) {
+      const t = document.createElement('span');
+      t.className = 'wa-testo' + (m.eliminato ? ' eliminato' : '');
+      t.textContent = m.eliminato ? (m.testo ? m.testo + ' · eliminato' : 'Messaggio eliminato') : m.testo;
+      b.appendChild(t);
+    }
     const o = document.createElement('span');
     o.className = 'wa-ora';
     o.textContent = m.ora;
+    if (m.mio) o.insertAdjacentHTML('beforeend', ' <svg class="wa-spunte' + (m.letto ? ' lette' : '') + '" viewBox="0 0 18 12" role="img" aria-label="Inviato"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>');
     b.appendChild(o);
-    chat.appendChild(b);
+    riga.appendChild(b);
+    chat.appendChild(riga);
   }
 
   async function aggiorna() {
     if (document.hidden) return;
     try {
       const r = await fetch(chat.dataset.url + '&dopo=' + chat.dataset.ultimo);
-      const { messaggi } = await r.json();
+      const { messaggi, letto_fino } = await r.json();
+      // spunte blu: i miei messaggi letti da tutti
+      chat.querySelectorAll('.wa-msg.mio').forEach(b => {
+        if (Number(b.dataset.id) <= letto_fino) { const sp = b.querySelector('.wa-spunte'); if (sp) sp.classList.add('lette'); }
+      });
       if (!messaggi.length) return;
       const vuota = document.getElementById('chat-vuota');
       if (vuota) vuota.remove();
@@ -578,8 +606,54 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
 // Turni di tutti: la testa con settimana e giorni si ferma subito sotto la barra in alto
 (function () {
   const barra = document.querySelector('.barra');
-  if (barra && document.querySelector('.st-testa')) document.documentElement.style.setProperty('--alto-barra', barra.offsetHeight + 'px');
+  if (barra && document.querySelector('.st-testa, .wa-testa')) document.documentElement.style.setProperty('--alto-barra', barra.offsetHeight + 'px');
 })();
 
 // Anagrafica: scelto il dipendente, la pagina si aggiorna da sola
 document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.addEventListener('change', () => s.form.submit()));
+
+
+// Chat · scorri un tuo messaggio verso destra per vedere chi l'ha letto (come WhatsApp, Giulia 11/11)
+(function () {
+  const chat = document.getElementById('chat');
+  if (!chat) return;
+  let fumetto = null, x0 = 0, y0 = 0, dx = 0;
+  chat.addEventListener('touchstart', e => {
+    fumetto = e.target.closest('.wa-msg[data-info]');
+    if (!fumetto) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0;
+  }, { passive: true });
+  chat.addEventListener('touchmove', e => {
+    if (!fumetto) return;
+    dx = e.touches[0].clientX - x0;
+    if (Math.abs(e.touches[0].clientY - y0) > Math.abs(dx)) { fumetto.style.transform = ''; fumetto = null; return; }
+    if (dx > 0) fumetto.style.transform = 'translateX(' + Math.min(dx, 110) + 'px)';
+  }, { passive: true });
+  chat.addEventListener('touchend', () => {
+    if (!fumetto) return;
+    const vai = dx > 80 ? fumetto.dataset.info : null;
+    fumetto.style.transform = '';
+    fumetto = null;
+    if (vai) location.href = vai;
+  });
+})();
+
+// Chat · foto scattata o scelta: la riduco in JPEG (anche le HEIC dell'iPhone) e la mostro prima di inviarla
+(function () {
+  const inputs = document.querySelectorAll('input[data-foto-chat]');
+  const pronta = document.getElementById('foto-pronta');
+  if (!inputs.length || !pronta) return;
+  const togli = () => { inputs.forEach(i => { i.value = ''; }); pronta.hidden = true; };
+  inputs.forEach(input => input.addEventListener('change', async () => {
+    if (!input.files.length) return;
+    inputs.forEach(altro => { if (altro !== input) altro.value = ''; });
+    const menu = input.form.querySelector('.wa-piu'); if (menu) menu.open = false;
+    if (window.DataTransfer && window.createImageBitmap) {
+      try { const dt = new DataTransfer(); dt.items.add(await riduci(input.files[0])); input.files = dt.files; } catch (e) { /* la riduce il server */ }
+    }
+    pronta.querySelector('img').src = URL.createObjectURL(input.files[0]);
+    pronta.hidden = false;
+  }));
+  const x = document.getElementById('foto-togli');
+  if (x) x.addEventListener('click', togli);
+})();

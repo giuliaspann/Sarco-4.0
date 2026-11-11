@@ -916,7 +916,9 @@ class MessaggioChat(models.Model):
 
     chat = models.ForeignKey(Chat, null=True, on_delete=models.CASCADE, related_name='messaggi')
     autore = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
-    testo = models.TextField(max_length=1000)
+    testo = models.TextField(max_length=1000, blank=True)
+    # foto scattata o caricata dal telefono (Giulia, 11/11/2026)
+    foto = models.ImageField(upload_to='chat/%Y/%m/', blank=True)
     creato_il = models.DateTimeField(auto_now_add=True)
     eliminato = models.BooleanField(default=False)
 
@@ -924,6 +926,48 @@ class MessaggioChat(models.Model):
         verbose_name = 'messaggio chat'
         verbose_name_plural = 'messaggi chat'
         ordering = ['creato_il']
+
+
+class FotoUtente(models.Model):
+    """Foto profilo di chi non è un dipendente (ufficio): tutti hanno il tondino con la foto (Giulia, 11/11/2026)."""
+
+    utente = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='foto_profilo')
+    foto = models.ImageField(upload_to='profili/')
+
+    class Meta:
+        verbose_name_plural = 'foto utenti'
+
+
+class Sondaggio(models.Model):
+    """Un sondaggio in una chat: compare nella chat come messaggio, ognuno vota toccando un'opzione."""
+
+    messaggio = models.OneToOneField(MessaggioChat, on_delete=models.CASCADE, related_name='sondaggio')
+    domanda = models.CharField(max_length=200)
+    una_risposta = models.BooleanField('una sola risposta per persona', default=True)
+
+    class Meta:
+        verbose_name_plural = 'sondaggi'
+
+    def __str__(self):
+        return self.domanda
+
+
+class OpzioneSondaggio(models.Model):
+    sondaggio = models.ForeignKey(Sondaggio, on_delete=models.CASCADE, related_name='opzioni')
+    testo = models.CharField(max_length=100)
+    ordine = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['ordine', 'pk']
+
+
+class VotoSondaggio(models.Model):
+    opzione = models.ForeignKey(OpzioneSondaggio, on_delete=models.CASCADE, related_name='voti')
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['opzione', 'utente'], name='un_voto_per_opzione')]
 
 
 class StatoMessaggi(models.Model):

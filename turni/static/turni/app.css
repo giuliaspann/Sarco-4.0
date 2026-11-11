@@ -2404,3 +2404,65 @@ i.cal-arancio { background: #e07b00; } i.cal-viola { background: #7b4bb7; }
 .vb-riga:last-child { border-bottom: 0; }
 .vb-riga span:first-child { min-width: 0; overflow-wrap: break-word; }
 .vb-riga span:last-child { flex: none; }
+
+/* Chat · proposta A (Giulia, 11/11): tondino con la foto, foto, sondaggi, spunte blu, menu + */
+.wa-riga { display: flex; align-items: flex-start; gap: 6px; }
+.wa-riga.mia { justify-content: flex-end; }
+.wa-riga .wa-msg { align-self: auto; transition: transform .15s ease-out; }
+.wa-tondo { flex: none; width: 32px; height: 32px; margin-top: 6px; border-radius: 999px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: #e9f6e7; color: #2b7f27; font-size: .72rem; font-weight: 800; }
+.wa-tondo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wa-tondo.vuoto { background: transparent; height: 1px; }
+.wa-foto { display: block; margin: 2px -4px 4px; }
+.wa-foto img { display: block; width: 230px; max-width: 100%; max-height: 300px; object-fit: cover; border-radius: 6px; }
+.wa-spunte { width: 16px; height: 11px; vertical-align: -1px; fill: none; stroke: #8696a0; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wa-spunte.lette { stroke: #2f8ce0; }
+.wa-elimina a { display: inline-block; margin-right: 14px; color: #1d6fb8; font-size: .8rem; font-weight: 700; text-decoration: none; }
+.wa-elimina form { display: inline; }
+.wa-sondaggio { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+.wa-sondaggio-tipo { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #00384f; }
+.wa-sondaggio-domanda { font-size: 1rem; }
+.wa-opzione { display: block; width: 100%; text-align: left; padding: 7px 9px; border-radius: 8px; border: 1px solid #e5e6e7; background: #ffffff;
+  font: inherit; color: #111b21; cursor: pointer; }
+.wa-opzione.mia { border: 2px solid #3aaa35; background: #f1fbef; }
+.wa-opzione-riga { display: flex; justify-content: space-between; gap: 8px; font-size: .92rem; }
+.wa-opzione progress { display: block; width: 100%; height: 5px; margin-top: 5px; border: 0; border-radius: 999px; overflow: hidden; background: #eceef0; appearance: none; -webkit-appearance: none; }
+.wa-opzione progress::-webkit-progress-bar { background: #eceef0; }
+.wa-opzione progress::-webkit-progress-value { background: #3aaa35; border-radius: 999px; }
+.wa-opzione progress::-moz-progress-bar { background: #3aaa35; }
+.wa-sondaggio-nota { font-size: .74rem; color: #667781; }
+.wa-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.wa-scrivi { flex-wrap: wrap; }
+.wa-pronta { flex-basis: 100%; display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 12px; background: #ffffff; font-size: .82rem; color: #54656f; }
+.wa-pronta img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+.wa-pronta span { flex: 1; }
+.wa-pronta button { width: 36px; height: 36px; border-radius: 999px; border: 1px solid #f5b5b5; background: #fcd9d9; color: #9b1c1c; font-weight: 800; cursor: pointer; }
+.wa-piu { position: relative; flex: none; }
+.wa-piu summary, .wa-camera { list-style: none; width: 46px; height: 46px; border-radius: 999px; background: #ffffff; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+.wa-piu summary::-webkit-details-marker { display: none; }
+.wa-piu summary svg, .wa-camera svg { width: 22px; height: 22px; fill: none; stroke: #00384f; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wa-piu-voci { position: absolute; bottom: 54px; left: 0; z-index: 5; width: 230px; display: flex; flex-direction: column; padding: 6px; border-radius: 14px;
+  background: #ffffff; border: 1px solid #e5e6e7; box-shadow: 0 6px 20px rgba(0, 0, 0, .15); }
+.wa-piu-voci label, .wa-piu-voci a { display: flex; align-items: center; min-height: 46px; padding: 0 12px; border-radius: 10px; color: #00384f; font-weight: 700;
+  text-decoration: none; cursor: pointer; }
+.wa-piu-voci label:hover, .wa-piu-voci a:hover { background: #f2f2f2; }
+.wa-camera { flex: none; }
+/* Info messaggio */
+.ci-messaggio { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; margin-left: auto; max-width: 85%; padding: 8px 10px; border-radius: 12px;
+  background: #d9fdd3; color: #111b21; margin-bottom: 14px; }
+.ci-messaggio img { width: 200px; max-width: 100%; border-radius: 8px; }
+.ci-messaggio small { color: #667781; }
+.ci-gruppo { margin-bottom: 12px; border-radius: 16px; background: var(--carta); border: 1px solid var(--bordo); overflow: hidden; }
+.ci-titolo { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px; font-weight: 800; color: var(--tenue); }
+.ci-titolo.letti { color: #1d6fb8; }
+.ci-persona { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--bordo); }
+.ci-persona .wa-tondo { margin-top: 0; width: 36px; height: 36px; }
+.ci-vuoto { margin: 0; padding: 0 14px 12px; }
+.wa-pronta[hidden] { display: none; }
+
+/* Chat (Giulia, 11/11): il titolo della chat resta fisso sotto il logo, scorrono solo i messaggi */
+.wa-testa { position: sticky; top: var(--alto-barra, 64px); z-index: 6; }
+/* tasto fotocamera allineato al box del messaggio (Giulia, 11/11) */
+.wa-scrivi .wa-camera { margin: 0; padding: 0; gap: 0; align-self: flex-end; font-size: 0; }
+.wa-scrivi textarea { min-height: 46px; }

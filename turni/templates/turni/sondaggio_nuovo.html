@@ -1,0 +1,16 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Nuovo sondaggio{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:messaggi' %}?vista=chat&chat={{ chat.pk }}#fondo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ chat.nome }}</a>
+<div class="intestazione"><h1>Nuovo sondaggio</h1></div>
+
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <label class="mc-campo">Domanda<input type="text" name="domanda" maxlength="200" required placeholder="Es. Cena di Natale: quale sera?" value="{{ dati.domanda }}"></label>
+  {% for i in righe %}
+  <label class="mc-campo">Risposta {{ forloop.counter }}{% if forloop.counter > 2 %} (facoltativa){% endif %}<input type="text" name="opzione" maxlength="100"{% if forloop.counter <= 2 %} required{% endif %}></label>
+  {% endfor %}
+  <label class="mc-spunta"><input type="checkbox" name="una_risposta" value="1" checked> Una sola risposta per persona</label>
+  <p class="tenue piccolo">Il sondaggio compare nella chat «{{ chat.nome }}»: ognuno vota toccando una risposta e vede quanti hanno scelto cosa.</p>
+  <button class="bottone pieno piena-larghezza">Pubblica il sondaggio</button>
+</form>
+{% endblock %}

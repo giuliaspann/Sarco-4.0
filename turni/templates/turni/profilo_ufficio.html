@@ -3,7 +3,14 @@
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
 <div class="ig-profilo">
-  <span class="ig-profilo-foto"><span>{{ iniziali }}</span></span>
+  {# tutti gli utenti hanno il tondino con la foto, anche l'ufficio (Giulia, 11/11): toccalo per cambiarla #}
+  <form method="post" action="{% url 'turni:foto_profilo' %}" enctype="multipart/form-data">{% csrf_token %}
+    <label class="ig-profilo-foto" title="Cambia foto profilo">
+      {% if nav_foto %}<img src="{{ nav_foto }}" alt="La tua foto profilo">{% else %}<span>{{ iniziali }}</span>{% endif %}
+      <i class="ig-piu" aria-hidden="true">+</i>
+      <input class="ig-scegli-foto" type="file" name="foto" accept="image/*" data-invia-subito aria-label="{% if nav_foto %}Cambia{% else %}Aggiungi{% endif %} la foto profilo">
+    </label>
+  </form>
   <div><h1>{{ nome }}</h1>{% if ruoli %}<p class="tenue">{{ ruoli }}</p>{% endif %}</div>
 </div>
 

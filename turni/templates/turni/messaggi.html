@@ -73,22 +73,59 @@
       <p class="wa-info">Per ritardi e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita</a>: lo vedono solo ufficio e Capo Turno.</p>
       {% for m in chat %}
         {% if m.nuovo_giorno %}<div class="wa-data" data-giorno="{{ m.giorno }}"><span>{{ m.etichetta_giorno }}</span></div>{% endif %}
-        <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}">
+        {# proposta A scelta da Giulia (11/11): tondino con la foto, foto, sondaggi, spunte blu; scorri a destra un tuo messaggio per vedere chi l'ha letto #}
+        <div class="wa-riga{% if m.mio %} mia{% endif %}" id="m{{ m.id }}">
+        {% if not m.mio %}{% if m.primo %}<span class="wa-tondo">{% if m.tondo.foto %}<img src="{{ m.tondo.foto }}" alt="">{% else %}{{ m.tondo.iniziali }}{% endif %}</span>{% else %}<span class="wa-tondo vuoto"></span>{% endif %}{% endif %}
+        <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}{% if m.foto %} con-foto{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}"{% if m.info %} data-info="{{ m.info }}"{% endif %}>
           {% if not m.mio and m.primo %}<span class="wa-autore c{{ m.colore }}">{{ m.autore }}</span>{% endif %}
-          <span class="wa-testo{% if m.eliminato %} eliminato{% endif %}">{% if m.eliminato and m.testo %}{{ m.testo|linebreaksbr }} <em class="wa-storico">· eliminato</em>{% elif m.eliminato %}Messaggio eliminato{% else %}{{ m.testo|linebreaksbr }}{% endif %}</span><span class="wa-ora">{{ m.ora }}</span>
-          {% if m.eliminabile %}
-          <form method="post" class="wa-elimina">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}"><input type="hidden" name="messaggio" value="{{ m.id }}">
-            <button name="azione" value="elimina_chat" data-conferma="Eliminare questo messaggio per tutti?">Elimina</button></form>
+          {% if m.foto %}<a class="wa-foto" href="{{ m.foto }}" target="_blank"><img src="{{ m.foto }}" alt="Foto di {{ m.autore }}" loading="lazy"></a>{% endif %}
+          {% if m.sondaggio %}
+          <div class="wa-sondaggio">
+            <span class="wa-sondaggio-tipo">Sondaggio</span>
+            <b class="wa-sondaggio-domanda">{{ m.sondaggio.domanda }}</b>
+            {% for o in m.sondaggio.opzioni %}
+            <form method="post" action="{% url 'turni:vota_sondaggio' m.sondaggio.id %}">{% csrf_token %}
+              <button class="wa-opzione{% if o.mia %} mia{% endif %}" name="opzione" value="{{ o.id }}">
+                <span class="wa-opzione-riga"><span>{{ o.testo }}</span><b>{{ o.voti }}</b></span>
+                <progress value="{{ o.voti }}" max="{{ m.sondaggio.totale|default:1 }}">{{ o.voti }}</progress>
+              </button>
+            </form>
+            {% endfor %}
+            <small class="wa-sondaggio-nota">{{ m.sondaggio.totale }} vot{{ m.sondaggio.totale|pluralize:'o,i' }}{% if m.sondaggio.una_risposta %} · una risposta{% else %} · più risposte{% endif %} · tocca per votare</small>
+          </div>
+          {% elif m.testo or m.eliminato %}
+          <span class="wa-testo{% if m.eliminato %} eliminato{% endif %}">{% if m.eliminato and m.testo %}{{ m.testo|linebreaksbr }} <em class="wa-storico">· eliminato</em>{% elif m.eliminato %}Messaggio eliminato{% else %}{{ m.testo|linebreaksbr }}{% endif %}</span>
           {% endif %}
+          <span class="wa-ora">{{ m.ora }}{% if m.mio %} <svg class="wa-spunte{% if m.letto %} lette{% endif %}" viewBox="0 0 18 12" role="img" aria-label="{% if m.letto %}Letto da tutti{% else %}Inviato{% endif %}"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>{% endif %}</span>
+          {% if m.eliminabile or m.info %}
+          <div class="wa-elimina">
+            {% if m.info %}<a href="{{ m.info }}">Chi l'ha letto</a>{% endif %}
+            {% if m.eliminabile %}<form method="post">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}"><input type="hidden" name="messaggio" value="{{ m.id }}">
+              <button name="azione" value="elimina_chat" data-conferma="Eliminare questo messaggio per tutti?">Elimina</button></form>{% endif %}
+          </div>
+          {% endif %}
+        </div>
         </div>
       {% empty %}
         <p class="wa-info" id="chat-vuota">Nessun messaggio. Scrivi tu il primo!</p>
       {% endfor %}
     </div>
 
-    <form method="post" class="wa-scrivi" id="fondo">{% csrf_token %}
+    <form method="post" class="wa-scrivi" id="fondo" enctype="multipart/form-data">{% csrf_token %}
       <input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}">
-      <textarea name="testo" rows="1" maxlength="1000" required placeholder="Messaggio"></textarea>
+      <input type="file" name="foto" accept="image/*" capture="environment" id="foto-scatta" class="wa-file" data-foto-chat>
+      <input type="file" name="foto" accept="image/*" id="foto-galleria" class="wa-file" data-foto-chat>
+      <div class="wa-pronta" id="foto-pronta" hidden><img alt="Foto da inviare"><span>Foto pronta: scrivi un commento o tocca Invia</span><button type="button" id="foto-togli" aria-label="Togli la foto">✕</button></div>
+      <details class="wa-piu">
+        <summary aria-label="Allega foto o sondaggio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+        <div class="wa-piu-voci">
+          <label for="foto-scatta">Scatta una foto</label>
+          <label for="foto-galleria">Carica dalla galleria</label>
+          <a href="{% url 'turni:sondaggio_nuovo' chat_aperta.pk %}">Crea un sondaggio</a>
+        </div>
+      </details>
+      <textarea name="testo" rows="1" maxlength="1000" placeholder="Messaggio"></textarea>
+      <label class="wa-camera" for="foto-scatta" aria-label="Scatta una foto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></label>
       <button class="wa-invia" name="azione" value="chat" aria-label="Invia">
         <svg viewBox="0 0 24 24"><path d="M3 20.5l18-8.5L3 3.5l2.5 8.5L3 20.5zM5.5 12H13"/></svg>
       </button>

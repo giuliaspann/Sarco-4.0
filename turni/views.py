@@ -997,8 +997,7 @@ def foto_profilo(request):
     from .pulizie import MAX_FOTO
 
     dip = dipendente_di(request)
-    if dip is None:
-        raise PermissionDenied
+    torna = 'turni:miei_turni' if dip else 'turni:profilo'
     file = request.FILES.get('foto')
     try:
         if not file or file.size > MAX_FOTO:
@@ -1008,13 +1007,33 @@ def foto_profilo(request):
         img.save(buf, 'JPEG', quality=82, optimize=True)
     except Exception:
         messages.error(request, "Non riesco a leggere questa foto: scattane una nuova o scegline un'altra (JPG o PNG).")
-        return redirect('turni:miei_turni')
-    vecchia = dip.foto.name
-    dip.foto.save(f'profilo-{dip.pk}.jpg', ContentFile(buf.getvalue()), save=True)
-    if vecchia and vecchia != dip.foto.name:
-        dip.foto.storage.delete(vecchia)
+        return redirect(torna)
+    if dip is None:
+        from .models import FotoUtente
+
+        dove, _ = FotoUtente.objects.get_or_create(utente=request.user, defaults={'foto': ''})
+        nome = f'utente-{request.user.pk}.jpg'
+    else:
+        dove, nome = dip, f'profilo-{dip.pk}.jpg'
+    vecchia = dove.foto.name
+    dove.foto.save(nome, ContentFile(buf.getvalue()), save=True)
+    if vecchia and vecchia != dove.foto.name:
+        dove.foto.storage.delete(vecchia)
     messages.success(request, 'Foto profilo aggiornata.')
-    return redirect('turni:miei_turni')
+    return redirect(torna)
+
+
+@login_required
+def foto_utente_img(request, utente_id):
+    """La foto profilo dell'ufficio: la vedono i colleghi e l'ufficio."""
+    from .models import FotoUtente
+
+    if not (dipendente_di(request) or request.user.is_staff):
+        raise PermissionDenied
+    f = get_object_or_404(FotoUtente, utente_id=utente_id)
+    if not f.foto:
+        raise Http404
+    return FileResponse(f.foto.open('rb'), content_type='image/jpeg')
 
 
 @login_required

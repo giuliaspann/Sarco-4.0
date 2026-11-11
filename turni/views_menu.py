@@ -203,8 +203,10 @@ TIPI_CON_RISPOSTA = ('cambio', 'cambio_ufficio', 'manutenzione', 'pulizia_ct', '
 def _tondino(utente):
     """Foto del dipendente che ha generato la notifica, oppure le sue iniziali (l'ufficio: la sua iniziale)."""
     dip = getattr(utente, 'dipendente', None) if utente else None
-    if dip and dip.foto:
-        return {'foto': reverse('turni:foto_profilo_img', args=[dip.pk]) + f'?v={dip.foto.name[-12:]}'}
+    from .foto_profilo import foto_url
+
+    if foto_url(utente):
+        return {'foto': foto_url(utente)}
     if dip:
         parole = dip.nome_breve.replace("'", ' ').replace('’', ' ').split()
         return {'iniziali': (parole[0][:1] + (parole[-1][:1] if len(parole) > 1 else '')).upper()}

@@ -1,0 +1,26 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Info messaggio{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:messaggi' %}?vista=chat&chat={{ chat.pk }}#m{{ m.id }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ chat.nome }}</a>
+<div class="intestazione"><h1>Info messaggio</h1></div>
+
+<div class="ci-messaggio">
+  {% if m.foto %}<img src="{{ m.foto }}" alt="Foto">{% endif %}
+  {% if m.sondaggio %}<b>Sondaggio: {{ m.sondaggio.domanda }}</b>{% elif m.testo %}<span>{{ m.testo|linebreaksbr }}</span>{% endif %}
+  <small>{{ m.etichetta_giorno }} · {{ m.ora }}</small>
+</div>
+
+<section class="ci-gruppo">
+  <p class="ci-titolo letti"><svg class="wa-spunte lette" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>Letto da {{ letti|length }}</p>
+  {% for p in letti %}
+  <div class="ci-persona"><span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span><span>{{ p.nome }}</span></div>
+  {% empty %}<p class="tenue piccolo ci-vuoto">Nessuno l'ha ancora letto.</p>{% endfor %}
+</section>
+
+<section class="ci-gruppo">
+  <p class="ci-titolo"><svg class="wa-spunte" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>Non ancora letto · {{ non_letti|length }}</p>
+  {% for p in non_letti %}
+  <div class="ci-persona"><span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span><span class="tenue">{{ p.nome }}</span></div>
+  {% empty %}<p class="tenue piccolo ci-vuoto">L'hanno letto tutti.</p>{% endfor %}
+</section>
+{% endblock %}

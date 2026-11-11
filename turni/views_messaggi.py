@@ -19,7 +19,8 @@ from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
 from . import push
-from .models import Annuncio, Chat, IscrizionePush, LetturaChat, MessaggioChat, RuoloApp, StatoMessaggi
+from .models import (Annuncio, Chat, IscrizionePush, LetturaChat, MessaggioChat, OpzioneSondaggio, RuoloApp, Sondaggio,
+                     StatoMessaggi, VotoSondaggio)
 from .richieste import e_responsabile
 
 MESSAGGI_MOSTRATI = 100
@@ -98,9 +99,48 @@ def etichetta_giorno(giorno):
     return date_format(giorno, 'j F Y')
 
 
-def _messaggio_json(m, utente, responsabile, direzione=False):
-    quando = timezone.localtime(m.creato_il)
+def tondo_di(utente):
+    """Il tondino accanto al nome: la foto profilo o le iniziali (Giulia, 11/11)."""
+    from .foto_profilo import foto_url
+
+    if foto_url(utente):
+        return {'foto': foto_url(utente), 'iniziali': ''}
+    nome = nome_di(utente).replace("'", ' ').replace('’', ' ').split()
+    return {'foto': '', 'iniziali': ((nome[0][:1] if nome else '?') + (nome[-1][:1] if len(nome) > 1 else '')).upper()}
+
+
+def letto_da_tutti_fino(chat):
+    """Fino a quale messaggio hanno letto tutti (chi ha usato l'app almeno una volta): le spunte diventano blu."""
+    membri = list(membri_di(chat).filter(last_login__isnull=False).values_list('pk', flat=True))
+    if not membri:
+        return 0
+    letture = dict(LetturaChat.objects.filter(chat=chat, utente_id__in=membri).values_list('utente_id', 'letta_fino'))
+    return min(letture.get(u, 0) for u in membri)
+
+
+def _sondaggio_json(m, utente):
+    try:
+        so = m.sondaggio
+    except Sondaggio.DoesNotExist:
+        return None
+    opzioni = list(so.opzioni.prefetch_related('voti'))
+    totale = len({v.utente_id for o in opzioni for v in o.voti.all()})
     return {
+        'id': so.pk, 'domanda': so.domanda, 'una_risposta': so.una_risposta, 'totale': totale,
+        'opzioni': [{'id': o.pk, 'testo': o.testo, 'voti': len(o.voti.all()),
+                     'mia': any(v.utente_id == utente.pk for v in o.voti.all())} for o in opzioni],
+    }
+
+
+def _messaggio_json(m, utente, responsabile, direzione=False, letto_fino=None):
+    quando = timezone.localtime(m.creato_il)
+    mio = m.autore_id == utente.pk
+    return {
+        'tondo': tondo_di(m.autore),
+        'foto': reverse('turni:foto_chat', args=[m.pk]) if m.foto and (not m.eliminato or direzione) else '',
+        'sondaggio': _sondaggio_json(m, utente) if not m.eliminato else None,
+        'letto': bool(mio and letto_fino is not None and m.pk <= letto_fino),
+        'info': reverse('turni:info_messaggio', args=[m.pk]) if mio or direzione else '',
         'id': m.pk,
         'autore': nome_di(m.autore),
         'autore_id': m.autore_id,
@@ -173,14 +213,23 @@ def messaggi(request):
             messages.success(request, 'Avviso pubblicato in bacheca.')
         elif azione == 'elimina_annuncio' and responsabile:
             get_object_or_404(Annuncio, pk=request.POST.get('annuncio')).delete()
-        elif azione == 'chat' and chat and testo and MessaggioChat.objects.filter(
+        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto'))) and MessaggioChat.objects.filter(
             autore=request.user, creato_il__gte=timezone.now() - timedelta(minutes=1)
         ).count() >= 10:
             messages.error(request, 'Stai scrivendo troppi messaggi di seguito: aspetta un minuto.')
-        elif azione == 'chat' and chat and testo:
-            m = MessaggioChat.objects.create(chat=chat, autore=request.user, testo=testo[:1000])
-            push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}', m.testo, _url_chat(chat),
-                       notifica=False)
+        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto'))):
+            foto = next((f for f in request.FILES.getlist('foto') if f), None)
+            m = MessaggioChat(chat=chat, autore=request.user, testo=testo[:1000])
+            if foto:
+                from .manutenzione import comprimi_foto
+                try:
+                    m.foto.save('chat.jpg', comprimi_foto(foto), save=False)
+                except (ValueError, OSError):
+                    messages.error(request, "Non riesco a leggere questa foto: scattane un'altra.")
+                    return redirect(_url_chat(chat) + '#fondo')
+            m.save()
+            push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}', m.testo or 'Foto',
+                       _url_chat(chat), notifica=False)
             avvisa_menzioni(m, request.user)
         elif azione == 'elimina_chat' and chat:
             m = get_object_or_404(MessaggioChat, pk=request.POST.get('messaggio'), chat=chat)
@@ -214,8 +263,11 @@ def messaggi(request):
         ultimi = list(
             chat.messaggi.select_related('autore', 'autore__dipendente').order_by('-pk')[:MESSAGGI_MOSTRATI]
         )[::-1]
+        if ultimi:
+            _segna_letta(request.user, chat, ultimi[-1].pk)
+        letto_fino = letto_da_tutti_fino(chat)
         contesto['chat_aperta'] = chat
-        contesto['chat'] = con_gruppi([_messaggio_json(m, request.user, responsabile, direzione) for m in ultimi])
+        contesto['chat'] = con_gruppi([_messaggio_json(m, request.user, responsabile, direzione, letto_fino) for m in ultimi])
         contesto['membri'] = membri_di(chat).count()
         contesto['ultimo_id'] = ultimi[-1].pk if ultimi else 0
         if ultimi:
@@ -260,7 +312,10 @@ def chat_nuovi(request):
     nuovi = list(chat.messaggi.filter(pk__gt=dopo).select_related('autore', 'autore__dipendente').order_by('pk')[:50])
     if nuovi:
         _segna_letta(request.user, chat, nuovi[-1].pk)
-    return JsonResponse({'messaggi': [_messaggio_json(m, request.user, responsabile, direzione) for m in nuovi]})
+    letto_fino = letto_da_tutti_fino(chat)
+    # letto_fino: i miei messaggi fino a lì passano alle spunte blu anche senza ricaricare
+    return JsonResponse({'messaggi': [_messaggio_json(m, request.user, responsabile, direzione, letto_fino) for m in nuovi],
+                         'letto_fino': letto_fino})
 
 
 @login_required
@@ -296,3 +351,82 @@ def non_letti_chat(utente, stato=None):
     for c in chat_visibili(utente):
         totale += c.messaggi.filter(pk__gt=letture.get(c.pk, 0), eliminato=False).exclude(autore=utente).count()
     return totale
+
+
+# ---------------------------------------------------------------- foto, chi ha letto, sondaggi (Giulia, 11/11/2026)
+
+
+def _messaggio_visibile(request, pk):
+    m = get_object_or_404(MessaggioChat.objects.select_related('chat', 'autore'), pk=pk)
+    if not chat_visibili(request.user).filter(pk=m.chat_id).exists():
+        raise Http404
+    return m
+
+
+@login_required
+def foto_chat(request, pk):
+    from django.http import FileResponse
+
+    m = _messaggio_visibile(request, pk)
+    if not m.foto or (m.eliminato and not e_direzione(request.user)):
+        raise Http404
+    return FileResponse(m.foto.open('rb'), content_type='image/jpeg')
+
+
+@login_required
+def info_messaggio(request, pk):
+    """Come «Info messaggio» di WhatsApp: chi l'ha letto e chi non ancora. Per chi l'ha scritto (e la direzione)."""
+    from django.core.exceptions import PermissionDenied
+
+    m = _messaggio_visibile(request, pk)
+    if m.autore_id != request.user.pk and not e_direzione(request.user):
+        raise PermissionDenied
+    letture = dict(LetturaChat.objects.filter(chat=m.chat).values_list('utente_id', 'letta_fino'))
+    letti, non_letti = [], []
+    for u in membri_di(m.chat).exclude(pk=m.autore_id).select_related('dipendente'):
+        voce = {'nome': nome_di(u), 'tondo': tondo_di(u)}
+        (letti if letture.get(u.pk, 0) >= m.pk else non_letti).append(voce)
+    letti.sort(key=lambda v: v['nome'])
+    non_letti.sort(key=lambda v: v['nome'])
+    return render(request, 'turni/chat_info.html', {
+        'm': _messaggio_json(m, request.user, e_responsabile(request.user), e_direzione(request.user)),
+        'chat': m.chat, 'letti': letti, 'non_letti': non_letti,
+    })
+
+
+@login_required
+def sondaggio_nuovo(request, chat_id):
+    try:
+        chat = chat_visibili(request.user).get(pk=chat_id)
+    except Chat.DoesNotExist:
+        raise Http404
+    if request.method == 'POST':
+        domanda = (request.POST.get('domanda') or '').strip()[:200]
+        opzioni = [o.strip()[:100] for o in request.POST.getlist('opzione') if o.strip()][:8]
+        if not domanda or len(opzioni) < 2:
+            messages.error(request, 'Scrivi la domanda e almeno due risposte.')
+        else:
+            m = MessaggioChat.objects.create(chat=chat, autore=request.user, testo=domanda)
+            so = Sondaggio.objects.create(messaggio=m, domanda=domanda, una_risposta=bool(request.POST.get('una_risposta')))
+            for i, testo in enumerate(opzioni):
+                OpzioneSondaggio.objects.create(sondaggio=so, testo=testo, ordine=i)
+            push.invia(destinatari(request.user, chat), f'{chat.nome} · sondaggio', domanda, _url_chat(chat), notifica=False)
+            return redirect(_url_chat(chat) + '#fondo')
+    return render(request, 'turni/sondaggio_nuovo.html', {'chat': chat, 'dati': request.POST, 'righe': range(4)})
+
+
+@login_required
+@require_POST
+def vota(request, pk):
+    so = get_object_or_404(Sondaggio.objects.select_related('messaggio__chat'), pk=pk)
+    if not chat_visibili(request.user).filter(pk=so.messaggio.chat_id).exists():
+        raise Http404
+    opzione = get_object_or_404(OpzioneSondaggio, pk=request.POST.get('opzione'), sondaggio=so)
+    gia = VotoSondaggio.objects.filter(opzione=opzione, utente=request.user)
+    if gia.exists():
+        gia.delete()  # toccare di nuovo la propria risposta la toglie
+    else:
+        if so.una_risposta:
+            VotoSondaggio.objects.filter(opzione__sondaggio=so, utente=request.user).delete()
+        VotoSondaggio.objects.create(opzione=opzione, utente=request.user)
+    return redirect(_url_chat(so.messaggio.chat) + f'#m{so.messaggio_id}')
