@@ -1,0 +1,21 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richiedi turno extra{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:ufficio_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Turni</a>
+<div class="intestazione"><h1>Richiedi turno extra</h1></div>
+
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <div class="mc-due">
+    <label class="mc-campo">Quando<input type="date" name="data" min="{{ oggi }}" value="{{ request.POST.data|default:oggi }}" required></label>
+    <label class="mc-campo">Turno<select name="fascia" required>{% for v, n in fasce %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+  </div>
+  <label class="mc-campo">Area<select name="postazione"><option value="">Qualsiasi</option>{% for v, n in postazioni %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+  <div class="mc-due">
+    <label class="mc-campo">Chi serve<select name="ruolo"><option value="">Qualsiasi operaio</option>{% for v, n in ruoli %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+    <label class="mc-campo">Quante persone<input type="number" name="posti" min="1" max="20" value="1" inputmode="numeric"></label>
+  </div>
+  <label class="mc-campo">Nota (facoltativa)<input type="text" name="nota" maxlength="300"></label>
+  <p class="tenue piccolo">Tutti gli operai liberi quel giorno ricevono la notifica e toccano «Sono disponibile»: i primi che rispondono coprono i posti e il turno entra subito nel loro calendario. Ricevi una notifica a ogni risposta.</p>
+  <button class="bottone pieno piena-larghezza">Invia la richiesta</button>
+</form>
+{% endblock %}

@@ -89,6 +89,9 @@ class Dipendente(models.Model):
     qualifica = models.CharField('ruolo in azienda', max_length=150, blank=True)
     # foto profilo (cerchietto in Area personale, barra in basso, "storie" di Oggi)
     foto = models.ImageField('foto profilo', upload_to='profili/', blank=True)
+    # anagrafica dell'ufficio (Giulia, 11/11/2026)
+    data_nascita = models.DateField('data di nascita', null=True, blank=True)
+    data_assunzione = models.DateField('data di assunzione', null=True, blank=True)
     # incarichi per la manutenzione
     resp_manutenzione = models.BooleanField('responsabile manutenzione', default=False)
     # assegna le pulizie della notte ai Capi Turno, convalida il piazzale, decide la pulizia generale dell'Impianto 2
@@ -812,6 +815,9 @@ class AvvisoAssenza(models.Model):
     visto_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     visto_il = models.DateTimeField(null=True, blank=True)
     annullato_il = models.DateTimeField(null=True, blank=True)
+    # ritardi e uscite anticipate vanno convalidati dall'ufficio (Giulia, 11/11/2026): 'approvato' / 'rifiutato'
+    esito = models.CharField(max_length=10, blank=True)
+    nota_ufficio = models.CharField(max_length=300, blank=True)
 
     class Meta:
         verbose_name = 'avviso di assenza'
@@ -925,6 +931,7 @@ class Notifica(models.Model):
         PULIZIA = 'pulizia', 'Pulizia richiesta (accettata in automatico)'
         MENZIONE = 'menzione', 'Menzione in chat'
         RIUNIONE = 'riunione', 'Invito a una riunione'
+        DOCUMENTO = 'documento', 'Documento da leggere'
 
     tipo = models.CharField(max_length=20, choices=Tipo.choices, blank=True, default='')
     oggetto_id = models.PositiveIntegerField(null=True, blank=True)
@@ -981,6 +988,91 @@ class InvitoRiunione(models.Model):
 
     def __str__(self):
         return f'{self.dipendente} · {self.riunione}'
+
+
+class Scadenza(models.Model):
+    """Scadenze del personale (Giulia, 11/11/2026): visite mediche, corsi sicurezza, patentini, contratti a termine.
+    L'ufficio le vede in ordine di scadenza e riceve l'avviso nel centro notifiche quando si avvicinano."""
+
+    class Tipo(models.TextChoices):
+        VISITA = 'VISITA', 'Visita medica'
+        CORSO = 'CORSO', 'Corso sicurezza'
+        PATENTINO = 'PATENTINO', 'Patentino / abilitazione'
+        CONTRATTO = 'CONTRATTO', 'Contratto a termine'
+        ALTRO = 'ALTRO', 'Altro'
+
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='scadenze')
+    tipo = models.CharField(max_length=10, choices=Tipo.choices)
+    descrizione = models.CharField(max_length=120, blank=True, help_text='es. carrello elevatore, formazione specifica')
+    scade_il = models.DateField()
+    preavviso_giorni = models.PositiveSmallIntegerField(default=30)
+    note = models.CharField(max_length=300, blank=True)
+    chiusa_il = models.DateTimeField(null=True, blank=True)  # non serve più (es. contratto trasformato)
+    creata_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    creata_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'scadenze'
+        ordering = ['scade_il']
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} · {self.dipendente} · {self.scade_il:%d/%m/%Y}'
+
+    @property
+    def giorni(self):
+        return (self.scade_il - timezone.localdate()).days
+
+    @property
+    def stato(self):
+        """scaduta / vicina (entro il preavviso) / ok"""
+        if self.giorni < 0:
+            return 'scaduta'
+        return 'vicina' if self.giorni <= self.preavviso_giorni else 'ok'
+
+
+def percorso_documento(istanza, nome):
+    import os
+    import uuid
+
+    return f'documenti/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{os.path.splitext(nome)[1].lower()}'
+
+
+class Documento(models.Model):
+    """Documenti per i dipendenti (Giulia, 11/11/2026): buste paga (a una persona), regolamenti e comunicazioni
+    (a tutti). Se serve, il dipendente conferma la presa visione."""
+
+    class Tipo(models.TextChoices):
+        BUSTA = 'BUSTA', 'Busta paga'
+        REGOLAMENTO = 'REGOLAMENTO', 'Regolamento'
+        COMUNICAZIONE = 'COMUNICAZIONE', 'Comunicazione ufficiale'
+        ALTRO = 'ALTRO', 'Altro'
+
+    titolo = models.CharField(max_length=120)
+    tipo = models.CharField(max_length=14, choices=Tipo.choices)
+    file = models.FileField(upload_to=percorso_documento)
+    nome_file = models.CharField(max_length=150, blank=True)
+    dipendente = models.ForeignKey(Dipendente, null=True, blank=True, on_delete=models.CASCADE, related_name='documenti',
+                                   help_text='vuoto = per tutti')
+    presa_visione = models.BooleanField('chiedi la presa visione', default=False)
+    caricato_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    caricato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'documenti'
+        ordering = ['-caricato_il']
+
+    def __str__(self):
+        return self.titolo
+
+
+class PresaVisione(models.Model):
+    documento = models.ForeignKey(Documento, on_delete=models.CASCADE, related_name='prese_visione')
+    dipendente = models.ForeignKey(Dipendente, on_delete=models.CASCADE, related_name='prese_visione')
+    il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = 'prese visione'
+        constraints = [models.UniqueConstraint(fields=['documento', 'dipendente'], name='una_presa_visione')]
 
 
 class IscrizionePush(models.Model):

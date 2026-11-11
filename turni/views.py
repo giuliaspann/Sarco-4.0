@@ -249,13 +249,15 @@ def miei_turni(request):
     lunedi_oggi = oggi - timedelta(days=oggi.weekday())
     from .views_riunioni import riunioni_della_settimana
     riunioni = riunioni_della_settimana(dip, inizio, fine)  # riquadri tipo calendario (Giulia, 10/11)
+    fermi = fermi_programmati(inizio, fine)
     settimane = []
     for lun in (inizio,):
         distanza = (lun - lunedi_oggi).days // 7
         quale = {0: 'questa', 1: 'prossima', -1: 'scorsa'}.get(distanza, '')
         nome = f'Settimana {lun.isocalendar()[1]}' + (f' · {quale}' if quale else '')
         giorni = [{'data': lun + timedelta(days=i), 'turno': turni.get(lun + timedelta(days=i)),
-                   'riunione': any(timezone.localtime(x.riunione.inizio).date() == lun + timedelta(days=i) for x in riunioni)}
+                   'riunione': any(timezone.localtime(x.riunione.inizio).date() == lun + timedelta(days=i) for x in riunioni),
+                   'fermo': any(f['giorno'] == lun + timedelta(days=i) for f in fermi.get(getattr(turni.get(lun + timedelta(days=i)), 'postazione', None) or '-', []))}
                   for i in range(7)]
         settimane.append({'nome': nome, 'giorni': giorni, 'caricata': any(c['turno'] for c in giorni)})
 
@@ -283,6 +285,7 @@ def miei_turni(request):
             'fine': fine,
             'settimane': settimane,
             'riunioni': riunioni,
+            'da_leggere': __import__('turni.views_hr', fromlist=['da_leggere']).da_leggere(dip),
             'oggi': oggi,
             'scelto': scelto,
             'turno': turno,
@@ -307,6 +310,21 @@ def nome_corto(dip):
     """'DI GIROLAMO GIANVITO' -> 'Di Girolamo G.': sta nella colonna stretta del telefono."""
     parole = dip.nome_breve.split()
     return ' '.join(parole[:-1] + [parole[-1][0] + '.']) if len(parole) > 1 else dip.nome_breve
+
+
+def fermi_programmati(dal, al):
+    """{area: [testo]} dei fermi impianto programmati tra dal e al, per mostrarli nei turni."""
+    from django.utils.dateformat import format as formatta
+
+    from .models import Comunicazione
+
+    fermi = {}
+    for c in Comunicazione.objects.filter(tipo=Comunicazione.Tipo.FERMO, dal__isnull=False, dal__date__lte=al).exclude(al__date__lt=dal):
+        inizio, fine = timezone.localtime(c.dal), timezone.localtime(c.al or c.dal)
+        fermi.setdefault(c.luogo, []).append({'giorno': inizio.date(),
+                                              'testo': f'{formatta(inizio, "D j")} · {inizio:%H:%M}–{fine:%H:%M}'
+                                                       + (f' · {c.get_motivo_display().lower()}' if c.motivo else '')})
+    return fermi
 
 
 @login_required
@@ -357,8 +375,10 @@ def settimana_tutti(request):
         chiave = k[0]
         return ORDINE_GRUPPI.index(chiave) if chiave in ORDINE_GRUPPI else len(ORDINE_GRUPPI) + (chiave == 'zz')
 
-    elenco = [(titolo, sorted(righe, key=lambda r: r['ordine'])) for (chiave, titolo), righe in sorted(gruppi.items(), key=lambda x: ordine_gruppo(x[0]))]
-    mia_riga = next((r for _, righe in elenco for r in righe if r['io']), None)
+    fermi = fermi_programmati(giorni[0], giorni[-1])  # i fermi impianto comunicati compaiono da soli (Giulia, 11/11)
+    elenco = [(titolo, sorted(righe, key=lambda r: r['ordine']), fermi.get(chiave, []))
+              for (chiave, titolo), righe in sorted(gruppi.items(), key=lambda x: ordine_gruppo(x[0]))]
+    mia_riga = next((r for _, righe, _f in elenco for r in righe if r['io']), None)
     return render(
         request,
         'turni/settimana_tutti.html',

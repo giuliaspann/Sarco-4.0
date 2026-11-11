@@ -329,7 +329,21 @@ def rispondi_extra(request, extra_id):
             messages.info(request, 'Disponibilità ritirata.')
         else:
             svc.offri(extra, dip)
-            messages.success(request, "Grazie! L'ufficio ti farà sapere se servi.")
+            disp = extra.disponibilita.get(dipendente=dip)
+            confermato = False
+            if extra.mancano > 0:
+                try:
+                    svc.conferma_volontario(disp)  # i primi che rispondono coprono i posti (Giulia, 11/11)
+                    confermato = True
+                except svc.RichiestaNonValida:
+                    pass  # settimana non ancora caricata: conferma l'ufficio dopo
+            extra.refresh_from_db()
+            capo = [extra.creata_da_id] if extra.creata_da_id else []
+            push.invia(capo + [u for u in svc._responsabili_turni() if u not in capo],
+                       f'{dip.nome_breve} è disponibile', f'Turno extra {extra.data:%d/%m} · {extra.get_fascia_display()}'
+                       f' · mancano {extra.mancano}', reverse('turni:ufficio_turni'), mittente=request.user)
+            messages.success(request, 'Confermato: il turno è nel tuo calendario.' if confermato
+                             else "Grazie! L'ufficio ti farà sapere se servi.")
     except svc.RichiestaNonValida as e:
         messages.error(request, str(e))
     return redirect('turni:miei_turni')

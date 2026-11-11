@@ -565,3 +565,6 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
   const barra = document.querySelector('.barra');
   if (barra && document.querySelector('.st-testa')) document.documentElement.style.setProperty('--alto-barra', barra.offsetHeight + 'px');
 })();
+
+// Anagrafica: scelto il dipendente, la pagina si aggiorna da sola
+document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.addEventListener('change', () => s.form.submit()));

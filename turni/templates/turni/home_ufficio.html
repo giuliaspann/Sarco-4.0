@@ -1,24 +1,38 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Oggi{% endblock %}
 {% block contenuto %}
-{# la home di chi non ha turni (ufficio, responsabili): come Oggi, con le 4 funzioni più usate; il resto è nel Menu #}
+{# la home dell'ufficio (Giulia, 11/11): ogni giorno, persone, azienda #}
 <div class="ig-saluto">
   <h1>Ciao {{ nome }}</h1>
   <span>{{ oggi_data|date:'D j M' }}</span>
 </div>
 
-<div class="ig-azioni">
-  {% for v in principali %}
-  <a href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span>{{ v.nome }}{% if v.badge %}<i class="home-badge">{{ v.badge }}</i>{% endif %}</a>
-  {% endfor %}
-</div>
-
 {% for f in fermi_aperti %}
 <a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>
 {% endfor %}
-{% if puo_riunioni %}
-<a class="ig-tutte rn-tasto-home" href="{% url 'turni:riunioni' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/></svg></span><b>Riunioni</b>{% if prossima_riunione %}<small class="tenue">{{ prossima_riunione.inizio|date:'D j · H:i' }}</small>{% endif %}<span class="sg-freccia">›</span></a>
+
+<p class="hu-sezione">Ogni giorno</p>
+<div class="ig-azioni hu-griglia">
+  {% for v in principali %}
+  <a href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span><b>{{ v.nome }}</b>{% if v.badge %}<i class="home-badge">{{ v.badge }}</i>{% endif %}</a>
+  {% endfor %}
+  <a href="{% url 'turni:calendario' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg></span><b>Calendario</b>{% if eventi_settimana %}<i class="home-badge">{{ eventi_settimana }}</i>{% endif %}</a>
+</div>
+
+{% if persone %}
+<p class="hu-sezione">Persone</p>
+<div class="mn-capo hu-righe">
+  {% for v in persone %}
+  <a class="mn-capo-tasto" href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span><span><b>{{ v.nome }}</b><small>{{ v.sotto }}</small></span>{% if v.badge %}<i class="badge-riga">{{ v.badge }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}</a>
+  {% endfor %}
+</div>
 {% endif %}
-{# il quadrato del Menu non è più nella barra: tutte le funzioni si aprono da qui (Giulia, 10/11) #}
-<a class="ig-tutte" href="{% url 'turni:menu' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><b>Tutte le funzioni</b>{% if nav_ufficio_badge %}<i class="badge-riga">{{ nav_ufficio_badge }}</i>{% else %}<span class="sg-freccia">›</span>{% endif %}</a>
+
+<p class="hu-sezione">Azienda</p>
+<div class="mn-capo hu-righe">
+  {% for v in azienda %}
+  <a class="mn-capo-tasto{% if v.blu %} hu-blu{% endif %}" href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span><span><b>{{ v.nome }}</b><small>{{ v.sotto }}</small></span><span class="sg-freccia">›</span></a>
+  {% endfor %}
+</div>
+
 {% endblock %}

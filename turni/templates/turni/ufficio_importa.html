@@ -1,7 +1,8 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Carica turni{% endblock %}
 {% block contenuto %}
-<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+<a class="tasto-indietro" href="{% url 'turni:ufficio_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Turni</a>
+<div class="intestazione"><h1>Carica turni</h1></div>
 
 <form method="post" enctype="multipart/form-data" class="scheda">{% csrf_token %}
   <h2>Carica il file della settimana</h2>

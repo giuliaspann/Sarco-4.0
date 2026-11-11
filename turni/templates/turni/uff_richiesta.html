@@ -1,0 +1,38 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richiesta{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:ufficio_richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Richieste</a>
+<div class="intestazione"><h1>Richiesta</h1></div>
+
+<section class="scheda">
+  <span class="av-tipo">{{ v.cosa }}</span>
+  <b class="ac-voce-titolo">{{ v.chi }}</b>
+  <span class="rn-stato {% if v.aperta %}attesa{% elif v.ok %}si{% else %}no{% endif %}">{{ v.stato }}</span>
+
+  {% if tipo == 'cambio' %}
+    {% for persona, righe in persone %}
+    <p class="nt-persona">{{ persona.nome_breve }}</p>
+    {% for r in righe %}
+    <div class="rq-scambio"><span class="rq-giorno">{{ r.giorno|date:'D j M'|capfirst }}</span>
+      <span class="rq-da">{% include 'turni/_pillola.html' with t=r.prima %}</span><span class="rq-freccia">→</span>
+      <span class="rq-a">{% include 'turni/_pillola.html' with t=r.dopo %}</span></div>
+    {% endfor %}
+    {% endfor %}
+    {% if o.motivo %}<p class="rq-motivo">“{{ o.motivo }}”</p>{% endif %}
+  {% elif tipo == 'ferie' %}
+    {% if o.motivo %}<p class="rq-motivo">“{{ o.motivo }}”</p>{% endif %}
+    {% if turni %}<p class="tenue piccolo">Turni che salta: {% for t in turni %}{{ t.data|date:'D j' }} {{ t.sigla }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    {% if colleghi_assenti %}<p class="tenue piccolo">Già assenti negli stessi giorni: {% for c in colleghi_assenti %}{{ c.dipendente.nome_breve }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+  {% else %}
+    {% if o.nota %}<p class="rq-motivo">“{{ o.nota }}”</p>{% endif %}
+  {% endif %}
+  {% if o.nota_ufficio %}<p class="tenue piccolo">Nota dell'ufficio: {{ o.nota_ufficio }}</p>{% endif %}
+</section>
+
+{% if v.aperta %}
+<div class="rn-tasti">
+  <a class="ur-si grande" href="{% url 'turni:ufficio_richiesta_scelta' tipo o.pk 'approva' %}">Approva</a>
+  <a class="ur-no grande" href="{% url 'turni:ufficio_richiesta_scelta' tipo o.pk 'rifiuta' %}">Rifiuta</a>
+</div>
+{% endif %}
+{% endblock %}

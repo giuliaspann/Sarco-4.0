@@ -1,0 +1,40 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Anagrafica{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Anagrafica</h1></div>
+
+<form method="get" class="scheda ac-filtri">
+  <label>Dipendente<select name="dip" data-invia-subito-select>{% if not dip %}<option value="">Scegli…</option>{% endif %}{% for d in elenco %}<option value="{{ d.pk }}"{% if d == dip %} selected{% endif %}>{{ d.nome_breve }}</option>{% endfor %}</select></label>
+  <button class="bottone pieno piena-larghezza">Mostra</button>
+</form>
+
+{% if dip %}
+<section class="scheda">
+  <h2>{{ dip.nome_breve }}</h2>
+  <dl class="ac-righe">{% for e, v in s.dati %}<dt>{{ e }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+  <details class="an-modifica"><summary>Modifica date</summary>
+    <form method="post" class="mc-form">{% csrf_token %}
+      <div class="mc-due">
+        <label class="mc-campo">Nascita<input type="date" name="data_nascita" value="{{ dip.data_nascita|date:'Y-m-d' }}"></label>
+        <label class="mc-campo">Assunzione<input type="date" name="data_assunzione" value="{{ dip.data_assunzione|date:'Y-m-d' }}"></label>
+      </div>
+      <button class="bottone pieno piena-larghezza">Salva</button>
+    </form>
+  </details>
+</section>
+
+<section class="scheda">
+  <h2>Presenze e assenze</h2>
+  <p class="tenue piccolo">Dal {{ s.dal|date:'j/m/Y' }} a oggi · {{ s.turni_lavorati }} turni lavorati</p>
+  <dl class="ac-righe">{% for e, v in s.numeri %}<dt>{{ e }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+</section>
+
+<section class="scheda">
+  <h2>Indici</h2>
+  <dl class="ac-righe">{% for e, v in s.indici %}<dt>{{ e }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+</section>
+
+<a class="bottone pieno piena-larghezza" href="{% url 'turni:anagrafica_pdf' dip.pk %}">⬇ Esporta in PDF</a>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{% if approva %}Approva{% else %}Rifiuta{% endif %}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:ufficio_richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Richieste</a>
+<div class="intestazione"><h1>{% if approva %}Approvi?{% else %}Rifiuti?{% endif %}</h1></div>
+
+<section class="scheda">
+  <b class="ac-voce-titolo">{{ v.chi }}</b>
+  <p>{{ v.cosa }}</p>
+  {% if approva %}
+  <p class="tenue piccolo">{% if tipo == 'cambio' %}I turni vengono scambiati subito e i due colleghi ricevono la notifica.{% elif tipo == 'ferie' %}I giorni vengono segnati nei suoi turni e riceve la notifica.{% else %}L'avviso viene convalidato e la persona riceve la notifica.{% endif %}</p>
+  {% else %}
+  <p class="tenue piccolo">La richiesta non viene accolta: la persona riceve la notifica con la tua nota.</p>
+  {% endif %}
+</section>
+
+<form method="post" class="nt-convalida">{% csrf_token %}
+  <input type="text" name="nota" maxlength="300" placeholder="Nota (facoltativa)">
+  <a class="bottone leggero" href="{% url 'turni:ufficio_richieste' %}">Annulla</a>
+  <button class="{% if approva %}bottone pieno{% else %}nt-rifiuta ur-no-grande{% endif %}">{% if approva %}Sì, approva{% else %}Sì, rifiuta{% endif %}</button>
+</form>
+{% endblock %}

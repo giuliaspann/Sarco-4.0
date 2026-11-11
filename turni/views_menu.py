@@ -11,6 +11,9 @@ from django.utils import timezone
 
 # icone a linea (stesso tratto dei riquadri di Oggi)
 ICONE = {
+    'comunicazioni': '<path d="M4 10v4h3l7 4V6L7 10H4z"/><path d="M17.5 9a4 4 0 010 6"/>',
+    'scadenze': '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 4l3 2M19 4l-3 2"/>',
+    'documenti': '<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/>',
     'riunione': '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/>',
     'pulizia': '<path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/>',
     'manutenzione': '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/>',
@@ -131,10 +134,13 @@ def menu(request):
 
 
 def home_ufficio(request):
-    """Home di chi non ha turni (ufficio, responsabili): le 4 funzioni più usate, poi i fermi impianto."""
+    """Home dell'ufficio (Giulia, 11/11): 4 tasti per le cose di ogni giorno, poi Persone e Azienda.
+    Le funzioni scelte guardando le piattaforme HR più usate (approvazioni, turni, comunicazioni, anagrafica,
+    presenze, scadenze, documenti)."""
     from .context import navigazione
-    from .models import FermoImpianto, Riunione
-    from .views import pulizie_da_verificare
+    from .models import FermoImpianto
+    from .views_calendario import eventi_prossimi
+    from .views_hr import scadenze_vicine
     from .views_riunioni import puo_programmare_riunione
 
     u = request.user
@@ -143,23 +149,25 @@ def home_ufficio(request):
     principali = []
     if nav.get('nav_responsabile'):
         principali.append(voce('Richieste', r('turni:ufficio_richieste'), 'richieste', nav.get('nav_da_approvare', 0)))
+    if nav.get('nav_responsabile') or u.is_staff:
+        principali.append(voce('Turni', r('turni:ufficio_turni'), 'carica'))
+    if puo_programmare_riunione(u):
+        principali.append(voce('Riunioni', r('turni:riunioni'), 'riunione'))
+    persone = []
     if u.is_staff:
-        principali.append(voce('Turni', r('turni:importa'), 'carica'))
-    if nav.get('nav_capoturno'):  # l'ufficio vede le pulizie di tutti i turni
-        principali.append(voce('Pulizie', r('turni:capoturno'), 'verifica', pulizie_da_verificare(u)))
-    principali.append(voce('Manutenzione', r('turni:manutenzione'), 'manutenzione', nav.get('nav_manutenzione', 0)))
-    if len(principali) < 4:
-        principali.append(voce('Statistiche', r('turni:statistiche'), 'statistiche'))
-    if len(principali) < 4 and u.is_staff:
-        principali.append(voce('Dipendenti', r('turni:dipendenti'), 'dipendenti'))
+        persone.append({**voce('Gestione accessi', r('turni:accessi'), 'dipendenti'), 'sotto': 'Attiva o disattiva un accesso'})
+        persone.append({**voce('Anagrafica', r('turni:anagrafica'), 'report'), 'sotto': 'Dati, presenze, assenze e indici'})
+        persone.append({**voce('Scadenze', r('turni:scadenze'), 'scadenze', len(scadenze_vicine())),
+                        'sotto': 'Visite mediche, corsi sicurezza, patentini'})
+        persone.append({**voce('Documenti', r('turni:documenti_ufficio'), 'documenti'), 'sotto': 'Buste paga, regolamenti, presa visione'})
+    azienda = [{**voce('Archivio', r('turni:archivio'), 'archivio'), 'sotto': 'Gli stessi tasti del Capo Turno', 'blu': True}]
     nome = (u.first_name or u.username).split()[0].capitalize()
     return render(request, 'turni/home_ufficio.html', {
-        'principali': principali[:4],
+        'principali': principali[:4], 'persone': persone, 'azienda': azienda,
         'nome': nome,
         'oggi_data': timezone.localdate(),
         'fermi_aperti': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
-        'puo_riunioni': puo_programmare_riunione(u),
-        'prossima_riunione': Riunione.objects.filter(annullata=False, fine__gte=timezone.now()).first(),
+        'eventi_settimana': eventi_prossimi(u, 7),
     })
 
 
@@ -322,6 +330,16 @@ def in_attesa(request):
                                            ).select_related('macchina', 'segnalata_da__dipendente'):
             riga('manutenzione', i.pk, f'Manutenzione da eseguire · {i.macchina.nome}', i.descrizione,
                  r('turni:intervento', args=[i.pk]), i.segnalata_il, i.segnalata_da)
+    if dip:
+        from .views_hr import da_leggere
+        for d in da_leggere(dip):
+            riga('', None, f'Documento da leggere: {d.titolo}', d.get_tipo_display(), r('turni:documenti'), d.caricato_il, d.caricato_da)
+    if u.is_staff:
+        from .views_hr import scadenze_vicine
+        for s in scadenze_vicine():
+            quando = 'scaduta' if s.stato == 'scaduta' else ('scade oggi' if s.giorni == 0 else f'scade tra {s.giorni} g')
+            riga('', None, f'{s.get_tipo_display()} · {s.dipendente.nome_breve}', f'{quando} ({s.scade_il:%d/%m/%Y})',
+                 r('turni:scadenze'), timezone.now(), s.dipendente.utente)  # sempre in cima, finché non si rinnova
     if e_responsabile(u):
         for c in CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_UFFICIO).select_related('richiedente__utente', 'collega'):
             riga('cambio_ufficio', c.pk, f'Cambio turno da approvare: {c.richiedente.nome_breve} ↔ {c.collega.nome_breve}',

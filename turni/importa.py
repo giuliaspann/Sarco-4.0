@@ -547,3 +547,47 @@ def salva_settimana(letta, utente=None, nome_file=''):
                 dip.tutor = tutor
                 dip.save(update_fields=['tutor'])
     return settimana, nuovi, mantenuti
+
+
+# ---------------------------------------------------------------- elenco dipendenti (Giulia, 11/11/2026)
+
+FOGLIO_ELENCO = 'Elenco Dipendenti, Aree e Orari'
+
+
+def leggi_elenco_dipendenti(file):
+    """I nomi del foglio «Elenco Dipendenti, Aree e Orari»: la colonna sotto l'intestazione «Dipendenti»."""
+    wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
+    foglio = next((n for n in wb.sheetnames if pulisci(n).lower() == FOGLIO_ELENCO.lower()), None)
+    if foglio is None:
+        raise ValueError(f'Nel file non trovo il foglio «{FOGLIO_ELENCO}».')
+    righe = list(wb[foglio].iter_rows(values_only=True))
+    for i, riga in enumerate(righe[:15]):
+        for j, valore in enumerate(riga):
+            if pulisci(valore).lower() == 'dipendenti':
+                nomi = []
+                for sotto in righe[i + 1:]:
+                    nome = pulisci(sotto[j]) if j < len(sotto) else ''
+                    if not nome:
+                        continue
+                    nomi.append(nome.upper())
+                return list(dict.fromkeys(nomi))
+    raise ValueError(f'Nel foglio «{foglio}» non trovo la colonna «Dipendenti».')
+
+
+def aggiorna_elenco_dipendenti(nomi):
+    """Aggiunge all'app chi manca (i nomi scritti in modo diverso si riconoscono come per i turni).
+    Restituisce (nuovi, già presenti)."""
+    from .mansioni import mansione_per
+    from .models import Dipendente
+
+    dipendenti = list(Dipendente.objects.all())
+    nuovi, presenti = [], []
+    for nome in nomi:
+        dip = trova_dipendente(nome, dipendenti)
+        if dip is None:
+            dip = Dipendente.objects.create(nome=nome, mansione=mansione_per(nome) or 'OPERAIO')
+            dipendenti.append(dip)
+            nuovi.append(dip)
+        else:
+            presenti.append(dip)
+    return nuovi, presenti

@@ -1,0 +1,20 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Documenti{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+<div class="intestazione"><h1>Documenti</h1></div>
+
+{% for d in elenco %}
+<section class="av-riquadro hr-doc{% if d.presa_visione and not d.letto %} av-rispondi{% endif %}">
+  <span class="av-tipo">{{ d.get_tipo_display }} · {{ d.caricato_il|date:'j M Y' }}</span>
+  <b>{{ d.titolo }}</b>
+  <div class="rn-tasti">
+    <a class="bottone leggero" href="{% url 'turni:documento_file' d.pk %}" target="_blank">Apri</a>
+    {% if d.presa_visione %}{% if d.letto %}<span class="rn-stato si">Letto</span>{% else %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="documento" value="{{ d.pk }}"><button class="nt-conferma">Ho letto</button></form>{% endif %}{% endif %}
+  </div>
+</section>
+{% empty %}
+<div class="vuoto"><p>Nessun documento per te.</p></div>
+{% endfor %}
+{% endblock %}

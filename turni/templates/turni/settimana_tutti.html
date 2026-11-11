@@ -19,8 +19,9 @@
 </div>
 
 <div class="st-tabella">
-{% for titolo, righe in gruppi %}
+{% for titolo, righe, fermi in gruppi %}
   <p class="st-area">{{ titolo }}</p>
+  {% for f in fermi %}<p class="st-fermo">Fermo programmato · {{ f.testo }}</p>{% endfor %}
   {% for r in righe %}
   <div class="gt-riga {% if r.io %}io{% endif %}">
     <span class="gt-nome" title="{{ r.dip.nome_breve }}">{{ r.nome }}</span>

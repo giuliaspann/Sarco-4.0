@@ -1,0 +1,31 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richieste{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Richieste</h1></div>
+
+<h2 class="rq-sezione">Da approvare{% if aperte %} · {{ aperte|length }}{% endif %}</h2>
+<div class="ur-elenco">
+{% for v in aperte %}
+<div class="ur-riga">
+  <a class="ur-testo" href="{% url 'turni:ufficio_richiesta' v.tipo v.pk %}"><b>{{ v.chi }}</b><small>{{ v.cosa }}</small></a>
+  <a class="ur-si" href="{% url 'turni:ufficio_richiesta_scelta' v.tipo v.pk 'approva' %}">Approva</a>
+  <a class="ur-no" href="{% url 'turni:ufficio_richiesta_scelta' v.tipo v.pk 'rifiuta' %}">Rifiuta</a>
+</div>
+{% empty %}
+<div class="vuoto"><p>Nessuna richiesta da approvare.</p></div>
+{% endfor %}
+</div>
+
+<h2 class="rq-sezione">Risolte</h2>
+<div class="ur-elenco">
+{% for v in risolte %}
+<a class="ur-riga ur-risolta" href="{% url 'turni:ufficio_richiesta' v.tipo v.pk %}">
+  <span class="ur-testo"><b>{{ v.chi }}</b><small>{{ v.cosa }}</small></span>
+  <span class="rn-stato {% if v.ok %}si{% else %}no{% endif %}">{{ v.stato }}</span>
+</a>
+{% empty %}
+<div class="vuoto"><p>Nessuna richiesta risolta.</p></div>
+{% endfor %}
+</div>
+{% endblock %}

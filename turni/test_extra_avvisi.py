@@ -54,32 +54,28 @@ class TurnoExtraTest(BaseTest):
         self.client.login(username='drame', password='123456')
         self.assertContains(self.client.get(reverse('turni:miei_turni')), 'Sono disponibile')
 
-        for user in ('drame', 'spano'):
-            self.client.login(username=user, password='123456')
-            self.client.post(reverse('turni:rispondi_extra', args=[extra.pk]), {'azione': 'offri'})
-        self.assertEqual(extra.disponibilita.count(), 2)
-
-        self.client.login(username='resp', password='x')
-        r = self.client.get(reverse('turni:ufficio_extra'))
-        self.assertContains(r, 'Drame Bouba')
-        disp_spano = Disponibilita.objects.get(dipendente=self.spano)
-        self.client.post(reverse('turni:ufficio_extra'), {'azione': 'conferma', 'disponibilita': disp_spano.pk})
-
-        turno = Turno.objects.get(dipendente=self.spano, data=DOMENICA)
+        # il primo che risponde copre il posto: il turno entra subito nel suo calendario (Giulia, 11/11)
+        self.client.login(username='drame', password='123456')
+        self.client.post(reverse('turni:rispondi_extra', args=[extra.pk]), {'azione': 'offri'})
+        turno = Turno.objects.get(dipendente=self.drame, data=DOMENICA)
         self.assertEqual((turno.fascia, turno.postazione), (Fascia.MATTINA, Postazione.IMP1))
         self.assertIn('extra', turno.nota_modifica)
         extra.refresh_from_db()
         self.assertTrue(extra.chiusa)  # un posto solo: coperto
+        # l'ufficio riceve la notifica
+        from .models import Notifica
+        self.assertTrue(Notifica.objects.filter(utente__username='resp', titolo__contains='disponibile').exists())
 
-        # posti finiti: Drame non si può più confermare, e Spano non si ritira da solo
+        # posti finiti: Spano non può più offrirsi, e Drame non si ritira da solo
+        self.client.login(username='spano', password='123456')
+        self.client.post(reverse('turni:rispondi_extra', args=[extra.pk]), {'azione': 'offri'})
+        self.assertFalse(Disponibilita.objects.filter(dipendente=self.spano).exists())
         with self.assertRaises(svc.RichiestaNonValida):
-            svc.conferma_volontario(Disponibilita.objects.get(dipendente=self.drame))
-        with self.assertRaises(svc.RichiestaNonValida):
-            svc.ritira(extra, self.spano)
+            svc.ritira(extra, self.drame)
 
         # ricaricare l'Excel non toglie il turno extra
         importa.salva_settimana(importa.leggi_file(file_turni(RIGHE), LUNEDI))
-        self.assertEqual(Turno.objects.get(dipendente=self.spano, data=DOMENICA).fascia, Fascia.MATTINA)
+        self.assertEqual(Turno.objects.get(dipendente=self.drame, data=DOMENICA).fascia, Fascia.MATTINA)
 
     def test_ritirarsi_prima_della_conferma(self):
         extra = self.crea()
@@ -124,10 +120,13 @@ class AvvisoTest(BaseTest):
 
         # l'ufficio lo vede e lo segna come visto
         self.client.login(username='resp', password='x')
-        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), 'visita medica')
-        self.client.post(reverse('turni:ufficio_richieste'), {'avviso': avviso.pk})
+        self.assertContains(self.client.get(reverse('turni:ufficio_richiesta', args=['avviso', avviso.pk])), 'visita medica')
+        # prima chiede di convalidare la scelta, poi la esegue
+        self.assertContains(self.client.get(reverse('turni:ufficio_richiesta_scelta', args=['avviso', avviso.pk, 'approva'])), 'Sì, approva')
+        self.client.post(reverse('turni:ufficio_richiesta_scelta', args=['avviso', avviso.pk, 'approva']))
         avviso.refresh_from_db()
         self.assertIsNotNone(avviso.visto_il)
+        self.assertEqual(avviso.esito, 'approvato')
 
 
 class RuoloExtraTest(BaseTest):

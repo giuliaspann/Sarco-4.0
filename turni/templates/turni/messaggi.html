@@ -97,6 +97,7 @@
 
 {% else %}
   {# stile Instagram: elenco delle chat come i messaggi diretti #}
+  <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
   <h1 class="ig-titolo">Messaggi</h1>
   {% if da_vedere %}
   <form method="post" action="{% url 'turni:presa_visione' %}" class="pv-riquadro ig-da-leggere">{% csrf_token %}

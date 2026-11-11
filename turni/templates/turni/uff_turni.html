@@ -1,0 +1,32 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Turni{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Turni</h1></div>
+
+<div class="mn-capo">
+  <a class="mn-capo-tasto" href="{% url 'turni:importa' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></span><span><b>Carica turni della settimana</b></span><span class="sg-freccia">›</span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:ufficio_extra_nuovo' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M19 8v6M16 11h6"/></svg></span><span><b>Richiedi turno extra</b></span><span class="sg-freccia">›</span></a>
+</div>
+
+{% if extra %}
+<h2 class="rq-sezione">Turni extra aperti</h2>
+{% for e in extra %}
+<section class="av-riquadro">
+  <span class="av-tipo">{{ e.data|date:'D j M'|capfirst }} · {{ e.get_fascia_display }}{% if e.postazione %} · {{ e.get_postazione_display }}{% endif %}{% if e.ruolo %} · {{ e.get_ruolo_display }}{% endif %}</span>
+  <b>{% if e.mancano %}Mancano {{ e.mancano }} su {{ e.posti }}{% else %}Coperto: {{ e.posti }} su {{ e.posti }}{% endif %}</b>
+  {% with conf=e.disponibilita.all %}{% if conf %}<small>{% for d in conf %}{{ d.dipendente.nome_breve }}{% if not d.confermata %} (in attesa){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</small>{% endif %}{% endwith %}
+</section>
+{% endfor %}
+{% endif %}
+
+<h2 class="rq-sezione">Presa visione dei turni cambiati</h2>
+<div class="nt-elenco">
+  {% for m in modifiche %}
+  <div class="rn-invitato"><span><b>{{ m.dipendente.nome_breve }}</b><br><small class="tenue">{{ m.data|date:'D j M'|capfirst }}: {{ m.prima }} → {{ m.dopo }}</small></span>
+    {% if m.vista_il %}<span class="rn-stato si">Visto {{ m.vista_il|date:'j/m H:i' }}</span>{% else %}<span class="rn-stato attesa">Da vedere</span>{% endif %}</div>
+  {% empty %}
+  <div class="vuoto"><p>Nessun turno cambiato nelle ultime due settimane.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

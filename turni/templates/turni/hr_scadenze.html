@@ -1,0 +1,58 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Scadenze{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Scadenze</h1></div>
+
+<div class="hr-conteggi">
+  <span class="rn-stato no">{{ conta.scaduta }} scadut{{ conta.scaduta|pluralize:'a,e' }}</span>
+  <span class="rn-stato attesa">{{ conta.vicina }} in arrivo</span>
+  <span class="rn-stato si">{{ conta.ok }} in regola</span>
+</div>
+
+<form method="get" class="scheda ac-filtri">
+  <div class="orari">
+    <label>Tipo<select name="tipo"><option value="">Tutti</option>{% for v, n in tipi %}<option value="{{ v }}"{% if v == tipo %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Dipendente<input type="search" name="q" value="{{ q }}" placeholder="Cerca un nome"></label>
+  </div>
+  <div class="ac-filtri-tasti">{% if tipo or q %}<a class="bottone leggero" href="?">Togli filtri</a>{% endif %}<button class="bottone pieno">Filtra</button></div>
+</form>
+
+<div class="ac-elenco">
+{% for s in elenco %}
+<details class="hr-scadenza {{ s.stato }}">
+  <summary>
+    <span class="hr-scadenza-testo"><b>{{ s.dipendente.nome_breve }}</b><small>{{ s.get_tipo_display }}{% if s.descrizione %} · {{ s.descrizione }}{% endif %}</small></span>
+    <span class="hr-scadenza-data"><b>{{ s.scade_il|date:'j M Y' }}</b>
+      <small>{% if s.stato == 'scaduta' %}scaduta da {{ s.giorni|stringformat:'d'|slice:'1:' }} g{% elif s.giorni == 0 %}oggi{% else %}tra {{ s.giorni }} g{% endif %}</small></span>
+  </summary>
+  {% if s.note %}<p class="tenue piccolo">{{ s.note }}</p>{% endif %}
+  <form method="post" class="hr-rinnova">{% csrf_token %}
+    <input type="hidden" name="scadenza" value="{{ s.pk }}">
+    <label>Nuova scadenza<input type="date" name="nuova" min="{{ s.scade_il|date:'Y-m-d' }}"></label>
+    <div class="ac-filtri-tasti">
+      <button class="bottone leggero" name="azione" value="chiudi">Non serve più</button>
+      <button class="bottone pieno" name="azione" value="rinnova">Rinnova</button>
+    </div>
+  </form>
+</details>
+{% empty %}
+<div class="vuoto"><p>{% if tipo or q %}Nessuna scadenza con questi filtri.{% else %}Nessuna scadenza inserita: aggiungi la prima qui sotto.{% endif %}</p></div>
+{% endfor %}
+</div>
+
+<form method="post" class="scheda mc-form hr-nuova">{% csrf_token %}
+  <h2>Aggiungi scadenza</h2>
+  <label class="mc-campo">Dipendente<select name="dipendente" required><option value="">Scegli…</option>{% for d in dipendenti %}<option value="{{ d.pk }}">{{ d.nome_breve }}</option>{% endfor %}</select></label>
+  <div class="mc-due">
+    <label class="mc-campo">Tipo<select name="tipo" required>{% for v, n in tipi %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+    <label class="mc-campo">Scade il<input type="date" name="scade_il" required></label>
+  </div>
+  <label class="mc-campo">Dettaglio (facoltativo)<input type="text" name="descrizione" maxlength="120" placeholder="Es. carrello elevatore"></label>
+  <div class="mc-due">
+    <label class="mc-campo">Avvisami prima di<select name="preavviso"><option value="15">15 giorni</option><option value="30" selected>30 giorni</option><option value="60">60 giorni</option><option value="90">90 giorni</option></select></label>
+    <label class="mc-campo">Note<input type="text" name="note" maxlength="300"></label>
+  </div>
+  <button class="bottone pieno piena-larghezza" name="azione" value="aggiungi">Aggiungi scadenza</button>
+</form>
+{% endblock %}

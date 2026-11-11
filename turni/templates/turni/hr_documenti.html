@@ -1,0 +1,33 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Documenti{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Documenti</h1></div>
+
+<form method="post" enctype="multipart/form-data" class="scheda mc-form">{% csrf_token %}
+  <h2>Carica un documento</h2>
+  <label class="mc-campo">Titolo<input type="text" name="titolo" maxlength="120" required placeholder="Es. Busta paga ottobre 2026"></label>
+  <div class="mc-due">
+    <label class="mc-campo">Tipo<select name="tipo" required>{% for v, n in tipi %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+    <label class="mc-campo">A chi<select name="a_chi" required><option value="tutti">Tutti i dipendenti</option>{% for d in dipendenti %}<option value="{{ d.pk }}">{{ d.nome_breve }}</option>{% endfor %}</select></label>
+  </div>
+  <label class="bottone foto-btn mn-foto"><input type="file" name="file" accept="application/pdf,image/jpeg,image/png" required><span>Scegli il file (PDF o foto)</span></label>
+  <label class="mc-spunta"><input type="checkbox" name="presa_visione" value="1"> Chiedi la presa visione</label>
+  <p class="tenue piccolo">Chi lo riceve ha una notifica. Con la presa visione, il documento resta nei suoi Avvisi finché non tocca «Ho letto».</p>
+  <button class="bottone pieno piena-larghezza">Carica e invia</button>
+</form>
+
+<h2 class="rq-sezione">Caricati</h2>
+<div class="ac-elenco">
+{% for d in elenco %}
+<a class="ac-riga" href="{% url 'turni:documento_ufficio' d.pk %}">
+  <span class="ac-riga-vuota hr-doc-ico">{% if d.tipo == 'BUSTA' %}€{% else %}📄{% endif %}</span>
+  <span class="ac-riga-testo"><b>{{ d.titolo }}</b><small>{{ d.get_tipo_display }} · {% if d.dipendente %}{{ d.dipendente.nome_breve }}{% else %}tutti{% endif %} · {{ d.caricato_il|date:'j M' }}</small></span>
+  {% if d.presa_visione %}<span class="rn-stato {% if d.letti >= d.su %}si{% else %}attesa{% endif %}">{{ d.letti }}/{{ d.su }}</span>{% endif %}
+  <span class="sg-freccia">›</span>
+</a>
+{% empty %}
+<div class="vuoto"><p>Nessun documento caricato.</p></div>
+{% endfor %}
+</div>
+{% endblock %}

@@ -2260,3 +2260,109 @@ button, .bottone, .tasto, input[type="submit"], .nt-tasti a, .rn-tasti a, .rn-ta
 .ap-tasti { margin-top: 18px; }
 .ap-tasti .mn-capo-tasto { min-height: 60px; }
 .ap-tasti .mn-capo-tasto .sg-freccia { margin-left: auto; }
+
+/* Home dell'ufficio (Giulia, 11/11) */
+.hu-sezione { margin: 16px 0 8px; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); }
+.hu-riunione { margin: -4px 0 4px; text-align: center; }
+.hu-righe .mn-capo-tasto { min-height: 60px; }
+.hu-righe .mn-capo-tasto .sg-freccia, .hu-righe .mn-capo-tasto .badge-riga { margin-left: auto; }
+.hu-righe .hu-blu { background: #e3edf8; border-color: #9cbde0; }
+.hu-righe .hu-blu .ig-ico { background: #2a72b0; color: #fff; }
+.hu-righe .hu-blu b { color: #1d4f80; }
+@media (prefers-color-scheme: dark) { .hu-righe .hu-blu { background: #1b3048; border-color: #34587e; } .hu-righe .hu-blu b { color: #d4e5f7; } }
+
+/* Scadenze e documenti */
+.hr-conteggi { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.hr-conteggi .rn-stato { margin-top: 0; }
+.hr-scadenza { border-radius: 14px; background: var(--carta); border: 1px solid var(--bordo); border-left: 5px solid #2f8f2a; padding: 0 12px; }
+.hr-scadenza.vicina { border-left-color: #e0a100; }
+.hr-scadenza.scaduta { border-left-color: #c0392b; }
+.hr-scadenza summary { display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; list-style: none; }
+.hr-scadenza summary::-webkit-details-marker { display: none; }
+.hr-scadenza-testo, .hr-scadenza-data { display: flex; flex-direction: column; gap: 2px; }
+.hr-scadenza-testo { flex: 1; min-width: 0; }
+.hr-scadenza-data { text-align: right; align-items: flex-end; }
+.hr-scadenza small { color: var(--tenue); font-size: .8rem; }
+.hr-scadenza.scaduta .hr-scadenza-data small { color: #9b1c1c; font-weight: 700; }
+.hr-scadenza.vicina .hr-scadenza-data small { color: #7a5600; font-weight: 700; }
+.hr-rinnova { display: flex; flex-direction: column; gap: 8px; padding: 0 0 12px; }
+.hr-nuova { margin-top: 18px; }
+.hr-doc-ico { display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--primario); }
+.hr-doc .rn-tasti { margin-top: 8px; align-items: center; }
+.hr-doc .rn-tasti form { flex: 1; display: flex; }
+.hr-doc .rn-tasti form button { flex: 1; }
+.hr-doc .rn-tasti .bottone { flex: 1; min-height: 46px; }
+.av-riquadro .rn-tasti { align-items: center; }
+.av-riquadro .rn-tasti form { flex: 1; display: flex; }
+.av-riquadro .rn-tasti form button, .av-riquadro .rn-tasti > .bottone { flex: 1; min-height: 46px; }
+.av-riquadro .rn-tasti > .bottone.leggero { border: 1px solid var(--bordo); background: var(--carta); }
+.ac-filtri input[type="search"] { width: 100%; font: inherit; padding: 11px 12px; min-height: 44px; border-radius: 10px; border: 1px solid var(--bordo); background: var(--sfondo); color: var(--testo); }
+
+/* Calendario dell'ufficio (Giulia, 11/11) */
+.hu-calendario { margin-top: 10px; }
+.cal-mese { margin: 0 0 10px; font-size: 1rem; }
+.cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; background: var(--carta); border: 1px solid var(--bordo);
+  border-radius: 16px; padding: 8px; }
+.cal-nome { text-align: center; font-size: .72rem; font-weight: 700; color: var(--tenue); padding-bottom: 2px; }
+.cal-giorno { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 3px; min-height: 48px; padding: 5px 0;
+  border-radius: 10px; color: var(--testo); text-decoration: none; }
+.cal-giorno b { font-size: .9rem; font-weight: 700; }
+.cal-giorno.fuori { opacity: .35; }
+.cal-giorno.oggi b { background: var(--primario); color: #fff; border-radius: 99px; padding: 0 6px; }
+.cal-giorno.scelto { background: color-mix(in srgb, var(--primario) 14%, var(--carta)); outline: 2px solid var(--primario); }
+.cal-punti { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; max-width: 30px; }
+.cal-punti i, .cal-legenda i { display: inline-block; width: 7px; height: 7px; border-radius: 99px; }
+.cal-legenda { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: center; margin: 10px 0 2px; font-size: .74rem; color: var(--tenue); }
+.cal-legenda span { display: inline-flex; align-items: center; gap: 5px; }
+i.cal-blu { background: #2a72b0; } i.cal-rosso { background: #c0392b; } i.cal-verde { background: #2f8f2a; }
+i.cal-arancio { background: #e07b00; } i.cal-viola { background: #7b4bb7; }
+.cal-evento { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 10px 14px; border-radius: 14px; background: var(--carta);
+  border: 1px solid var(--bordo); border-left: 5px solid var(--bordo); color: var(--testo); text-decoration: none; }
+.cal-evento.cal-blu { border-left-color: #2a72b0; } .cal-evento.cal-rosso { border-left-color: #c0392b; }
+.cal-evento.cal-verde { border-left-color: #2f8f2a; } .cal-evento.cal-arancio { border-left-color: #e07b00; }
+.cal-evento.cal-viola { border-left-color: #7b4bb7; }
+.cal-evento-testo { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cal-tipo { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--tenue); }
+.cal-evento small { color: var(--tenue); font-size: .8rem; }
+.cal-evento .sg-freccia { margin-left: auto; }
+
+/* Fermi programmati nei turni; Richieste dell'ufficio (Giulia, 11/11) */
+.st-fermo { margin: -2px 0 6px; padding: 6px 10px; border-radius: 8px; background: #fcd9d9; color: #9b1c1c; font-size: .8rem; font-weight: 700; text-align: center; }
+@media (prefers-color-scheme: dark) { .st-fermo { background: #5a2222; color: #ffd4d4; } }
+.st-pallino-fermo { background: #c0392b; }
+.ur-elenco { display: flex; flex-direction: column; gap: 6px; }
+.ur-riga { display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 12px; border-radius: 14px; background: var(--carta); border: 1px solid var(--bordo);
+  color: var(--testo); text-decoration: none; }
+.ur-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; color: var(--testo); text-decoration: none; }
+.ur-testo b { font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ur-testo small { font-size: .78rem; color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ur-si, .ur-no { flex: none; display: inline-flex; align-items: center; justify-content: center; text-align: center; min-height: 36px; padding: 0 10px;
+  border-radius: 10px; font-weight: 700; font-size: .8rem; text-decoration: none; }
+.ur-si { background: var(--primario); color: #fff; }
+.ur-no { background: #fcd9d9; color: #9b1c1c; border: 1px solid #f5b5b5; }
+.ur-si.grande, .ur-no.grande { flex: 1; min-height: 48px; font-size: .95rem; }
+.ur-risolta .rn-stato { margin-top: 0; flex: none; }
+.an-modifica summary { cursor: pointer; color: var(--primario); font-weight: 700; margin-top: 8px; }
+
+/* ===== Omogeneità (Giulia, 11/11): stessi font e icone in tutti i riquadri, testo sempre dentro e centrato ===== */
+:root { --titolo-pagina: 1.6rem; --titolo-riquadro: 1rem; --sotto-riquadro: .82rem; --icona: 50px; --icona-svg: 26px; }
+.intestazione h1, .ig-titolo, .ig-saluto h1, h1 { font-size: var(--titolo-pagina); }
+/* titoli dentro i riquadri e i tasti */
+.ig-azioni a, .ig-azioni a b, .mn-capo-tasto b, .ac-riga-testo b, .av-riquadro b, .rn-corpo b, .cal-evento b, .ur-testo b,
+.ig-tutte b, .ig-archivio-tasto b, .ig-richieste b, .hr-scadenza-testo b, .an-campioni span, .ac-tasti a {
+  font-size: var(--titolo-riquadro); font-weight: 700; }
+.mn-capo-tasto small, .ac-riga-testo small, .av-riquadro small, .cal-evento small, .ur-testo small, .hr-scadenza small, .rq-testo small {
+  font-size: var(--sotto-riquadro); }
+/* icone tutte uguali */
+.ig-azioni .ig-ico, .ig-azioni.grandi .ig-ico, .mn-capo-tasto .ig-ico, .ig-richieste .ig-ico, .ig-tutte .ig-ico, .ig-archivio-tasto .ig-ico, .nt-dafare .ig-ico {
+  width: var(--icona); height: var(--icona); border-radius: 99px; flex: none; }
+.ig-ico svg { width: var(--icona-svg); height: var(--icona-svg); }
+/* il testo va a capo e resta dentro il riquadro */
+.ig-azioni a, .mn-capo-tasto, .ac-riga, .av-riquadro, .cal-evento, .ur-riga, .rn-riquadro { min-width: 0; overflow: hidden; }
+.mn-capo-tasto > span:not(.ig-ico):not(.sg-freccia), .ig-azioni a b { min-width: 0; overflow-wrap: break-word; hyphens: auto; }
+/* i tasti grandi della home: 2 per riga, testo centrato */
+.hu-griglia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.hu-griglia a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 112px;
+  padding: 14px 10px; border-radius: 18px; text-align: center; color: var(--testo); text-decoration: none; }
+.hu-griglia a b { display: block; line-height: 1.2; }
+.hu-griglia .home-badge { position: absolute; top: 8px; right: 10px; }

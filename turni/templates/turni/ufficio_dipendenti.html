@@ -1,7 +1,8 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Dipendenti{% endblock %}
 {% block contenuto %}
-<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+<a class="tasto-indietro" href="{% url 'turni:accessi' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Gestione accessi</a>
+<div class="intestazione"><h1>Dipendenti</h1></div>
 
 <form method="post" class="scheda">{% csrf_token %}
   <h2>Aggiungi dipendente</h2>

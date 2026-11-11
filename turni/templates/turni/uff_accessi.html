@@ -1,0 +1,36 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Gestione accessi{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Gestione accessi</h1></div>
+
+<form method="post" enctype="multipart/form-data" class="scheda mc-form">{% csrf_token %}
+  <h2>Elenco dipendenti</h2>
+  <p class="tenue piccolo">Carica il file «Organizzazione Turni»: l'app legge il foglio «Elenco Dipendenti, Aree e Orari» e aggiunge chi manca.</p>
+  <label class="bottone foto-btn mn-foto"><input type="file" name="file" accept=".xlsx,.xlsm" required><span>Scegli il file Excel</span></label>
+  <button class="bottone pieno piena-larghezza" name="azione" value="elenco">Aggiorna elenco dipendenti</button>
+</form>
+
+{% if da_attivare %}
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <h2>Accesso per tutti</h2>
+  <p class="tenue piccolo">{{ da_attivare|length }} dipendent{{ da_attivare|length|pluralize:'e,i' }} senza accesso. L'app crea nome utente e PIN per ognuno e mostra le tessere da stampare, una sola volta.</p>
+  <button class="bottone pieno piena-larghezza" name="azione" value="tutti" data-conferma="Creare l'accesso per {{ da_attivare|length }} dipendenti?">Attiva accesso per tutti ({{ da_attivare|length }})</button>
+</form>
+{% endif %}
+
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <h2>Attiva accesso</h2>
+  <label class="mc-campo">Nome<select name="dipendente" required><option value="">Scegli…</option>{% for d in tutti %}<option value="{{ d.pk }}">{{ d.nome_breve }}{% if d.utente and d.utente.is_active %} · ha già l'accesso: nuovo PIN{% endif %}</option>{% endfor %}</select></label>
+  <label class="mc-campo">Ruolo<select name="ruolo">{% for v, n in ruoli %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+  <p class="tenue piccolo">L'app crea nome utente e PIN e li mostra una sola volta, da stampare o consegnare. Per chi ha già l'accesso crea un PIN nuovo e quello vecchio smette di funzionare.</p>
+  <button class="bottone pieno piena-larghezza" name="azione" value="attiva">Attiva accesso</button>
+</form>
+
+<form method="post" class="scheda mc-form">{% csrf_token %}
+  <h2>Disattiva accesso</h2>
+  <label class="mc-campo">Nome<select name="dipendente" required><option value="">Scegli…</option>{% for d in attivi %}<option value="{{ d.pk }}">{{ d.nome_breve }} · {{ d.get_ruolo_app_display }}</option>{% endfor %}</select></label>
+  <p class="tenue piccolo">La persona non può più entrare; turni e storico restano.</p>
+  <button class="bottone avviso-btn piena-larghezza" name="azione" value="disattiva" data-conferma="Disattivare l'accesso? La persona non potrà più entrare nell'app.">Disattiva accesso</button>
+</form>
+{% endblock %}

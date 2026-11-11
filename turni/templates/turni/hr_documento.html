@@ -1,0 +1,22 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ d.titolo }}{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:documenti_ufficio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Documenti</a>
+<div class="intestazione"><h1>Documento</h1></div>
+
+<section class="scheda">
+  <b class="ac-voce-titolo">{{ d.titolo }}</b>
+  <p class="tenue piccolo">{{ d.get_tipo_display }} · {% if d.dipendente %}per {{ d.dipendente.nome_breve }}{% else %}per tutti{% endif %} · caricato il {{ d.caricato_il|date:'j M Y, H:i' }}</p>
+  <a class="bottone pieno piena-larghezza" href="{% url 'turni:documento_file' d.pk %}" target="_blank">Apri il documento</a>
+</section>
+
+{% if d.presa_visione %}
+<h2 class="rq-sezione">Presa visione · {{ n_letti }} su {{ righe|length }}</h2>
+<div class="nt-elenco">
+  {% for p, il in righe %}
+  <div class="rn-invitato"><span>{{ p.nome_breve }}</span>
+    {% if il %}<span class="rn-stato si">Letto il {{ il|date:'j/m H:i' }}</span>{% else %}<span class="rn-stato attesa">Da leggere</span>{% endif %}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,6 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Area personale{% endblock %}
 {% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
 {# stile profilo Instagram: cerchietto, nome, tasti delle richieste, poi la settimana su una riga #}
 <div class="ig-profilo">
   {# tocca il cerchietto per cambiare la foto: si invia appena scelta #}
@@ -38,6 +39,7 @@
       {% if c.turno.capoturno and c.turno.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}
     {% endif %}
     {% if c.riunione %}<span class="rn-pallino" title="Riunione"></span>{% endif %}
+    {% if c.fermo %}<span class="rn-pallino st-pallino-fermo" title="Fermo impianto programmato"></span>{% endif %}
   </div>
   {% endfor %}
 </div>
@@ -45,9 +47,19 @@
 {% endfor %}
 
 {# Avvisi (Giulia, 10/11): un riquadro per ogni cosa, riunioni e richieste singole, niente accorpato #}
-{% if riunioni or da_rispondere or aperte_cambi or aperte_ferie or aperti_avvisi %}
+{% if riunioni or da_leggere or da_rispondere or aperte_cambi or aperte_ferie or aperti_avvisi %}
 <h2 class="ap-sezione">Avvisi</h2>
 {% for inv in riunioni %}{% include 'turni/_riunione_riquadro.html' with r=inv.riunione inv=inv %}{% endfor %}
+{% for d in da_leggere %}
+<section class="av-riquadro av-rispondi">
+  <span class="av-tipo">{{ d.get_tipo_display }} · da leggere</span>
+  <b>{{ d.titolo }}</b>
+  <div class="rn-tasti">
+    <a class="bottone leggero" href="{% url 'turni:documento_file' d.pk %}" target="_blank">Apri</a>
+    <form method="post" action="{% url 'turni:documenti' %}">{% csrf_token %}<input type="hidden" name="documento" value="{{ d.pk }}"><input type="hidden" name="dopo" value="{% url 'turni:miei_turni' %}"><button class="nt-conferma">Ho letto</button></form>
+  </div>
+</section>
+{% endfor %}
 {% for c in da_rispondere %}
 <section class="av-riquadro av-rispondi">
   <span class="av-tipo">Cambio turno · devi rispondere</span>
@@ -96,7 +108,7 @@
 
 {% for e in extra %}
 <section class="scheda extra {% if e.mia.confermata %}extra-ok{% elif e.mia %}extra-offerto{% endif %}">
-  <p class="extra-titolo">{% if e.mia.confermata %}Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}Cercasi volontari{% endif %}</p>
+  <p class="extra-titolo">{% if e.mia.confermata %}Confermato: lavori tu{% elif e.mia %}Ti sei offerto{% else %}Cercasi volontari · mancano {{ e.mancano }} su {{ e.posti }}{% endif %}</p>
   <h2 class="grande">{{ e.data|date:'l j F'|capfirst }}</h2>
   <p>{% include 'turni/_pillola.html' with t=e %} <span class="orario">{{ e.orario }}</span>{% if e.ruolo %} <span class="ruolo-cercato">Serve un {{ e.get_ruolo_display|lower }}</span>{% endif %}</p>
   {% if not e.mia.confermata %}
@@ -138,6 +150,7 @@
 <div class="mn-capo ap-tasti">
   <a class="mn-capo-tasto" href="{% url 'turni:settimana_tutti' %}?settimana={{ inizio|date:'Y-m-d' }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></span><span><b>Cambio turno</b></span><span class="sg-freccia">›</span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:nuovo_avviso' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span><b>Ritardo / Uscita</b></span><span class="sg-freccia">›</span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:documenti' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg></span><span><b>Documenti</b></span><span class="sg-freccia">›</span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:archivio_richieste' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 13h4"/></svg></span><span><b>Archivio Richieste</b></span><span class="sg-freccia">›</span></a>
 </div>
 

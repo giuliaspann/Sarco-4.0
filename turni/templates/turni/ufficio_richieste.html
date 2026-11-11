@@ -1,7 +1,8 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Richieste da approvare{% endblock %}
 {% block contenuto %}
-<div class="intestazione"><h1>Ufficio</h1>{% include 'turni/_ufficio_menu.html' %}</div>
+<a class="tasto-indietro" href="{% url 'turni:ufficio_richieste' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Richieste</a>
+<div class="intestazione"><h1>Richieste</h1></div>
 
 {% if capi_da_completare %}
 <section class="scheda">

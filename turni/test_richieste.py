@@ -75,8 +75,9 @@ class RichiesteTest(TestCase):
         self.assertEqual(self.turno(self.spano, self.MAR).fascia, Fascia.RIPOSO)  # non ancora applicato
 
         self.client.login(username='resp', password='x')
-        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), 'visita medica')
-        self.client.post(reverse('turni:ufficio_richieste'), {'cambio': cambio.pk, 'azione': 'approva'})
+        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), reverse('turni:ufficio_richiesta', args=['cambio', cambio.pk]))
+        self.assertContains(self.client.get(reverse('turni:ufficio_richiesta', args=['cambio', cambio.pk])), 'visita medica')
+        self.client.post(reverse('turni:ufficio_richiesta_scelta', args=['cambio', cambio.pk, 'approva']))
         cambio.refresh_from_db()
         self.assertEqual(cambio.stato, CambioTurno.Stato.APPROVATO)
 
@@ -151,8 +152,8 @@ class RichiesteTest(TestCase):
         )
 
         self.client.login(username='resp', password='x')
-        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), 'non sono ancora nei turni caricati')
-        self.client.post(reverse('turni:ufficio_richieste'), {'ferie': f.pk, 'azione': 'approva'})
+        self.assertContains(self.client.get(reverse('turni:ufficio_richieste')), reverse('turni:ufficio_richiesta', args=['ferie', f.pk]))
+        self.client.post(reverse('turni:ufficio_richiesta_scelta', args=['ferie', f.pk, 'approva']))
         f.refresh_from_db()
         self.assertEqual(f.stato, RichiestaFerie.Stato.APPROVATA)
         self.assertEqual(self.turno(self.drame, LUNEDI + timedelta(days=3)).fascia, Fascia.FERIE)

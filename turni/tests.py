@@ -549,7 +549,7 @@ class SettimanaTuttiTest(TestCase):
     def test_griglia_per_impianto_e_celle_cambiabili(self):
         r = self.client.get(reverse('turni:settimana_tutti'))
         self.assertEqual(r.status_code, 200)
-        gruppi = dict(r.context['gruppi'])
+        gruppi = {t: righe for t, righe, _ in r.context['gruppi']}
         # Drame e Spano lavorano soprattutto all'Impianto 1, Crimi soprattutto da palista
         self.assertEqual({x['nome'] for x in gruppi['Impianto 1']}, {'Spano’ A. M.', 'Drame B.'})
         self.assertIn('Crimi B.', {x['nome'] for x in gruppi['Palista']})

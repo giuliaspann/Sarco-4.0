@@ -1,7 +1,7 @@
 from django.contrib.auth.views import LogoutView, PasswordChangeView
 from django.urls import path, reverse_lazy
 
-from . import views, views_menu, views_mn_capo, views_programma, views_riunioni,views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import views, views_menu, views_mn_capo, views_programma, views_riunioni, views_hr, views_calendario, views_ufficio, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
 
 app_name = 'turni'
 
@@ -98,11 +98,24 @@ urlpatterns = [
     path('manutenzione/etichette/', views_manutenzione.etichette, name='etichette'),
     path('manutenzione/foto/<str:tipo>/<int:oggetto_id>/', views_manutenzione.foto, name='foto_mn'),
     path('manutenzione/video/<str:tipo>/<int:oggetto_id>/', views_manutenzione.video, name='video_mn'),
-    path('ufficio/richieste/', views_richieste.ufficio_richieste, name='ufficio_richieste'),
+    path('ufficio/richieste/', views_ufficio.richieste, name='ufficio_richieste'),
+    path('ufficio/richieste/<str:tipo>/<int:pk>/', views_ufficio.richiesta, name='ufficio_richiesta'),
+    path('ufficio/richieste/<str:tipo>/<int:pk>/<str:scelta>/', views_ufficio.richiesta_scelta, name='ufficio_richiesta_scelta'),
+    path('ufficio/turni/', views_ufficio.turni, name='ufficio_turni'),
+    path('ufficio/turni/extra/', views_ufficio.extra_nuovo, name='ufficio_extra_nuovo'),
+    path('ufficio/accessi/', views_ufficio.accessi_view, name='accessi'),
+    path('ufficio/anagrafica/', views_ufficio.anagrafica, name='anagrafica'),
+    path('ufficio/anagrafica/<int:dip_id>/pdf/', views_ufficio.anagrafica_pdf, name='anagrafica_pdf'),
     path('report/assenze/', views_report.report_assenze, name='report_assenze'),
     path('assenze/', views_report.storico_assenze, name='storico_assenze'),
     path('ufficio/importa/', views.importa_turni, name='importa'),
     path('ufficio/importa/anteprima/', views.anteprima, name='anteprima'),
     path('ufficio/dipendenti/', views.dipendenti, name='dipendenti'),
+    path('ufficio/scadenze/', views_hr.scadenze, name='scadenze'),
+    path('calendario/', views_calendario.calendario, name='calendario'),
+    path('ufficio/documenti/', views_hr.documenti_ufficio, name='documenti_ufficio'),
+    path('ufficio/documenti/<int:pk>/', views_hr.documento_ufficio, name='documento_ufficio'),
+    path('documenti/', views_hr.documenti, name='documenti'),
+    path('documenti/<int:pk>/file/', views_hr.documento_file, name='documento_file'),
     path('ufficio/credenziali/', views.credenziali, name='credenziali'),
 ]
