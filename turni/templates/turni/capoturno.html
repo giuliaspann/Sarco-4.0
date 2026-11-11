@@ -2,21 +2,19 @@
 {% block titolo %}Verifica pulizie{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizia</a>
-<div class="intestazione">
-  <div class="naviga">
-    <a class="freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno precedente">‹</a>
-    <h1>Verifica · {{ giorno|date:'D j M' }}</h1>
-    <a class="freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno successivo">›</a>
-  </div>
-  {% if fasce %}
-  <div class="filtri filtri-fasce">
-    <a href="?giorno={{ giorno|date:'Y-m-d' }}" class="{% if not fascia %}attivo{% endif %}">Tutti</a>
-    {% for f, nome, classe in fasce %}<a href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}" class="{{ classe }}{% if fascia == f %} scelto{% endif %}">{{ nome }}</a>{% endfor %}
-  </div>
-  {% elif mio_turno %}
-  <p class="tenue piccolo">Le pulizie del tuo turno: {{ mio_turno }}.</p>
-  {% endif %}
+<div class="intestazione"><h1>Verifica pulizie</h1></div>
+{# proposta B scelta da Giulia (11/11): data su una riga, poi le pulizie divise per stato #}
+<div class="st-settimana vp-giorno">
+  <a class="st-freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno precedente">‹</a>
+  <span>{{ giorno|date:'D j M'|capfirst }}{% if mio_turno %} · {{ mio_turno }}{% endif %}</span>
+  <a class="st-freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno successivo">›</a>
 </div>
+{% if fasce %}
+<div class="filtri filtri-fasce">
+  <a href="?giorno={{ giorno|date:'Y-m-d' }}" class="{% if not fascia %}attivo{% endif %}">Tutti</a>
+  {% for f, nome, classe in fasce %}<a href="?giorno={{ giorno|date:'Y-m-d' }}&fascia={{ f }}" class="{{ classe }}{% if fascia == f %} scelto{% endif %}">{{ nome }}</a>{% endfor %}
+</div>
+{% endif %}
 {% if non_capo %}<p class="tenue">Questo giorno non sei Capo Turno: non hai pulizie da verificare.</p>{% endif %}
 
 {% if avvisi %}
@@ -37,46 +35,43 @@
   <small class="tenue">{{ fascia }} · {% for v in voci %}{{ v.turno.dipendente.nome_breve }} {% if v.stato == 'VERIFICATA' %}✓{% elif v.stato == 'IMPEDITA' %}⚠️ {{ v.nota }}{% else %}da fare{% endif %}{% if not forloop.last %} · {% endif %}{% endfor %}</small>
 </section>
 {% endfor %}
-{% for t in turni %}
-<details class="scheda persona" id="d{{ t.pk }}" {% if t.n_da_verificare %}open{% endif %}>
-  <summary>
-    <span>
-      <strong>{{ t.dipendente.nome_breve }}</strong>
-      {% if fasce %}<span>{% include 'turni/_pillola.html' %}</span>{% elif t.nome_postazione %}<span class="posto">{{ t.nome_postazione }}</span>{% endif %}
-    </span>
-    <span class="conteggio {% if t.n_voci and t.n_fatte == t.n_voci %}completo{% elif t.n_da_verificare %}da-vedere{% endif %}">
-      {{ t.n_fatte }}/{{ t.n_voci }}
-    </span>
-  </summary>
-  {% for p in t.pulizie.all %}
-    <div class="voce stato-{{ p.stato|lower }}">
-      <div class="voce-testa">
-        <span class="spunta" aria-hidden="true"></span>
-        <div><strong>{{ p.titolo }}</strong>
-          {% if p.fatta_il %}<span class="tenue piccolo">alle {{ p.fatta_il|time:'H:i' }}</span>{% endif %}
-        </div>
-        <span class="stato">{{ p.get_stato_display }}</span>
-      </div>
-      {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
-      {% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto {{ p.titolo }}" loading="lazy"></a>{% endif %}
-      {% if p.elemento.convalida == 'PIAZZALE' %}
-      {% if p.stato == 'FATTA' %}<p class="tenue piccolo">La convalida il responsabile piazzale.</p>{% endif %}
-      {% elif p.stato == 'FATTA' and p.ok_capoturno_il %}
-      <p class="tenue piccolo">Ok del Capo Turno alle {{ p.ok_capoturno_il|time:'H:i' }}: ora la convalida il responsabile piazzale.</p>
-      {% elif p.stato == 'FATTA' or p.stato == 'SEGNALATA' or p.stato == 'IMPEDITA' %}
-      <form method="post" class="form-voce">{% csrf_token %}
-        <input type="hidden" name="pulizia" value="{{ p.pk }}">
-        <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">
-        <button class="bottone pieno" name="azione" value="verifica">Ok</button>
-        <button class="bottone avviso-btn" name="azione" value="segnala">Da rifare</button>
-      </form>
-      {% endif %}
+<p class="vb-sezione verde">Da verificare · {{ da_verificare|length }}</p>
+{% for p in da_verificare %}
+<section class="vb-scheda" id="p{{ p.pk }}">
+  <b class="vb-titolo">{{ p.titolo }}</b>
+  <span class="vb-chi">{{ p.turno.dipendente.nome_breve }}{% if p.fatta_il %} · alle {{ p.fatta_il|time:'H:i' }}{% endif %}{% if p.stato != 'FATTA' %} · {{ p.get_stato_display|lower }}{% endif %}</span>
+  {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
+  {% if p.foto_prima or p.foto %}<div class="vb-foto">{% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Dopo" loading="lazy"></a>{% endif %}</div>{% endif %}
+  <form method="post" class="vb-azioni">{% csrf_token %}
+    <input type="hidden" name="pulizia" value="{{ p.pk }}">
+    <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">
+    <div class="vb-tasti">
+      <button class="nt-conferma" name="azione" value="verifica">Approva</button>
+      <button class="nt-rifiuta" name="azione" value="segnala">Da rifare</button>
     </div>
-  {% empty %}
-    <p class="tenue piccolo">Nessuna pulizia prevista.</p>
-  {% endfor %}
-</details>
+  </form>
+</section>
 {% empty %}
-  <div class="vuoto"><p>Nessuno in turno questo giorno.</p></div>
+<div class="vuoto"><p>Niente da verificare per ora.</p></div>
 {% endfor %}
+
+{% if al_responsabile %}
+<p class="vb-sezione">Dal responsabile piazzale · {{ al_responsabile|length }}</p>
+<div class="vb-elenco">
+  {% for p in al_responsabile %}<div class="vb-riga"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }}</span></div>{% endfor %}
+</div>
+{% endif %}
+
+<p class="vb-sezione">Ancora da fare · {{ da_fare|length }}</p>
+<div class="vb-elenco">
+  {% for p in da_fare %}<div class="vb-riga"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }}</span></div>
+  {% empty %}<div class="vb-riga"><span class="tenue">Tutte fatte.</span></div>{% endfor %}
+</div>
+
+{% if fatte %}
+<p class="vb-sezione">Approvate · {{ fatte|length }}</p>
+<div class="vb-elenco">
+  {% for p in fatte %}<div class="vb-riga"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }}</span></div>{% endfor %}
+</div>
+{% endif %}
 {% endblock %}

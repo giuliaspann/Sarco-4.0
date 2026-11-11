@@ -455,11 +455,12 @@ class HomeTest(TestCase):
         r = self.client.get(reverse('turni:home'))
         self.assertEqual(r.status_code, 200)
         # si apre "Oggi" (stile Instagram): storie di chi lavora con me, turno, quattro tasti e i fermi impianto
-        for testo in ('Pulizia', 'Manutenzione', '>Produzione<',
-                      '>Fermo<', '>Ripartenza<', 'Area personale', 'aria-label="Chat'):
+        for testo in ('Pulizia', 'Manutenzione', '>Produzione<', 'Area personale', 'aria-label="Chat'):
             self.assertContains(r, testo)
+        for testo in ('>Fermo<', '>Ripartenza<'):  # tolti dalla home (Giulia, 11/11)
+            self.assertNotContains(r, testo)
         self.assertNotContains(r, '>Home<')
-        self.assertNotContains(r, '>Analisi<')  # solo chi lavora in laboratorio
+        self.assertContains(r, '>Analisi<')  # la stessa home per tutti i dipendenti (11/11)
         r2 = self.client.get(reverse('turni:miei_turni'))
         # Area personale come un profilo: niente ferie, permessi né malattia (10/11/2026)
         for testo in ('I miei turni', 'Turni di tutti', reverse('turni:archivio_richieste')):

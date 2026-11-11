@@ -36,7 +36,7 @@ class StatisticheTest(TestCase):
         for t in (reverse('turni:produzione_nuova'), 'aria-label="Chat'):
             self.assertContains(r, t)
         # il tasto Analisi solo per chi lavora in laboratorio
-        self.assertNotContains(r, reverse('turni:analisi_nuova'))
+        self.assertContains(r, reverse('turni:analisi_nuova'))  # la stessa home per tutti (11/11)
         self.assertContains(self.client.get(reverse('turni:archivio')), reverse('turni:archivio_cerca', args=['analisi']))
         r = self.client.get(reverse('turni:statistiche'))
         for t in ('Inserisci produzione del turno', 'Inserisci analisi prodotto', 'Report'):

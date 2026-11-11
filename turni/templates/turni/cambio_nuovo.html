@@ -45,25 +45,19 @@
     <input type="hidden" name="giorno" value="{{ giorno|date:'Y-m-d' }}">
     <input type="hidden" name="collega" value="{{ collega.pk }}">
     <p class="cb-giorno">{{ giorno|date:'l j F'|capfirst }}</p>
-    <div class="cb-scambio">
+    {# proposta A scelta da Giulia (11/11): per ognuno «Ora» e «Dopo», a tutta larghezza, con il colore del turno #}
+    <div class="cb-scambio cb-ora-dopo">
       <div class="cb-persona">
         <b>Tu</b>
-        <div class="cb-prima-dopo">
-          <span>{% include 'turni/_pillola.html' with t=mio %}</span>
-          <span class="cb-freccia">➜</span>
-          <span>{% include 'turni/_pillola.html' with t=suo %}</span>
-        </div>
+        <div class="cb-fila"><span class="cb-etichetta">Ora</span>{% include 'turni/_turno_riga.html' with t=mio %}</div>
+        <div class="cb-fila"><span class="cb-etichetta dopo">Dopo</span>{% include 'turni/_turno_riga.html' with t=suo %}</div>
       </div>
       <div class="cb-persona">
         <b>{{ collega.nome_breve }}</b>
-        <div class="cb-prima-dopo">
-          <span>{% include 'turni/_pillola.html' with t=suo %}</span>
-          <span class="cb-freccia">➜</span>
-          <span>{% include 'turni/_pillola.html' with t=mio %}</span>
-        </div>
+        <div class="cb-fila"><span class="cb-etichetta">Ora</span>{% include 'turni/_turno_riga.html' with t=suo %}</div>
+        <div class="cb-fila"><span class="cb-etichetta dopo">Dopo</span>{% include 'turni/_turno_riga.html' with t=mio %}</div>
       </div>
     </div>
-
 
     <label class="cb-motivo">Motivo (facoltativo)<textarea name="motivo" rows="2" maxlength="300" placeholder="Es. visita medica"></textarea></label>
     <button class="bottone pieno piena-larghezza cb-invia">Invia la richiesta a {{ collega.nome_breve }}</button>

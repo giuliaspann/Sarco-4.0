@@ -54,7 +54,7 @@ class FotoProfiloTest(TestCase):
     def test_file_non_valido(self):
         brutto = SimpleUploadedFile('x.jpg', b'non sono una foto', content_type='image/jpeg')
         r = self.client.post(reverse('turni:foto_profilo'), {'foto': brutto}, follow=True)
-        self.assertContains(r, 'Foto non valida')
+        self.assertContains(r, 'Non riesco a leggere questa foto')
         self.dip.refresh_from_db()
         self.assertFalse(self.dip.foto)
 

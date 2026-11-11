@@ -1,7 +1,7 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Area personale{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<a class="tasto-indietro" data-resta href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
 {# stile profilo Instagram: cerchietto, nome, tasti delle richieste, poi la settimana su una riga #}
 <div class="ig-profilo">
   {# tocca il cerchietto per cambiare la foto: si invia appena scelta #}

@@ -95,7 +95,7 @@ class PulizieTurnoTest(TestCase):
         self.client.post(reverse('turni:capoturno') + f'?giorno={GIORNO}', {'azione': 'verifica', 'pulizia': p.pk})
         p.refresh_from_db()
         self.assertEqual((p.stato, p.ok_capoturno_da), (Pulizia.Stato.FATTA, capo.dipendente.utente))
-        self.assertContains(self.client.get(reverse('turni:capoturno') + f'?giorno={GIORNO}'), 'ora la convalida il responsabile piazzale')
+        self.assertContains(self.client.get(reverse('turni:capoturno') + f'?giorno={GIORNO}'), 'Dal responsabile piazzale')
 
         self.entra(resp)
         r = self.client.get(reverse('turni:pulizie_piazzale'))

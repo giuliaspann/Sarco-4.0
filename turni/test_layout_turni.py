@@ -178,7 +178,7 @@ class ProfiloUfficioTest(TestCase):
 
 
 class TastoAnalisiTest(TestCase):
-    def entra(self, nome, mansione='OPERAIO', postazione='IMP1'):
+    def entra(self, nome, mansione='OPERAIO', postazione='IMP1', capo=False):
         from django.utils import timezone
 
         from .models import Settimana
@@ -188,12 +188,16 @@ class TastoAnalisiTest(TestCase):
         d.save()
         oggi = timezone.localdate()
         sett, _ = Settimana.objects.get_or_create(lunedi=oggi - timedelta(days=oggi.weekday()))
-        Turno.objects.create(settimana=sett, dipendente=d, data=oggi, fascia='1T', postazione=postazione)
+        Turno.objects.create(settimana=sett, dipendente=d, data=oggi, fascia='1T', postazione=postazione, capoturno=capo)
         self.client.force_login(d.utente)
         return self.client.get(reverse('turni:oggi'))
 
     def test_capo_turno_in_impianto_non_vede_analisi(self):
-        self.assertNotContains(self.entra('CAPO PROVA'), reverse('turni:analisi_nuova'))
+        self.assertNotContains(self.entra('CAPO PROVA', capo=True), reverse('turni:analisi_nuova'))
+
+    def test_tutti_gli_altri_dipendenti_la_vedono(self):
+        # la stessa home per tutti i dipendenti (Giulia, 11/11/2026)
+        self.assertContains(self.entra('OPERAIO PROVA'), reverse('turni:analisi_nuova'))
 
     def test_analista_e_chi_e_in_laboratorio_la_vedono(self):
         self.assertContains(self.entra('GALASSI MARIO', mansione='OPERAIO,ANALISTA'), reverse('turni:analisi_nuova'))

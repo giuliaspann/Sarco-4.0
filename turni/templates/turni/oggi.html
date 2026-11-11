@@ -54,12 +54,7 @@
   {% endif %}
 </div>
 
-{% if not capo or not turno_oggi.lavora %}
-<div class="ig-impianti">
-  <a class="fermo" href="{% url 'turni:nuovo_fermo' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Fermo</a>
-  <a class="riparte" href="{% url 'turni:ripartenza' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Ripartenza</a>
-</div>
-{% endif %}
+{# tasti Fermo e Ripartenza tolti dalla home (Giulia, 11/11): i fermi restano in Manutenzione #}
 {% endwith %}
 {% for f in fermi_aperti %}
 <a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>

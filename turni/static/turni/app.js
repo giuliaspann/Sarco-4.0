@@ -473,8 +473,23 @@ document.querySelectorAll('form[data-qr]').forEach(form => {
 });
 
 // ---------------------------------------------------------------- foto profilo: si invia appena scelta
+// prima la converto in JPEG nel telefono: le foto dell'iPhone (HEIC) il server non le sa leggere (bug segnalato l'11/11)
 document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input => {
-  input.addEventListener('change', () => { if (input.files.length) input.form.submit(); });
+  input.addEventListener('change', async () => {
+    if (!input.files.length) return;
+    const piu = input.closest('label') && input.closest('label').querySelector('.ig-piu');
+    if (piu) piu.textContent = '…';
+    if (window.DataTransfer && window.createImageBitmap) {
+      try {
+        const dt = new DataTransfer();
+        dt.items.add(await riduci(input.files[0]));
+        input.files = dt.files;
+      } catch (e) {
+        // il browser non riesce a leggerla: mando l'originale e il server dice se non va
+      }
+    }
+    input.form.submit();
+  });
 });
 
 // ---------------------------------------------------------------- tasto "indietro": torna da dove si è arrivati
@@ -518,7 +533,7 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
 
 // ---------------------------------------------------------------- tasto indietro sulla riga del titolo (come Instagram)
 (function () {
-  document.querySelectorAll('a.tasto-indietro').forEach(a => {
+  document.querySelectorAll('a.tasto-indietro:not([data-resta])').forEach(a => {
     const nome = a.textContent.trim();
     if (nome) a.setAttribute('aria-label', 'Indietro: ' + nome);
     // il primo titolo dopo il tasto: lì dentro la freccia, così non occupa una riga sua

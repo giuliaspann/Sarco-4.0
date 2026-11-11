@@ -171,6 +171,11 @@ def vede_analisi(dip, turno=None):
         return False
     if Mansione.ANALISTA in dip.mansioni:
         return True
+    # la stessa home per tutti i dipendenti, Analisi compresa (Giulia, 11/11/2026);
+    # Capi Turno, responsabile piazzale e responsabile impianto hanno compiti diversi: per loro resta solo il laboratorio
+    capo_oggi = bool(turno and turno.lavora and turno.capoturno)
+    if not (capo_oggi or dip.resp_piazzale or dip.resp_impianto):
+        return True
     return bool(turno and turno.lavora and any(p == Postazione.ANALISI for p, _ in turno.lista_incarichi))
 
 
@@ -327,6 +332,12 @@ def fermi_programmati(dal, al):
     return fermi
 
 
+def cognome_nome(dip):
+    """('Di Girolamo', 'Gianvito'): il cognome sopra e il nome sotto nella colonna stretta (Giulia, 11/11)."""
+    parole = dip.nome_breve.split()
+    return (' '.join(parole[:-1]), parole[-1]) if len(parole) > 1 else (dip.nome_breve, '')
+
+
 @login_required
 def settimana_tutti(request):
     """Come il file Excel: tutti i dipendenti della settimana, raggruppati per impianto/postazione,
@@ -367,7 +378,8 @@ def settimana_tutti(request):
         # dentro il gruppo: prima chi fa più mattine, poi pomeriggi, notti...
         fascia_tipica = Counter(t.fascia for t in lavoro).most_common(1)[0][0] if lavoro else 'zz'
         gruppi.setdefault((chiave, titolo), []).append(
-            {'dip': dip, 'nome': nome_corto(dip), 'celle': celle, 'io': dip == mio,
+            {'dip': dip, 'nome': nome_corto(dip), 'cognome': cognome_nome(dip)[0], 'nome_proprio': cognome_nome(dip)[1],
+             'celle': celle, 'io': dip == mio,
              'ordine': (ORDINE_FASCE.index(fascia_tipica) if fascia_tipica in ORDINE_FASCE else 9, dip.nome)}
         )
 
@@ -755,6 +767,20 @@ def capoturno(request):
     turni.sort(key=lambda t: (-t.n_da_verificare, ORDINE_FASCE.index(t.fascia), t.dipendente.nome))
     from .models import AvvisoAssenza
 
+    # Verifica · proposta B (Giulia, 11/11): divisa per stato, «Approva» e «Da rifare» subito sulle pulizie da verificare
+    da_verificare, al_responsabile, da_fare, fatte = [], [], [], []
+    for t in turni:
+        for p in t.pulizie.all():
+            if p.elemento_id and p.elemento.promemoria:
+                continue
+            if p.stato == Pulizia.Stato.VERIFICATA:
+                fatte.append(p)
+            elif p.stato == Pulizia.Stato.DA_FARE:
+                da_fare.append(p)
+            elif p.stato == Pulizia.Stato.FATTA and (p.ok_capoturno_il or (p.elemento_id and p.elemento.convalida == ElementoPulizia.Convalida.PIAZZALE)):
+                al_responsabile.append(p)
+            else:
+                da_verificare.append(p)  # fatte, da rifare o non eseguibili: decide il Capo Turno
     promemoria = {}
     promemoria_q = Pulizia.objects.filter(turno__data=giorno, elemento__promemoria=True)
     if mie_fasce is not None:
@@ -769,6 +795,7 @@ def capoturno(request):
             'avvisi': AvvisoAssenza.objects.filter(data=giorno, annullato_il__isnull=True).select_related('dipendente'),
             'giorno': giorno,
             'turni': turni,
+            'da_verificare': da_verificare, 'al_responsabile': al_responsabile, 'da_fare': da_fare, 'fatte': fatte,
             'fascia': fascia,
             # sigle come nel calendario, così la barra sta su una riga; il Capo Turno vede solo il suo turno (niente barra)
             'fasce': [
@@ -980,7 +1007,7 @@ def foto_profilo(request):
         buf = BytesIO()
         img.save(buf, 'JPEG', quality=82, optimize=True)
     except Exception:
-        messages.error(request, 'Foto non valida o troppo grande.')
+        messages.error(request, "Non riesco a leggere questa foto: scattane una nuova o scegline un'altra (JPG o PNG).")
         return redirect('turni:miei_turni')
     vecchia = dip.foto.name
     dip.foto.save(f'profilo-{dip.pk}.jpg', ContentFile(buf.getvalue()), save=True)

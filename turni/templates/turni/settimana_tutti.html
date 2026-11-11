@@ -24,13 +24,13 @@
   {% for f in fermi %}<p class="st-fermo">Fermo programmato · {{ f.testo }}</p>{% endfor %}
   {% for r in righe %}
   <div class="gt-riga {% if r.io %}io{% endif %}">
-    <span class="gt-nome" title="{{ r.dip.nome_breve }}">{{ r.nome }}</span>
+    <span class="gt-nome st-nome" title="{{ r.dip.nome_breve }}"><b>{{ r.cognome }}</b>{% if r.nome_proprio %}<small>{{ r.nome_proprio }}</small>{% endif %}</span>
     {% for c in r.celle %}
       {% if c.cambiabile %}
-        <a class="gt-cella cambiabile {{ c.turno.classe_fascia }}" href="{% url 'turni:nuovo_cambio' %}?giorno={{ c.giorno|date:'Y-m-d' }}&collega={{ r.dip.pk }}"
-           title="Chiedi il cambio a {{ r.nome }}">{{ c.turno.sigla }}</a>
+        <a class="gt-cella st-cella cambiabile {{ c.turno.classe_solo_fascia }}" href="{% url 'turni:nuovo_cambio' %}?giorno={{ c.giorno|date:'Y-m-d' }}&collega={{ r.dip.pk }}"
+           title="Chiedi il cambio a {{ r.nome }}">{{ c.turno.sigla_fascia|default:'CT' }}{% if c.turno.capoturno and c.turno.lavora %}<i class="st-ct">CT</i>{% endif %}</a>
       {% elif c.turno %}
-        <span class="gt-cella {{ c.turno.classe_fascia }}" title="{{ c.turno.descrizione }}">{{ c.turno.sigla }}</span>
+        <span class="gt-cella st-cella {{ c.turno.classe_solo_fascia }}" title="{{ c.turno.descrizione }}">{{ c.turno.sigla_fascia|default:'CT' }}{% if c.turno.capoturno and c.turno.lavora %}<i class="st-ct">CT</i>{% endif %}</span>
       {% else %}
         <span class="gt-cella vuota">–</span>
       {% endif %}
