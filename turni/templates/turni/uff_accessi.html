@@ -6,7 +6,7 @@
 
 <form method="post" enctype="multipart/form-data" class="scheda mc-form">{% csrf_token %}
   <h2>Elenco dipendenti</h2>
-  <p class="tenue piccolo">Carica il file «Organizzazione Turni»: l'app legge il foglio «Elenco Dipendenti, Aree e Orari» e aggiunge chi manca.</p>
+  <p class="tenue piccolo">Carica il file «Organizzazione Turni»: l'app legge il foglio «Elenco Dipendenti, Aree e Orari», aggiunge chi manca e aggiorna chi è competente per le macchine ottiche (colonna MO).</p>
   <label class="bottone foto-btn mn-foto"><input type="file" name="file" accept=".xlsx,.xlsm" required><span>Scegli il file Excel</span></label>
   <button class="bottone pieno piena-larghezza" name="azione" value="elenco">Aggiorna elenco dipendenti</button>
 </form>

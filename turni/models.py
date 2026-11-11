@@ -92,6 +92,8 @@ class Dipendente(models.Model):
     # anagrafica dell'ufficio (Giulia, 11/11/2026)
     data_nascita = models.DateField('data di nascita', null=True, blank=True)
     data_assunzione = models.DateField('data di assunzione', null=True, blank=True)
+    # competenza macchine ottiche dal foglio «Elenco Dipendenti, Aree e Orari», colonna MO: 1 = prima scelta, 2 = seconda
+    livello_mo = models.PositiveSmallIntegerField('macchine ottiche (MO)', null=True, blank=True, choices=[(1, '1 · prima scelta'), (2, '2 · seconda scelta')])
     # incarichi per la manutenzione
     resp_manutenzione = models.BooleanField('responsabile manutenzione', default=False)
     # assegna le pulizie della notte ai Capi Turno, convalida il piazzale, decide la pulizia generale dell'Impianto 2
@@ -420,6 +422,14 @@ class RegolaPulizia(models.Model):
     # es. i pozzetti: una sola persona al giorno, a turno tra quelli che corrispondono alla regola
     a_rotazione = models.BooleanField('a turno tra gli addetti', default=False)
 
+    class Scelta(models.TextChoices):
+        TUTTI = '', 'Tutti quelli che corrispondono'
+        MO = 'MO', 'Due competenti macchine ottiche (prima chi ha 1, poi chi ha 2, a caso)'
+        NO_MO = 'NO_MO', 'Gli altri, che non fanno le macchine ottiche'
+
+    # macchine ottiche e pavimentazione (Giulia, 11/11/2026)
+    scelta = models.CharField('chi tra loro', max_length=6, choices=Scelta.choices, blank=True, default='')
+
     class Meta:
         verbose_name = 'regola pulizia'
         verbose_name_plural = 'regole pulizie'
@@ -450,9 +460,36 @@ class RegolaPulizia(models.Model):
                     for p, r in turno.lista_incarichi)
         )
 
+    def candidati(self, turno):
+        """Chi corrisponde alla regola nello stesso giorno e turno; i Capi Turno non fanno pulizie, supervisionano."""
+        return [t for t in Turno.objects.filter(data=turno.data, fascia=turno.fascia, dipendente__attivo=True)
+                .select_related('dipendente').order_by('dipendente__nome', 'pk') if self.corrisponde(t) and not t.capoturno]
+
+    def scelti_mo(self, turno, quanti=2):
+        """Le due persone delle macchine ottiche: prima chi ha 1 in MO, poi chi ha 2, a caso (ma sempre le stesse
+        per quel giorno e turno). Se nessuno ha ancora la competenza caricata, si sceglie tra tutti."""
+        import random
+
+        candidati = self.candidati(turno)
+        caricati = Dipendente.objects.filter(livello_mo__isnull=False).exists()
+        caso = random.Random(f'{turno.data.isoformat()}-{turno.fascia}-{self.postazione}')
+        caso.shuffle(candidati)
+        if caricati:
+            candidati = [t for t in candidati if t.dipendente.livello_mo in (1, 2)]
+            candidati.sort(key=lambda t: t.dipendente.livello_mo)
+        return {t.pk for t in candidati[:quanti]}
+
     def si_applica(self, turno):
         if not self.corrisponde(turno):
             return False
+        if self.scelta == self.Scelta.MO:
+            return turno.pk in self.scelti_mo(turno)
+        if self.scelta == self.Scelta.NO_MO:
+            # gli altri: chi non è tra i due delle macchine ottiche dello stesso turno e reparto
+            regola_mo = RegolaPulizia.objects.filter(scelta=self.Scelta.MO, postazione=self.postazione, ruolo=self.ruolo, fascia=self.fascia,
+                                                     elemento__attivo=True).first()
+            regola_mo = regola_mo or RegolaPulizia(postazione=self.postazione, ruolo=self.ruolo, fascia=self.fascia, scelta=self.Scelta.MO)
+            return turno.pk not in regola_mo.scelti_mo(turno) and not turno.capoturno
         if not self.a_rotazione:
             return True
         # una persona al giorno: si gira tra chi corrisponde, in ordine di nome

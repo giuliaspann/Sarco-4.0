@@ -216,3 +216,33 @@ class ElencoDipendentiTest(TestCase):
         r = self.client.post(reverse('turni:accessi'), {'azione': 'tutti'})
         self.assertRedirects(r, reverse('turni:credenziali'), fetch_redirect_response=False)
         self.assertFalse(Dipendente.objects.filter(utente__isnull=True).exists())
+
+
+class MacchineOtticheTest(TestCase):
+    """Regole dell'11/11/2026: ottiche a due OdL competenti (MO 1, poi 2), pavimentazione agli altri, CT senza pulizie."""
+
+    def test_ottiche_e_pavimentazione(self):
+        from .models import Pulizia, Settimana, Turno
+        from .pulizie import genera_pulizie
+
+        giorno = timezone.localdate() + timedelta(days=1)
+        while giorno.weekday() in (2, 5):  # niente controllo vagli, per non confondere il conteggio
+            giorno += timedelta(days=1)
+        sett, _ = Settimana.objects.get_or_create(lunedi=giorno - timedelta(days=giorno.weekday()))
+        persone = [('ODL UNO', 1, False), ('ODL DUE', 2, False), ('ODL TRE', 2, False), ('ODL QUATTRO', None, False), ('CAPO PROVA', 1, True)]
+        turni = {}
+        for nome, mo, capo in persone:
+            d = Dipendente.objects.create(nome=nome, livello_mo=mo)
+            turni[nome] = Turno.objects.create(settimana=sett, dipendente=d, data=giorno, fascia='1T', postazione='IMP1',
+                                               capoturno=capo, ruolo='CT' if capo else 'OdL',
+                                               incarichi='IMP1/CT' if capo else 'IMP1/OdL')
+        for t in turni.values():
+            genera_pulizie(t)
+        ottiche = set(Pulizia.objects.filter(elemento__nome='Macchine ottiche', turno__data=giorno).values_list('turno__dipendente__nome', flat=True))
+        pavimento = set(Pulizia.objects.filter(elemento__nome='Pavimentazione + altro', turno__data=giorno).values_list('turno__dipendente__nome', flat=True))
+        self.assertEqual(len(ottiche), 2)
+        self.assertIn('ODL UNO', ottiche)  # chi ha 1 viene prima
+        self.assertNotIn('ODL QUATTRO', ottiche)  # senza MO non le fa
+        self.assertEqual(ottiche | pavimento, {'ODL UNO', 'ODL DUE', 'ODL TRE', 'ODL QUATTRO'})
+        self.assertFalse(ottiche & pavimento)
+        self.assertFalse(turni['CAPO PROVA'].pulizie.exists())  # il Capo Turno supervisiona

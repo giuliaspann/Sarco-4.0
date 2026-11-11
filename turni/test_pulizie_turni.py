@@ -51,23 +51,25 @@ class PulizieTurnoTest(TestCase):
 
     def test_pulizie_standard_per_turno_postazione_e_ruolo(self):
         """Il foglio "Regole Pulizie per Area e Ruolo"."""
-        self.assertEqual(self.voci(self.persona('A', '1T', 'IMP1', ruolo='OdL')), ['Pavimentazione + altro', 'Pozzetti'])
-        self.assertEqual(self.voci(self.persona('B', '2T', 'IMP1', ruolo='OdL')), ['Pavimentazione + altro'])
+        # regole dell'11/11: le ottiche le fanno due operatori (qui da soli in turno, quindi tocca a loro)
+        self.assertEqual(self.voci(self.persona('A', '1T', 'IMP1', ruolo='OdL')), ['Macchine ottiche', 'Pozzetti'])
+        self.assertEqual(self.voci(self.persona('B', '2T', 'IMP1', ruolo='OdL')), ['Macchine ottiche'])
         self.assertEqual(self.voci(self.persona('CT', '1T', 'IMP1', capoturno=True)), [])
-        self.assertEqual(self.voci(self.persona('MAN1', '2T', 'IMP1', ruolo='Man')), ['Generiche Manutenzione', 'Macchine ottiche'])
+        self.assertEqual(self.voci(self.persona('MAN1', '2T', 'IMP1', ruolo='Man')), ['Generiche Manutenzione'])
         self.assertEqual(self.voci(self.persona('C', 'N', 'IMP2', ruolo='OdL')), ['Incolore'])
         self.assertEqual(self.voci(self.persona('D', '2T', 'BARROTTI', ruolo='OdL')), ['Barrotti'])
         self.assertEqual(self.voci(self.persona('E', '1T', 'PALISTA', ruolo='Pal')), ['Pala', 'Piazzale + corridoio granella'])
         self.assertEqual(self.voci(self.persona('E2', '1T', 'IMP1', ruolo='Pal')), ['Pala', 'Piazzale + corridoio granella'])
         self.assertEqual(self.voci(self.persona('F', '2T', 'PALISTA', ruolo='Pal')), ['Pala'])
         self.assertEqual(self.voci(self.persona('G', 'G', 'MULINO', ruolo='OdL')), ['Mulino e pressa'])
-        self.assertEqual(self.voci(self.persona('I', 'N', 'IMP1', ruolo='OdL')), [])  # la notte le assegna il responsabile
+        # di notte le generiche le assegna il responsabile; le ottiche le fanno due operatori di turno
+        self.assertEqual(self.voci(self.persona('I', 'N', 'IMP1', ruolo='OdL')), ['Macchine ottiche'])
 
     def test_capo_turno_e_palista_ha_le_pulizie_di_tutti_e_due(self):
         crimi = self.persona('CRIMI', 'N', 'IMP1', capoturno=True)
         crimi.incarichi = 'IMP1/CT IMP1/Pal'
         crimi.save()
-        self.assertEqual(self.voci(crimi), ['Pala'])
+        self.assertEqual(self.voci(crimi), [])  # il Capo Turno non fa pulizie, supervisiona (regola dell'11/11)
         # chi è palista all'impianto e operatore alla sabbia non prende le pulizie degli operatori dell'impianto
         titone = self.persona('TITONE', '2T', 'IMP1', ruolo='Pal')
         titone.incarichi = 'IMP1/Pal SABBIA/OdL'
@@ -79,7 +81,7 @@ class PulizieTurnoTest(TestCase):
         capo = self.persona('CAPO', '1T', 'IMP1', capoturno=True)
         resp = self.persona('LOMBARDO GABRIELE', 'G', 'UFFICIO', resp_piazzale=True)
         genera_pulizie(op)
-        p = op.pulizie.get(elemento__nome='Pavimentazione + altro')
+        p = op.pulizie.get(elemento__nome='Macchine ottiche')
         self.adesso = alle(13, 40)
         self.entra(op)
         self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {'azione': 'fatta', 'pulizia': p.pk})
@@ -97,7 +99,7 @@ class PulizieTurnoTest(TestCase):
 
         self.entra(resp)
         r = self.client.get(reverse('turni:pulizie_piazzale'))
-        self.assertContains(r, 'Pavimentazione + altro')
+        self.assertContains(r, 'Macchine ottiche')
         self.assertContains(r, 'ok di Capo')
         self.client.post(reverse('turni:pulizie_piazzale'), {'azione': 'convalida', 'pulizia': p.pk})
         p.refresh_from_db()
@@ -109,7 +111,7 @@ class PulizieTurnoTest(TestCase):
         capo = self.persona('CAPO', '1T', 'IMP1', capoturno=True)
         for t in (mattina, sera):
             genera_pulizie(t)
-        p_sera = sera.pulizie.get(elemento__nome='Pavimentazione + altro')
+        p_sera = sera.pulizie.get(elemento__nome='Macchine ottiche')  # da solo in turno: le ottiche toccano a lui
         p_sera.stato = Pulizia.Stato.FATTA
         p_sera.save()
         self.entra(capo)

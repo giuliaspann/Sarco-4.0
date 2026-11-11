@@ -27,8 +27,9 @@ RINOMINA = {
 INTOCCABILI = {'Pulizia generale Impianto 2'}
 
 
-def r(postazione='', fascia='', ruolo='', giorno=None, a_rotazione=False):
-    return {'postazione': postazione, 'fascia': fascia, 'ruolo': ruolo, 'giorno': giorno, 'a_rotazione': a_rotazione}
+def r(postazione='', fascia='', ruolo='', giorno=None, a_rotazione=False, scelta=''):
+    return {'postazione': postazione, 'fascia': fascia, 'ruolo': ruolo, 'giorno': giorno, 'a_rotazione': a_rotazione,
+            'scelta': scelta}
 
 
 TRE = ('1T', '2T', 'N')
@@ -38,11 +39,12 @@ VOCI = [
      'istruzioni': 'Inizio turno · 40 minuti. Una persona al giorno, a turno tra gli operatori di linea.',
      'regole': [r('IMP1', '1T', 'OdL', a_rotazione=True)]},
     {'nome': 'Macchine ottiche', 'luogo': 'IMP1', 'modo': 'SOLO_TASTO', 'convalida': 'CT_RP', 'minuti': None,
-     'istruzioni': 'A metà e a fine turno · 15 minuti. La fa il manutentore, la approva il Capo Turno, poi il responsabile piazzale.',
-     'regole': [r('IMP1', f, 'Man') for f in TRE]},
+     'istruzioni': 'A metà e a fine turno · 15 minuti. La fanno due operatori di turno competenti per le macchine ottiche '
+                   '(prima chi ha 1 nella colonna MO, poi chi ha 2); la approva il Capo Turno, poi il responsabile piazzale.',
+     'regole': [r('IMP1', f, 'OdL', scelta='MO') for f in TRE]},
     {'nome': 'Pavimentazione + altro', 'luogo': 'IMP1', 'modo': 'SOLO_TASTO', 'convalida': 'CT_RP', 'minuti': 30,
-     'istruzioni': 'Fine turno · 30 minuti. La fa chi non fa le macchine ottiche.',
-     'regole': [r('IMP1', '1T', 'OdL'), r('IMP1', '2T', 'OdL')]},
+     'istruzioni': 'Fine turno · 30 minuti. La fanno gli altri operatori di turno, che non fanno le macchine ottiche.',
+     'regole': [r('IMP1', '1T', 'OdL', scelta='NO_MO'), r('IMP1', '2T', 'OdL', scelta='NO_MO')]},
     {'nome': 'Generiche Impianto 1 (notte)', 'luogo': 'IMP1', 'modo': 'PULIZIA_FOTO', 'convalida': 'CT_RP', 'minuti': 60,
      'istruzioni': 'Fine turno · 60 minuti. Le assegna il responsabile piazzale ai Capi Turno entro le 17:00; '
                    'il Capo Turno le affida a voce agli operatori.',
@@ -65,7 +67,7 @@ VOCI = [
      'regole': [r('SUPERBI', f) for f in TRE]},
     {'nome': 'Generiche Rotovaglio', 'luogo': 'PIAZZALE', 'modo': 'PULIZIA_FOTO', 'convalida': 'PIAZZALE', 'minuti': 30,
      'istruzioni': 'Fine turno · 30 minuti.',
-     'regole': [r('ROTOVAGLIO')]},
+     'regole': [r('ROTOVAGLIO', 'G'), r('ROTOVAGLIO', '1T')]},
     {'nome': 'Pala', 'luogo': 'MEZZI', 'tipo': 'MEZZO', 'modo': 'PULIZIA_FOTO', 'convalida': 'PIAZZALE', 'minuti': 30,
      'istruzioni': 'Fine turno: controllo e pulizia · 30 minuti.',
      'regole': [r('IMP1', ruolo='Pal'), r('PALISTA')]},
@@ -108,7 +110,8 @@ def applica(Elemento, Regola):
         e.attivo = True
         e.save()
         Regola.objects.filter(elemento=e).delete()
+        campi = {f.name for f in Regola._meta.get_fields()}  # le migrazioni vecchie non hanno i campi nuovi
         for regola in v['regole']:
-            Regola.objects.create(elemento=e, **regola)
+            Regola.objects.create(elemento=e, **{k: x for k, x in regola.items() if k in campi})
         tenute.add(e.nome)
     Elemento.objects.exclude(nome__in=tenute).update(attivo=False)

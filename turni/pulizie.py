@@ -15,6 +15,8 @@ def genera_pulizie(turno):
     """Crea le voci di pulizia previste dalle regole per il turno (una volta sola per elemento)."""
     if not turno.lavora:
         return
+    if turno.capoturno:
+        return  # i Capi Turno non fanno le pulizie: supervisionano, fanno le foto e confermano (regola generale, 11/11/2026)
     # le voci "promemoria" (es. controllo vagli zig-zag) non si creano da sole: le regole dicono solo chi vede l'avviso,
     # il controllo lo assegna il Capo Turno a una persona
     regole = RegolaPulizia.objects.filter(elemento__attivo=True, elemento__promemoria=False).select_related('elemento')

@@ -564,13 +564,20 @@ def leggi_elenco_dipendenti(file):
     for i, riga in enumerate(righe[:15]):
         for j, valore in enumerate(riga):
             if pulisci(valore).lower() == 'dipendenti':
-                nomi = []
+                intest = [pulisci(c).upper() for c in riga]
+                col_mo = intest.index('MO') if 'MO' in intest else None
+                elenco = {}
                 for sotto in righe[i + 1:]:
                     nome = pulisci(sotto[j]) if j < len(sotto) else ''
                     if not nome:
                         continue
-                    nomi.append(nome.upper())
-                return list(dict.fromkeys(nomi))
+                    mo = sotto[col_mo] if col_mo is not None and col_mo < len(sotto) else None
+                    try:
+                        mo = int(mo) if mo not in (None, '') and int(mo) in (1, 2) else None
+                    except (TypeError, ValueError):
+                        mo = None
+                    elenco.setdefault(nome.upper(), mo)
+                return list(elenco.items())  # [(nome, livello macchine ottiche 1/2 o None)]
     raise ValueError(f'Nel foglio «{foglio}» non trovo la colonna «Dipendenti».')
 
 
@@ -582,12 +589,16 @@ def aggiorna_elenco_dipendenti(nomi):
 
     dipendenti = list(Dipendente.objects.all())
     nuovi, presenti = [], []
-    for nome in nomi:
+    for voce in nomi:
+        nome, mo = voce if isinstance(voce, tuple) else (voce, None)
         dip = trova_dipendente(nome, dipendenti)
         if dip is None:
-            dip = Dipendente.objects.create(nome=nome, mansione=mansione_per(nome) or 'OPERAIO')
+            dip = Dipendente.objects.create(nome=nome, mansione=mansione_per(nome) or 'OPERAIO', livello_mo=mo)
             dipendenti.append(dip)
             nuovi.append(dip)
         else:
+            if isinstance(voce, tuple) and dip.livello_mo != mo:
+                dip.livello_mo = mo  # la competenza per le macchine ottiche segue il file
+                dip.save(update_fields=['livello_mo'])
             presenti.append(dip)
     return nuovi, presenti

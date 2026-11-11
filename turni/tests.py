@@ -160,7 +160,7 @@ class PulizieTest(TestCase):
 
         capo = Turno.objects.get(dipendente=self.spano, data=LUNEDI + timedelta(days=2))
         genera_pulizie(capo)
-        self.assertEqual({p.elemento for p in capo.pulizie.all()}, {self.nastro, self.ufficio})
+        self.assertFalse(capo.pulizie.exists())  # il Capo Turno non fa pulizie, supervisiona (regola dell'11/11)
         palista = Turno.objects.get(dipendente__nome='CRIMI BENITO', data=LUNEDI)
         genera_pulizie(palista)
         self.assertEqual([p.elemento for p in palista.pulizie.all()], [self.pala])
