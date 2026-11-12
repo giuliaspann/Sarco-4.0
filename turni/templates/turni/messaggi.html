@@ -56,10 +56,17 @@
   <div class="wa">
     <div class="wa-testa">
       <a class="wa-indietro" href="?vista=lista" aria-label="Tutte le chat"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
-      <span class="wa-titolo"><b>{{ chat_aperta.nome }}</b><small class="wa-membri"><span class="wa-pila">{% for t in membri_tondi %}<span class="wa-tondo">{% if t.foto %}<img src="{{ t.foto }}" alt="">{% else %}{{ t.iniziali }}{% endif %}</span>{% endfor %}</span>{{ membri }} membri{% if direzione %} · storico completo{% endif %}</small></span>
+      {# tocca il nome o i membri: la lista dei partecipanti (Giulia, 12/11) #}
+      <a class="wa-titolo" href="{% url 'turni:membri_chat' chat_aperta.pk %}" aria-label="Partecipanti di {{ chat_aperta.nome }}"><b>{{ chat_aperta.nome }}</b><small class="wa-membri"><span class="wa-pila">{% for t in membri_tondi %}<span class="wa-tondo">{% if t.foto %}<img src="{{ t.foto }}" alt="">{% else %}{{ t.iniziali }}{% endif %}</span>{% endfor %}</span>{{ membri }} membri ›{% if direzione %} · storico completo{% endif %}</small></a>
       <details class="wa-menu">
         <summary aria-label="Opzioni">⋮</summary>
         <div class="wa-menu-voci">
+          {# come i gruppi di WhatsApp (Giulia, 12/11) #}
+          <a class="wa-voce" href="{% url 'turni:membri_chat' chat_aperta.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>Info gruppo</span><i>›</i></a>
+          {% if puo_aggiungere %}<a class="wa-voce" href="{% url 'turni:aggiungi_membri' chat_aperta.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="3.5"/><path d="M3.5 19.5c.9-3.2 3.4-5 6.5-5 1.3 0 2.5.3 3.5.9M18 14v6M15 17h6"/></svg><span>Aggiungi membri</span><i>›</i></a>{% endif %}
+          <a class="wa-voce" href="{% url 'turni:cerca_chat' chat_aperta.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><span>Cerca</span><i>›</i></a>
+          <a class="wa-voce" href="{% url 'turni:media_chat' chat_aperta.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-9 8"/></svg><span>Media, link e documenti</span><i>›</i></a>
+          <hr class="wa-menu-riga">
           <form method="post">{% csrf_token %}<input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}">
             <button name="azione" value="notifiche_chat">{% if stato.notifiche_chat %}Disattiva notifiche chat{% else %}Attiva notifiche chat{% endif %}</button></form>
           <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita (privato)</a>
@@ -78,6 +85,7 @@
         <div class="wa-msg{% if m.mio %} mio{% endif %}{% if m.primo %} primo{% endif %}{% if m.foto %} con-foto{% endif %}" data-id="{{ m.id }}" data-autore="{{ m.autore_id }}" data-giorno="{{ m.giorno }}"{% if m.info %} data-info="{{ m.info }}"{% endif %}>
           {% if not m.mio and m.primo %}<span class="wa-autore c{{ m.colore }}">{{ m.autore }}</span>{% endif %}
           {% if m.foto %}<a class="wa-foto" href="{{ m.foto }}" target="_blank"><img src="{{ m.foto }}" alt="Foto di {{ m.autore }}" loading="lazy"></a>{% endif %}
+          {% if m.documento %}<a class="wa-doc" href="{{ m.documento }}" target="_blank"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg><span>{{ m.documento_nome }}</span></a>{% endif %}
           {% if m.sondaggio %}
           <div class="wa-sondaggio">
             <span class="wa-sondaggio-tipo">Sondaggio</span>
@@ -114,12 +122,15 @@
       <input type="hidden" name="vista" value="chat"><input type="hidden" name="chat" value="{{ chat_aperta.pk }}">
       <input type="file" name="foto" accept="image/*" capture="environment" id="foto-scatta" class="wa-file" data-foto-chat>
       <input type="file" name="foto" accept="image/*" id="foto-galleria" class="wa-file" data-foto-chat>
+      <input type="file" name="documento" id="doc-scegli" class="wa-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.txt,.csv,.rtf" data-doc-chat>
+      <div class="wa-pronta" id="doc-pronto" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg><span></span><button type="button" id="doc-togli" aria-label="Togli il documento">✕</button></div>
       <div class="wa-pronta" id="foto-pronta" hidden><img alt="Foto da inviare"><span>Foto pronta: scrivi un commento o tocca Invia</span><button type="button" id="foto-togli" aria-label="Togli la foto">✕</button></div>
       <details class="wa-piu">
         <summary aria-label="Allega foto o sondaggio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
         <div class="wa-piu-voci">
           <label for="foto-scatta">Scatta una foto</label>
           <label for="foto-galleria">Carica dalla galleria</label>
+          <label for="doc-scegli">Documento</label>
           <a href="{% url 'turni:sondaggio_nuovo' chat_aperta.pk %}">Crea un sondaggio</a>
         </div>
       </details>

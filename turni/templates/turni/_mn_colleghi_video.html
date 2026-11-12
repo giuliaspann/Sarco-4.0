@@ -8,8 +8,4 @@
   <div class="mn-colleghi">{% for d in colleghi_altri %}<label><input type="checkbox" name="collaboratori" value="{{ d.pk }}"><span>{{ d.nome_breve }}</span></label>{% endfor %}</div>
 </details>
 {% endif %}
-<label class="bottone foto-btn mn-foto mn-video">
-  <input type="file" name="video" accept="video/*">
-  <span>{% icona 'video' %} Video</span>
-</label>
 <label>Cosa resta da fare (facoltativo)<textarea name="resta" rows="2" maxlength="1000" placeholder="Es. si può procedere al ripristino dei vecchi tamburi"></textarea></label>

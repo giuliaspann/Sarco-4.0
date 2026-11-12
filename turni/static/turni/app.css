@@ -2546,4 +2546,91 @@ i.cal-grigio { background: #54595f; } i.cal-acqua { background: #1f8a70; } i.cal
 .kd-punti i { display: block; width: 5px; height: 5px; border-radius: 99px; }
 .kd-giorno small { text-align: center; font-size: .5rem; font-weight: 700; color: var(--tenue); }
 .kd-mio-turno .cal-sigla { flex: none; width: auto; min-width: 44px; padding: 5px 8px; }
-.kd-cambio { display: block; margin: -2px 0 10px; text-align: center; font-size: .85rem; font-weight: 700; color: var(--testo); }
+
+
+/* Home: quattro riquadri grandi due per riga e Archivio largo sotto (disegno di Giulia, 12/11/2026) */
+.ig-azioni.quadri { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ig-azioni.quadri a { min-height: 150px; justify-content: center; gap: 12px; border-radius: 20px; font-size: 1rem; }
+.ig-azioni.quadri a:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 110px; }
+.ig-azioni.quadri .ig-ico { width: 64px; height: 64px; }
+.ig-azioni.quadri .ig-ico svg { width: 32px; height: 32px; }
+.ig-azioni.quadri ~ .ig-archivio-tasto { min-height: 110px; justify-content: center; gap: 16px; border-radius: 20px; padding: 14px 18px; }
+.ig-azioni.quadri ~ .ig-archivio-tasto .ig-ico { width: 64px; height: 64px; }
+.ig-azioni.quadri ~ .ig-archivio-tasto .ig-ico svg { width: 32px; height: 32px; }
+.ig-azioni.quadri ~ .ig-archivio-tasto b { font-size: 1rem; font-weight: 700; }
+.ig-azioni.quadri ~ .ig-archivio-tasto::after { content: none; }
+
+/* Foto e Video affiancati nei moduli di manutenzione (Giulia, 12/11/2026) */
+.mn-media { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 4px 0 14px; }
+.mn-media .mn-foto { margin: 0; width: auto; min-width: 0; justify-content: center; }
+
+/* Partecipanti della chat (Giulia, 12/11/2026) */
+a.wa-titolo { color: inherit; text-decoration: none; min-width: 0; }
+.ci-persona .ci-nome b { display: block; font-weight: 600; }
+.ci-persona .ci-nome small { display: block; color: var(--tenue); font-size: .8rem; }
+
+/* Gruppi chat: Info gruppo, Aggiungi membri, Cerca, Media e link (Giulia, 12/11/2026) */
+.wa-menu-voci a.wa-voce { display: flex; align-items: center; gap: 12px; }
+.wa-voce svg { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wa-voce span { flex: 1; }
+.wa-voce i { font-style: normal; color: var(--tenue); }
+.wa-menu-riga { border: 0; border-top: 1px solid var(--bordo); margin: 4px 0; }
+.cg-sotto { margin: -6px 0 12px; text-align: center; }
+.cg-tasti { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin: 0 0 14px; }
+.cg-tasti a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 76px; padding: 8px 4px;
+  border-radius: 14px; background: var(--carta); border: 1px solid var(--bordo); color: var(--testo); text-decoration: none; text-align: center; }
+.cg-tasti svg { width: 24px; height: 24px; fill: none; stroke: var(--primario); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cg-tasti b { font-size: .9rem; }
+.cg-tasti small { font-size: .72rem; color: var(--tenue); }
+.cg-cerca { margin: 0 0 12px; }
+.cg-cerca input { width: 100%; box-sizing: border-box; height: 46px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--bordo); background: var(--carta); color: var(--testo); font: inherit; font-size: 1rem; }
+.cg-scegli { cursor: pointer; margin: 0; }
+.cg-scegli input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--primario); }
+a.cg-risultato, a.cg-link { color: inherit; text-decoration: none; }
+.cg-risultato .ci-nome small { white-space: normal; }
+.cg-link .ci-nome b { overflow-wrap: anywhere; }
+.cg-link i { font-style: normal; color: var(--tenue); }
+.cg-foto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+.cg-foto a { display: block; aspect-ratio: 1; overflow: hidden; border-radius: 6px; background: var(--bordo); }
+.cg-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cg-foto .ci-vuoto { grid-column: 1 / -1; }
+
+/* Turni di tutti: il nome dell'area resta fisso sotto la testa finché non arriva la successiva (Giulia, 12/11/2026) */
+.st-area { position: sticky; top: calc(var(--alto-barra, 58px) + var(--alto-testa, 90px)); z-index: 4;
+  box-shadow: 0 -6px 0 var(--sfondo), 0 2px 6px rgba(0, 0, 0, .08); }
+
+/* Info gruppo, proposta A (Giulia, 12/11/2026) */
+.ga-testa { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -8px 0 16px; text-align: center; }
+.ga-tondo { width: 84px; height: 84px; border-radius: 999px; background: color-mix(in srgb, var(--primario) 14%, var(--carta)); color: var(--primario);
+  display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; }
+.ga-testa h1 { margin: 6px 0 0; font-size: 1.5rem; }
+.ga-testa p { margin: 0; color: var(--tenue); font-size: .9rem; }
+.ga-tasti { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 18px; }
+.ga-tasti a, .ga-tasti button { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; padding: 0; background: none; border: 0;
+  color: var(--testo); font: inherit; text-decoration: none; cursor: pointer; text-align: center; }
+.ga-tasti form { margin: 0; }
+.ga-cerchio { width: 58px; height: 58px; border-radius: 999px; background: var(--carta); border: 1px solid var(--bordo); box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+  display: flex; align-items: center; justify-content: center; }
+.ga-cerchio svg { width: 24px; height: 24px; fill: none; stroke: var(--testo); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.ga-cerchio.spenta { background: color-mix(in srgb, #c0392b 10%, var(--carta)); border-color: color-mix(in srgb, #c0392b 35%, var(--carta)); }
+.ga-cerchio.spenta svg { stroke: #c0392b; }
+.ga-tasti b { font-size: .9rem; font-weight: 600; }
+.ga-tasti small { margin-top: -4px; font-size: .74rem; color: var(--tenue); }
+.ga-membri-testa { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
+.ga-membri-testa b { font-size: .95rem; color: var(--tenue); }
+.ga-lente { width: 36px; height: 36px; border-radius: 999px; border: 0; background: var(--bordo); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.ga-lente svg { width: 18px; height: 18px; fill: none; stroke: var(--testo); stroke-width: 2; stroke-linecap: round; }
+.ga-filtro { width: 100%; box-sizing: border-box; height: 44px; margin: 0 0 10px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--bordo);
+  background: var(--carta); color: var(--testo); font: inherit; }
+.ga-filtro[hidden], .ci-persona[hidden] { display: none; }
+a.ga-aggiungi { color: var(--primario); text-decoration: none; }
+a.ga-aggiungi b { font-weight: 700; }
+.ga-piu { flex: none; width: 40px; height: 40px; border-radius: 999px; background: var(--primario); display: flex; align-items: center; justify-content: center; }
+.ga-piu svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; }
+.ga-doc { flex: none; width: 40px; height: 40px; border-radius: 10px; background: color-mix(in srgb, #2a72b0 12%, var(--carta)); display: flex; align-items: center; justify-content: center; }
+.ga-doc svg, .wa-doc svg, #doc-pronto svg { width: 22px; height: 22px; fill: none; stroke: #2a72b0; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+/* documento dentro il fumetto */
+.wa-doc { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; padding: 8px 10px; border-radius: 10px; background: rgba(0, 0, 0, .05);
+  color: var(--testo); text-decoration: none; font-weight: 600; font-size: .9rem; min-width: 0; }
+.wa-doc span { min-width: 0; overflow-wrap: anywhere; }
+#doc-pronto { align-items: center; gap: 8px; }

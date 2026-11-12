@@ -29,11 +29,12 @@
   <p class="an-scelto"><b>{{ nome_campione }}</b><span>{{ oggi|date:'D j M' }} · {% if modo == 'foto' %}foto dell'analisi{% else %}analisi manuale{% endif %}</span></p>
 
   {% if modo == 'foto' %}
+  {# un solo tasto (Giulia, 12/11): il telefono chiede se scattare o caricare dalla galleria, poi i numeri si leggono da soli #}
   <label class="bottone foto-btn mn-foto">
-    <input type="file" name="foto" accept="image/*" capture="environment" data-riduci>
+    <input type="file" name="foto" accept="image/*" data-riduci{% if leggi_foto %} data-leggi-subito{% endif %}>
     <span>{% icona 'foto' %} Foto dell'analisi</span>
   </label>
-  {% if leggi_foto %}<button type="button" class="bottone piena-larghezza st-leggi" data-leggi>{% icona 'cerca' %} Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
+  {% if leggi_foto %}<button type="button" class="st-leggi" data-leggi hidden>Leggi i numeri dalla foto</button><p class="st-esito" hidden></p>{% endif %}
   {% endif %}
 
   <section class="scheda pr-gruppo">

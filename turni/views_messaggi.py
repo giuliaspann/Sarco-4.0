@@ -5,6 +5,7 @@ leggibile dalla direzione, che è sempre dentro ogni chat.
 """
 
 import json
+import os
 from datetime import timedelta
 
 from django.contrib import messages
@@ -83,7 +84,7 @@ def destinatari(escluso, chat=None):
     """Chi riceve la notifica (chi scrive escluso). Per le chat solo chi non ha spento le notifiche."""
     utenti = (membri_di(chat) if chat else get_user_model().objects.filter(is_active=True)).exclude(pk=escluso.pk)
     if chat:
-        utenti = utenti.exclude(stato_messaggi__notifiche_chat=False)
+        utenti = utenti.exclude(stato_messaggi__notifiche_chat=False).exclude(stato_messaggi__chat_silenziate=chat)
     return utenti.values_list('pk', flat=True)
 
 
@@ -140,6 +141,8 @@ def _messaggio_json(m, utente, responsabile, direzione=False, letto_fino=None):
     return {
         'tondo': tondo_di(m.autore),
         'foto': reverse('turni:foto_chat', args=[m.pk]) if m.foto and (not m.eliminato or direzione) else '',
+        'documento': reverse('turni:documento_chat', args=[m.pk]) if m.documento and (not m.eliminato or direzione) else '',
+        'documento_nome': m.documento_nome,
         'sondaggio': _sondaggio_json(m, utente) if not m.eliminato else None,
         'letto': bool(mio and letto_fino is not None and m.pk <= letto_fino),
         'info': reverse('turni:info_messaggio', args=[m.pk]) if mio or direzione else '',
@@ -186,6 +189,19 @@ def _segna_letta(utente, chat, fino):
         lettura.save(update_fields=['letta_fino'])
 
 
+# documenti nella chat (Giulia, 12/11/2026)
+ESTENSIONI_DOCUMENTO = ('.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', '.ods', '.txt', '.csv', '.rtf')
+MAX_DOCUMENTO = 15 * 1024 * 1024
+
+
+def errore_documento(f):
+    if not os.path.splitext(f.name or '')[1].lower() in ESTENSIONI_DOCUMENTO:
+        return 'Puoi mandare PDF, Word, Excel, PowerPoint o file di testo.'
+    if f.size > MAX_DOCUMENTO:
+        return 'Il documento è troppo grande: massimo 15 MB.'
+    return ''
+
+
 def _url_chat(chat):
     return f"{reverse('turni:messaggi')}?vista=chat&chat={chat.pk}"
 
@@ -220,11 +236,11 @@ def messaggi(request):
             messages.success(request, 'Avviso pubblicato in bacheca.')
         elif azione == 'elimina_annuncio' and responsabile:
             get_object_or_404(Annuncio, pk=request.POST.get('annuncio')).delete()
-        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto'))) and MessaggioChat.objects.filter(
+        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto')) or request.FILES.get('documento')) and MessaggioChat.objects.filter(
             autore=request.user, creato_il__gte=timezone.now() - timedelta(minutes=1)
         ).count() >= 10:
             messages.error(request, 'Stai scrivendo troppi messaggi di seguito: aspetta un minuto.')
-        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto'))):
+        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto')) or request.FILES.get('documento')):
             foto = next((f for f in request.FILES.getlist('foto') if f), None)
             m = MessaggioChat(chat=chat, autore=request.user, testo=testo[:1000])
             if foto:
@@ -234,9 +250,17 @@ def messaggi(request):
                 except (ValueError, OSError):
                     messages.error(request, "Non riesco a leggere questa foto: scattane un'altra.")
                     return redirect(_url_chat(chat) + '#fondo')
+            documento = request.FILES.get('documento')
+            if documento:
+                errore = errore_documento(documento)
+                if errore:
+                    messages.error(request, errore)
+                    return redirect(_url_chat(chat) + '#fondo')
+                m.documento.save(documento.name, documento, save=False)
+                m.documento_nome = os.path.basename(documento.name)[:200]
             m.save()
-            push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}', m.testo or 'Foto',
-                       _url_chat(chat), notifica=False)
+            push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}',
+                       m.testo or ('Foto' if m.foto else f'Documento: {m.documento_nome}'), _url_chat(chat), notifica=False)
             avvisa_menzioni(m, request.user)
         elif azione == 'elimina_chat' and chat:
             m = get_object_or_404(MessaggioChat, pk=request.POST.get('messaggio'), chat=chat)
@@ -277,6 +301,7 @@ def messaggi(request):
         contesto['chat'] = con_gruppi([_messaggio_json(m, request.user, responsabile, direzione, letto_fino) for m in ultimi])
         contesto['membri'] = membri_di(chat).count()
         contesto['membri_tondi'] = [tondo_di(u) for u in membri_di(chat).select_related('dipendente')[:3]]
+        contesto['puo_aggiungere'] = puo_gestire_chat(request.user) and not chat.tutti
         contesto['ultimo_id'] = ultimi[-1].pk if ultimi else 0
         if ultimi:
             _segna_letta(request.user, chat, ultimi[-1].pk)
@@ -372,6 +397,20 @@ def _messaggio_visibile(request, pk):
 
 
 @login_required
+def documento_chat(request, pk):
+    import mimetypes
+
+    from django.http import FileResponse
+
+    m = _messaggio_visibile(request, pk)
+    if not m.documento or (m.eliminato and not e_direzione(request.user)):
+        raise Http404
+    tipo = mimetypes.guess_type(m.documento_nome)[0] or 'application/octet-stream'
+    return FileResponse(m.documento.open('rb'), content_type=tipo, filename=m.documento_nome,
+                        as_attachment=not tipo.startswith(('application/pdf', 'text/')))
+
+
+@login_required
 def foto_chat(request, pk):
     from django.http import FileResponse
 
@@ -402,6 +441,126 @@ def info_messaggio(request, pk):
         'm': _messaggio_json(m, request.user, e_responsabile(request.user), e_direzione(request.user)),
         'chat': m.chat, 'letti': letti, 'non_letti': non_letti, 'm_oggi': timezone.localdate().strftime('%Y%m%d'),
     })
+
+
+def _chat_o_404(request, chat_id):
+    try:
+        return chat_visibili(request.user).get(pk=chat_id)
+    except Chat.DoesNotExist:
+        raise Http404
+
+
+def puo_gestire_chat(utente):
+    """Aggiungere persone a un gruppo: ufficio, responsabili e direzione."""
+    return bool(utente.is_staff or e_responsabile(utente) or e_direzione(utente))
+
+
+def _messaggi_visibili(request, chat):
+    qs = chat.messaggi.select_related('autore', 'autore__dipendente')
+    return qs if e_direzione(request.user) else qs.filter(eliminato=False)
+
+
+LINK = __import__('re').compile(r'(https?://[^\s<>]+|www\.[^\s<>]+)')
+CON_LINK = r'(https?://|www\.)'
+
+
+@login_required
+def membri_chat(request, chat_id):
+    """Info gruppo (Giulia, 12/11): partecipanti con foto e ruolo, e quante foto e link ci sono."""
+    chat = _chat_o_404(request, chat_id)
+    persone = []
+    for u in membri_di(chat).select_related('dipendente'):
+        dip = getattr(u, 'dipendente', None)
+        if dip:
+            ruolo = 'Direzione' if dip.ruolo_app == RuoloApp.DIREZIONE else (dip.qualifica or dip.mansioni_display)
+        else:
+            ruolo = 'Ufficio' if u.is_staff else ''
+        persone.append({'nome': nome_di(u), 'tondo': tondo_di(u), 'ruolo': ruolo, 'io': u.pk == request.user.pk})
+    persone.sort(key=lambda p: (not p['io'], p['nome'].lower()))
+    parole = chat.nome.split()
+    return render(request, 'turni/chat_membri.html', {
+        'chat': chat, 'persone': persone, 'gestisce': puo_gestire_chat(request.user) and not chat.tutti,
+        'silenziata': stato_di(request.user).chat_silenziate.filter(pk=chat.pk).exists(),
+        'iniziali_chat': ''.join(p[0] for p in parole[:2]).upper(),
+    })
+
+
+@login_required
+@require_POST
+def notifiche_gruppo(request, chat_id):
+    """Tasto Notifiche di Info gruppo: accende o spegne le notifiche solo di questo gruppo."""
+    chat = _chat_o_404(request, chat_id)
+    stato = stato_di(request.user)
+    if stato.chat_silenziate.filter(pk=chat.pk).exists():
+        stato.chat_silenziate.remove(chat)
+        messages.success(request, f'Notifiche di {chat.nome} attive.')
+    else:
+        stato.chat_silenziate.add(chat)
+        messages.success(request, f'Notifiche di {chat.nome} disattivate.')
+    return redirect('turni:membri_chat', chat.pk)
+
+
+@login_required
+def aggiungi_membri(request, chat_id):
+    """Aggiungi membri a un gruppo (non a quelli aperti a tutti): ufficio, responsabili e direzione."""
+    from django.core.exceptions import PermissionDenied
+
+    chat = _chat_o_404(request, chat_id)
+    if not puo_gestire_chat(request.user) or chat.tutti:
+        raise PermissionDenied
+    gia = set(membri_di(chat).values_list('pk', flat=True))
+    candidati = get_user_model().objects.filter(is_active=True).exclude(pk__in=gia).select_related('dipendente')
+    if request.method == 'POST':
+        scelti = list(candidati.filter(pk__in=request.POST.getlist('utenti')))
+        if scelti:
+            chat.membri.add(*scelti)
+            push.invia([u.pk for u in scelti], 'Sei nel gruppo ' + chat.nome, f'{nome_di(request.user)} ti ha aggiunto',
+                       _url_chat(chat), mittente=request.user)
+            messages.success(request, f'Aggiunti {len(scelti)} al gruppo.' if len(scelti) > 1
+                             else f'{nome_di(scelti[0])} aggiunto al gruppo.')
+        return redirect('turni:membri_chat', chat.pk)
+    q = (request.GET.get('q') or '').strip()
+    persone = sorted(({'pk': u.pk, 'nome': nome_di(u), 'tondo': tondo_di(u)} for u in candidati), key=lambda p: p['nome'].lower())
+    if q:
+        persone = [p for p in persone if q.lower() in p['nome'].lower()]
+    return render(request, 'turni/chat_aggiungi.html', {'chat': chat, 'persone': persone, 'q': q})
+
+
+@login_required
+def cerca_chat(request, chat_id):
+    """Cerca nei messaggi del gruppo."""
+    chat = _chat_o_404(request, chat_id)
+    q = (request.GET.get('q') or '').strip()[:100]
+    risultati = []
+    if len(q) >= 2:
+        recenti = set(chat.messaggi.order_by('-pk').values_list('pk', flat=True)[:MESSAGGI_MOSTRATI])
+        for m in _messaggi_visibili(request, chat).filter(testo__icontains=q).order_by('-pk')[:50]:
+            risultati.append({'autore': nome_di(m.autore), 'tondo': tondo_di(m.autore), 'testo': m.testo,
+                              'quando': timezone.localtime(m.creato_il),
+                              'url': _url_chat(chat) + f'#m{m.pk}' if m.pk in recenti else ''})
+    return render(request, 'turni/chat_cerca.html', {'chat': chat, 'q': q, 'risultati': risultati})
+
+
+@login_required
+def media_chat(request, chat_id):
+    """Foto e link mandati nel gruppo, i più recenti prima."""
+    chat = _chat_o_404(request, chat_id)
+    visibili = _messaggi_visibili(request, chat).order_by('-pk')
+    quale = request.GET.get('quale') if request.GET.get('quale') in ('link', 'documenti') else 'foto'
+    foto, link, documenti = [], [], []
+    if quale == 'foto':
+        foto = [reverse('turni:foto_chat', args=[m.pk]) for m in visibili.exclude(foto='')[:120]]
+    elif quale == 'documenti':
+        documenti = [{'url': reverse('turni:documento_chat', args=[m.pk]), 'nome': m.documento_nome, 'autore': nome_di(m.autore),
+                      'quando': timezone.localtime(m.creato_il)} for m in visibili.exclude(documento='')[:100]]
+    else:
+        for m in visibili.filter(testo__iregex=CON_LINK)[:100]:
+            for indirizzo in LINK.findall(m.testo):
+                href = indirizzo if indirizzo.startswith('http') else 'https://' + indirizzo
+                link.append({'href': href, 'testo': indirizzo, 'autore': nome_di(m.autore),
+                             'quando': timezone.localtime(m.creato_il)})
+    return render(request, 'turni/chat_media.html', {'chat': chat, 'quale': quale, 'foto': foto, 'link': link,
+                                                     'documenti': documenti})
 
 
 @login_required

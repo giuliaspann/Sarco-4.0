@@ -32,6 +32,7 @@ document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
     } catch (e) {
       // se il browser non ci riesce, mando l'originale: lo riduce il server
     }
+    input.dispatchEvent(new Event('foto-pronta'));
   });
 });
 
@@ -186,6 +187,11 @@ async function iscrivi(riquadro) {
       const l = document.createElement('a'); l.className = 'wa-foto'; l.href = m.foto; l.target = '_blank';
       const i = document.createElement('img'); i.src = m.foto; i.alt = 'Foto di ' + m.autore; l.appendChild(i); b.appendChild(l);
     }
+    if (m.documento) {
+      const d = document.createElement('a'); d.className = 'wa-doc'; d.href = m.documento; d.target = '_blank';
+      d.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg>';
+      const n = document.createElement('span'); n.textContent = m.documento_nome; d.appendChild(n); b.appendChild(d);
+    }
     if (m.sondaggio) {
       const l = document.createElement('a'); l.className = 'wa-testo'; l.href = location.pathname + location.search + '#m' + m.id;
       l.textContent = 'Sondaggio: ' + m.sondaggio.domanda + ' · tocca per votare';
@@ -277,6 +283,7 @@ document.querySelectorAll('form[data-lettura] [data-leggi]').forEach(btn => {
     dati.append('tipo', form.dataset.lettura);
     dati.append('csrfmiddlewaretoken', form.querySelector('[name=csrfmiddlewaretoken]').value);
     btn.disabled = true; const testo = btn.textContent; btn.textContent = '⏳ Sto leggendo…';
+    if (btn.hidden) scrivi('⏳ Sto leggendo i numeri dalla foto…');
     try {
       const r = await fetch('/turni/statistiche/leggi-foto/', { method: 'POST', body: dati });
       const j = await r.json();
@@ -304,6 +311,11 @@ document.querySelectorAll('form[data-lettura] [data-leggi]').forEach(btn => {
       scrivi('Senza rete: scrivi i numeri a mano.');
     } finally { btn.disabled = false; btn.textContent = testo; }
   });
+});
+
+// Analisi: un solo tasto Foto; appena la foto è pronta i numeri si leggono da soli (Giulia, 12/11)
+document.querySelectorAll('input[type=file][data-leggi-subito]').forEach(input => {
+  input.addEventListener('foto-pronta', () => { const b = input.form.querySelector('[data-leggi]'); if (b && input.files.length) b.click(); });
 });
 
 document.querySelectorAll('[data-condividi]').forEach(btn => {
@@ -608,6 +620,9 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
 (function () {
   const barra = document.querySelector('.barra');
   if (barra && document.querySelector('.st-testa, .wa-testa')) document.documentElement.style.setProperty('--alto-barra', barra.offsetHeight + 'px');
+  // il nome dell'area (Impianto 1…) resta fisso sotto la testa finché non arriva l'area dopo (Giulia, 12/11)
+  const testa = document.querySelector('.st-testa');
+  if (testa) document.documentElement.style.setProperty('--alto-testa', testa.offsetHeight + 'px');
 })();
 
 // Anagrafica: scelto il dipendente, la pagina si aggiorna da sola
@@ -657,4 +672,31 @@ document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.add
   }));
   const x = document.getElementById('foto-togli');
   if (x) x.addEventListener('click', togli);
+})();
+
+// Chat · documento scelto dal "+": ne mostro il nome prima di inviarlo (Giulia, 12/11)
+(function () {
+  const input = document.querySelector('input[data-doc-chat]');
+  const pronto = document.getElementById('doc-pronto');
+  if (!input || !pronto) return;
+  input.addEventListener('change', () => {
+    if (!input.files.length) { pronto.hidden = true; return; }
+    const f = input.files[0];
+    const menu = input.form.querySelector('.wa-piu'); if (menu) menu.open = false;
+    pronto.querySelector('span').textContent = f.size > 15 * 1048576 ? '⚠️ ' + f.name + ': troppo grande (massimo 15 MB)' : f.name + ': scrivi un commento o tocca Invia';
+    pronto.hidden = false;
+  });
+  document.getElementById('doc-togli').addEventListener('click', () => { input.value = ''; pronto.hidden = true; });
+})();
+
+// Info gruppo: la lente filtra i membri per nome
+(function () {
+  const lente = document.querySelector('[data-apri-filtro]');
+  const filtro = document.querySelector('[data-filtro-membri]');
+  if (!lente || !filtro) return;
+  lente.addEventListener('click', () => { filtro.hidden = !filtro.hidden; if (!filtro.hidden) filtro.focus(); });
+  filtro.addEventListener('input', () => {
+    const q = filtro.value.trim().toLowerCase();
+    document.querySelectorAll('.ci-persona[data-nome]').forEach(r => { r.hidden = q && !r.dataset.nome.includes(q); });
+  });
 })();

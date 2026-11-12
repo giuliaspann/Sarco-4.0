@@ -45,7 +45,8 @@
 
 {# il Capo Turno in servizio: riquadri grandi; fermo e ripartenza stanno dentro Manutenzione (Giulia, 10/11) #}
 {% with capo=turno_oggi.capoturno|default:False %}
-<div class="ig-azioni{% if not vede_analisi %} tre{% endif %}{% if capo and turno_oggi.lavora %} grandi{% endif %}">
+{# tasti grandi, due per riga, Archivio largo sotto: per tutti (disegno di Giulia, 12/11) #}
+<div class="ig-azioni grandi quadri">
   <a href="{% url 'turni:pulizie' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/></svg></span>Pulizia{% if badge_pulizia %}<i class="home-badge">{{ badge_pulizia }}</i>{% endif %}</a>
   <a href="{% url 'turni:mn_scelta' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/></svg></span>Manutenzione</a>
   <a href="{% url 'turni:produzione_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg></span>Produzione</a>

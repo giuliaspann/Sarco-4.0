@@ -19,7 +19,6 @@
     <span>Sett. {{ lunedi|date:'W' }} | {{ lunedi|date:'j' }}{% if lunedi.month != giorni.6.month %} {{ lunedi|date:'F' }}{% endif %} – {{ giorni.6|date:'j F' }}</span>
     <a class="st-freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
   </div>
-  {% if mio %}<p class="st-aiuto">Per un cambio turno tocca il turno di un collega</p>{% endif %}
   <div class="gt-riga gt-testa">
     <span class="gt-nome"></span>
     {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}

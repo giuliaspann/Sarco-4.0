@@ -79,10 +79,17 @@
   <label>Cosa hai fatto<textarea name="lavoro" rows="3" maxlength="2000" required placeholder="Es. sostituito il tubo e rabboccato l'olio, provata 10 minuti"></textarea></label>
   {% include 'turni/_mn_pezzi.html' %}
   <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
+  {# Foto e Video uno accanto all'altro (Giulia, 12/11) #}
+  <div class="mn-media">
   <label class="bottone foto-btn mn-foto">
     <input type="file" name="foto" accept="image/*" capture="environment" data-riduci required>
     <span>{% icona 'foto' %} Foto</span>
 </label>
+  <label class="bottone foto-btn mn-foto mn-video">
+    <input type="file" name="video" accept="video/*">
+    <span>{% icona 'video' %} Video</span>
+  </label>
+  </div>
   {% include 'turni/_mn_colleghi_video.html' %}
   <button class="bottone pieno piena-larghezza" name="azione" value="completa">{% icona 'ok' %} Riparata</button>
 </form>

@@ -1,0 +1,20 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Cerca{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:messaggi' %}?vista=chat&chat={{ chat.pk }}#fondo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ chat.nome }}</a>
+<div class="intestazione"><h1>Cerca</h1></div>
+<form method="get" class="cg-cerca"><input type="search" name="q" value="{{ q }}" placeholder="Cerca nei messaggi" aria-label="Cerca nei messaggi" autofocus></form>
+
+{% if q %}
+<section class="ci-gruppo">
+  <p class="ci-titolo">{{ risultati|length }} {% if risultati|length == 1 %}messaggio{% else %}messaggi{% endif %}{% if risultati|length == 50 %} (i più recenti){% endif %}</p>
+  {% for p in risultati %}
+  {% if p.url %}<a class="ci-persona cg-risultato" href="{{ p.url }}">{% else %}<div class="ci-persona cg-risultato">{% endif %}
+    <span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span>
+    <span class="ci-nome"><b>{{ p.autore }}</b><small>{{ p.testo|truncatechars:160 }}</small></span>
+    <small class="ci-ora">{{ p.quando|date:'j/m' }}</small>
+  {% if p.url %}</a>{% else %}</div>{% endif %}
+  {% empty %}<p class="tenue piccolo ci-vuoto">{% if q|length < 2 %}Scrivi almeno due lettere.{% else %}Nessun messaggio trovato.{% endif %}</p>{% endfor %}
+</section>
+{% endif %}
+{% endblock %}

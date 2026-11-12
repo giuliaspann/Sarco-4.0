@@ -46,10 +46,17 @@
     </div>
     <input type="text" name="pezzo" maxlength="100" placeholder="Quale pezzo (es. rete vaglio)" class="mn-campo">
     <textarea name="descrizione" rows="2" maxlength="1000" placeholder="Note (es. griglie zig zag n3 1240 f8)" class="mn-campo">{{ descrizione }}</textarea>
+    {# Foto e Video uno accanto all'altro (Giulia, 12/11) #}
+    <div class="mn-media">
     <label class="bottone foto-btn mn-foto">
       <input type="file" name="foto" accept="image/*" multiple data-riduci required>
       <span>{% icona 'foto' %} Foto</span>
 </label>
+    <label class="bottone foto-btn mn-foto mn-video">
+      <input type="file" name="video" accept="video/*">
+      <span>{% icona 'video' %} Video</span>
+    </label>
+    </div>
     {% include 'turni/_mn_pezzi.html' %}
     <label>Ore di lavoro<input type="number" name="ore" step="0.5" min="0" max="999" inputmode="decimal" placeholder="Es. 1,5"></label>
     {% include 'turni/_mn_colleghi_video.html' %}

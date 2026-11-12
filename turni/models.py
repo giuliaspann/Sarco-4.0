@@ -911,6 +911,13 @@ class Chat(models.Model):
         return self.nome
 
 
+def percorso_documento_chat(istanza, nome):
+    import os
+    import uuid
+
+    return f'chat/documenti/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{os.path.splitext(nome)[1].lower()}'
+
+
 class MessaggioChat(models.Model):
     """Messaggio in una chat di gruppo."""
 
@@ -919,6 +926,9 @@ class MessaggioChat(models.Model):
     testo = models.TextField(max_length=1000, blank=True)
     # foto scattata o caricata dal telefono (Giulia, 11/11/2026)
     foto = models.ImageField(upload_to='chat/%Y/%m/', blank=True)
+    # documento allegato: PDF, Word, Excel... (Giulia, 12/11/2026)
+    documento = models.FileField(upload_to=percorso_documento_chat, blank=True)
+    documento_nome = models.CharField(max_length=200, blank=True)
     creato_il = models.DateTimeField(auto_now_add=True)
     eliminato = models.BooleanField(default=False)
 
@@ -988,6 +998,8 @@ class StatoMessaggi(models.Model):
     bacheca_letta_il = models.DateTimeField(null=True, blank=True)
     chat_letta_fino = models.PositiveBigIntegerField(default=0)
     notifiche_chat = models.BooleanField(default=True)
+    # notifiche spente solo per alcuni gruppi (tasto Notifiche in Info gruppo, Giulia 12/11/2026)
+    chat_silenziate = models.ManyToManyField(Chat, blank=True, related_name='+')
 
 
 class LetturaChat(models.Model):

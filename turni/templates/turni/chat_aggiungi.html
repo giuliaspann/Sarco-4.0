@@ -1,0 +1,18 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Aggiungi membri{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:membri_chat' chat.pk %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Info gruppo</a>
+<div class="intestazione"><h1>Aggiungi membri</h1></div>
+<p class="tenue cg-sotto">{{ chat.nome }}</p>
+
+<form method="get" class="cg-cerca"><input type="search" name="q" value="{{ q }}" placeholder="Cerca un nome" aria-label="Cerca un nome"></form>
+
+<form method="post">{% csrf_token %}
+<section class="ci-gruppo">
+  {% for p in persone %}
+  <label class="ci-persona cg-scegli"><input type="checkbox" name="utenti" value="{{ p.pk }}"><span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span><span class="ci-nome"><b>{{ p.nome }}</b></span></label>
+  {% empty %}<p class="tenue piccolo ci-vuoto">{% if q %}Nessuno con questo nome.{% else %}Ci sono già tutti.{% endif %}</p>{% endfor %}
+</section>
+{% if persone %}<button class="bottone pieno piena-larghezza">Aggiungi al gruppo</button>{% endif %}
+</form>
+{% endblock %}

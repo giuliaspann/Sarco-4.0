@@ -1,0 +1,29 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Media, link e documenti{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:messaggi' %}?vista=chat&chat={{ chat.pk }}#fondo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ chat.nome }}</a>
+<div class="intestazione"><h1>Media</h1></div>
+<div class="ig-schede">
+  {% if quale == 'foto' %}<span class="attiva">Foto</span>{% else %}<a href="?quale=foto">Foto</a>{% endif %}
+  {% if quale == 'link' %}<span class="attiva">Link</span>{% else %}<a href="?quale=link">Link</a>{% endif %}
+  {% if quale == 'documenti' %}<span class="attiva">Documenti</span>{% else %}<a href="?quale=documenti">Documenti</a>{% endif %}
+</div>
+{% if quale == 'foto' %}
+<div class="cg-foto">
+  {% for f in foto %}<a href="{{ f }}" target="_blank"><img src="{{ f }}" alt="Foto della chat" loading="lazy"></a>
+  {% empty %}<p class="tenue piccolo ci-vuoto">Nessuna foto in questo gruppo.</p>{% endfor %}
+</div>
+{% elif quale == 'documenti' %}
+<section class="ci-gruppo">
+  {% for d in documenti %}
+  <a class="ci-persona cg-link" href="{{ d.url }}" target="_blank"><span class="ga-doc" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg></span><span class="ci-nome"><b>{{ d.nome }}</b><small>{{ d.autore }} · {{ d.quando|date:'j/m' }}</small></span><i>›</i></a>
+  {% empty %}<p class="tenue piccolo ci-vuoto">Nessun documento in questo gruppo.</p>{% endfor %}
+</section>
+{% else %}
+<section class="ci-gruppo">
+  {% for l in link %}
+  <a class="ci-persona cg-link" href="{{ l.href }}" target="_blank" rel="noopener noreferrer"><span class="ci-nome"><b>{{ l.testo }}</b><small>{{ l.autore }} · {{ l.quando|date:'j/m' }}</small></span><i>›</i></a>
+  {% empty %}<p class="tenue piccolo ci-vuoto">Nessun link in questo gruppo.</p>{% endfor %}
+</section>
+{% endif %}
+{% endblock %}

@@ -56,7 +56,6 @@
   <span class="cal-sigla {{ kd_turno.classe_solo_fascia }}">{% if kd_turno.sigla_fascia %}{{ kd_turno.sigla_fascia }}{% else %}CT{% endif %}</span>
   <span class="cal-evento-testo"><b>{{ kd_turno.descrizione_fascia }}</b>{% if kd_turno.lavora %}<small>{{ kd_turno.nome_postazione }}{% if kd_turno.orario %} · {{ kd_turno.orario }}{% endif %}</small>{% endif %}</span>
 </div>
-{% if kd_scelto >= kd_oggi %}<a class="kd-cambio" href="{% url 'turni:settimana_tutti' %}?settimana={{ kd_scelto|date:'Y-m-d' }}">Chiedi un cambio per questo giorno ›</a>{% endif %}
 {% endif %}
 {% for e in kd_del_giorno %}
 {% if e.url %}<a class="cal-evento {{ e.classe }}" href="{{ e.url }}">{% else %}<div class="cal-evento {{ e.classe }}">{% endif %}

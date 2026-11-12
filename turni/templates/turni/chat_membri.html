@@ -1,0 +1,32 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Info gruppo{% endblock %}
+{% block contenuto %}
+{# proposta A scelta da Giulia (12/11): tondo del gruppo, tre tasti tondi, membri con «Aggiungi membri» in cima #}
+<a class="tasto-indietro" data-resta href="{% url 'turni:messaggi' %}?vista=chat&chat={{ chat.pk }}#fondo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ chat.nome }}</a>
+<div class="ga-testa">
+  <span class="ga-tondo">{% if chat.emoji %}{{ chat.emoji }}{% else %}{{ iniziali_chat }}{% endif %}</span>
+  <h1>{{ chat.nome }}</h1>
+  <p>Gruppo · {{ persone|length }} membri</p>
+</div>
+
+<div class="ga-tasti">
+  <a href="{% url 'turni:cerca_chat' chat.pk %}"><span class="ga-cerchio"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></span><b>Cerca</b></a>
+  <a href="{% url 'turni:media_chat' chat.pk %}"><span class="ga-cerchio"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-9 8"/></svg></span><b>Media</b></a>
+  <form method="post" action="{% url 'turni:notifiche_gruppo' chat.pk %}">{% csrf_token %}
+    <button aria-pressed="{% if silenziata %}false{% else %}true{% endif %}"><span class="ga-cerchio{% if silenziata %} spenta{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>{% if silenziata %}<path d="M4 4l16 16"/>{% endif %}</svg></span><b>Notifiche</b><small>{% if silenziata %}Disattivate{% else %}Attive{% endif %}</small></button>
+  </form>
+</div>
+
+<div class="ga-membri-testa">
+  <b>{{ persone|length }} membri</b>
+  <button type="button" class="ga-lente" data-apri-filtro aria-label="Cerca un membro"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg></button>
+</div>
+<input type="search" class="ga-filtro" placeholder="Cerca un membro" aria-label="Cerca un membro" data-filtro-membri hidden>
+
+<section class="ci-gruppo">
+  {% if gestisce %}<a class="ci-persona ga-aggiungi" href="{% url 'turni:aggiungi_membri' chat.pk %}"><span class="ga-piu" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><b>Aggiungi membri</b></a>{% endif %}
+  {% for p in persone %}
+  <div class="ci-persona" data-nome="{{ p.nome|lower }}"><span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span><span class="ci-nome"><b>{% if p.io %}Tu{% else %}{{ p.nome }}{% endif %}</b>{% if p.ruolo %}<small>{{ p.ruolo }}</small>{% endif %}</span></div>
+  {% endfor %}
+</section>
+{% endblock %}
