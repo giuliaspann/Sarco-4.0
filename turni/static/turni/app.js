@@ -123,8 +123,9 @@ async function iscrivi(riquadro) {
 // ---------------------------------------------------------------- chat e bacheca in stile WhatsApp
 (function () {
   if (!document.querySelector('.wa')) return;
-  // come WhatsApp: si parte dagli ultimi messaggi
-  const fondo = () => window.scrollTo(0, document.documentElement.scrollHeight);
+  // come WhatsApp: si parte dagli ultimi messaggi; dopo un voto si torna al sondaggio (#m…), sotto il titolo della chat
+  const bersaglio = /^#m\d+$/.test(location.hash) ? document.querySelector(location.hash) : null;
+  const fondo = () => bersaglio ? bersaglio.scrollIntoView({ block: 'center' }) : window.scrollTo(0, document.documentElement.scrollHeight);
   fondo();
   window.addEventListener('load', fondo);
   // tocco sul fumetto (proprio, o qualsiasi per l'ufficio): compare "Elimina"

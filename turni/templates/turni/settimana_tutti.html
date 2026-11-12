@@ -3,7 +3,15 @@
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
 
+{% if nav_dipendente %}
+<div class="ig-schede">
+  <a href="{% url 'turni:miei_turni' %}?settimana={{ lunedi|date:'Y-m-d' }}">Calendario</a>
+  {% if nav_cal_tutti %}<a href="{% url 'turni:calendario' %}">Eventi di tutti</a>{% endif %}
+  <span class="attiva">Turni di tutti</span>
+</div>
+{% else %}
 <div class="intestazione"><h1>Turni di tutti</h1></div>
+{% endif %}
 {# testa fissa (Giulia, 10/11): settimana su una riga piccola, la frase del cambio e i giorni restano in vista mentre si scorre #}
 <div class="st-testa" id="st-testa">
   <div class="st-settimana">

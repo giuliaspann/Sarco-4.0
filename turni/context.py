@@ -14,6 +14,7 @@ def navigazione(request):
     contesto = {
         'nav_capoturno': e_capoturno(user, timezone.localdate()),
         'nav_dipendente': dip,
+        'nav_cal_tutti': __import__('turni.views_calendario', fromlist=['vede_tutti']).vede_tutti(user),
         'nav_foto': __import__('turni.foto_profilo', fromlist=['foto_url']).foto_url(user),
         'nav_responsabile': responsabile,
         'nav_ufficio': user.is_staff or responsabile,

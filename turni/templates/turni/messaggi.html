@@ -56,8 +56,7 @@
   <div class="wa">
     <div class="wa-testa">
       <a class="wa-indietro" href="?vista=lista" aria-label="Tutte le chat"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>
-      <span class="wa-avatar wa-avatar-emoji">{{ chat_aperta.emoji|default:'💬' }}</span>
-      <span class="wa-titolo"><b>{{ chat_aperta.nome }}</b><small>{{ membri }} membri{% if direzione %} · storico completo{% endif %}</small></span>
+      <span class="wa-titolo"><b>{{ chat_aperta.nome }}</b><small class="wa-membri"><span class="wa-pila">{% for t in membri_tondi %}<span class="wa-tondo">{% if t.foto %}<img src="{{ t.foto }}" alt="">{% else %}{{ t.iniziali }}{% endif %}</span>{% endfor %}</span>{{ membri }} membri{% if direzione %} · storico completo{% endif %}</small></span>
       <details class="wa-menu">
         <summary aria-label="Opzioni">⋮</summary>
         <div class="wa-menu-voci">
@@ -86,7 +85,7 @@
             {% for o in m.sondaggio.opzioni %}
             <form method="post" action="{% url 'turni:vota_sondaggio' m.sondaggio.id %}">{% csrf_token %}
               <button class="wa-opzione{% if o.mia %} mia{% endif %}" name="opzione" value="{{ o.id }}">
-                <span class="wa-opzione-riga"><span>{{ o.testo }}</span><b>{{ o.voti }}</b></span>
+                <span class="wa-opzione-riga"><span>{{ o.testo }}</span><span class="wa-votanti"><span class="wa-pila">{% for t in o.tondi %}<span class="wa-tondo">{% if t.foto %}<img src="{{ t.foto }}" alt="">{% else %}{{ t.iniziali }}{% endif %}</span>{% endfor %}</span><b>{{ o.voti }}</b></span></span>
                 <progress value="{{ o.voti }}" max="{{ m.sondaggio.totale|default:1 }}">{{ o.voti }}</progress>
               </button>
             </form>
@@ -124,8 +123,10 @@
           <a href="{% url 'turni:sondaggio_nuovo' chat_aperta.pk %}">Crea un sondaggio</a>
         </div>
       </details>
-      <textarea name="testo" rows="1" maxlength="1000" placeholder="Messaggio"></textarea>
-      <label class="wa-camera" for="foto-scatta" aria-label="Scatta una foto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></label>
+      <div class="wa-campo">
+        <textarea name="testo" rows="1" maxlength="1000" placeholder="Messaggio"></textarea>
+        <label class="wa-camera" for="foto-scatta" aria-label="Scatta una foto"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></label>
+      </div>
       <button class="wa-invia" name="azione" value="chat" aria-label="Invia">
         <svg viewBox="0 0 24 24"><path d="M3 20.5l18-8.5L3 3.5l2.5 8.5L3 20.5zM5.5 12H13"/></svg>
       </button>

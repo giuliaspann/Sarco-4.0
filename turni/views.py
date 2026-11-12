@@ -302,6 +302,7 @@ def miei_turni(request):
             'saldo': saldi.residuo(dip),
             **contesto_oggi(request, dip),
             **__import__('turni.views_richieste', fromlist=['contesto_richieste']).contesto_richieste(dip),
+            **__import__('turni.views_calendario', fromlist=['contesto']).contesto(request, dip),
         },
     )
 

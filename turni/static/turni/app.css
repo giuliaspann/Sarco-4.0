@@ -2466,3 +2466,84 @@ i.cal-arancio { background: #e07b00; } i.cal-viola { background: #7b4bb7; }
 /* tasto fotocamera allineato al box del messaggio (Giulia, 11/11) */
 .wa-scrivi .wa-camera { margin: 0; padding: 0; gap: 0; align-self: flex-end; font-size: 0; }
 .wa-scrivi textarea { min-height: 46px; }
+/* dopo un voto la pagina torna al sondaggio: si ferma sotto il logo e il titolo della chat, non dietro (bug 12/11) */
+.wa-riga { scroll-margin-top: calc(var(--alto-barra, 64px) + 80px); }
+
+/* Chat · proposta A migliorata (Giulia, 12/11) */
+.wa-membri { display: flex; align-items: center; gap: 6px; }
+.wa-pila { display: inline-flex; }
+.wa-pila .wa-tondo { width: 20px; height: 20px; margin: 0 0 0 -6px; border: 2px solid var(--carta); font-size: .5rem; }
+.wa-pila .wa-tondo:first-child { margin-left: 0; }
+.wa-votanti { display: inline-flex; align-items: center; gap: 6px; }
+.wa-votanti .wa-tondo { border-color: #ffffff; }
+.wa-campo { flex: 1; min-width: 0; display: flex; align-items: flex-end; border-radius: 23px; background: #ffffff; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+.wa-campo textarea { flex: 1; min-width: 0; background: transparent; box-shadow: none; }
+.wa-scrivi .wa-campo .wa-camera { width: 44px; height: 46px; box-shadow: none; background: transparent; }
+.wa-scrivi .wa-campo .wa-camera svg { stroke: #54595f; }
+@media (prefers-color-scheme: dark) { .wa-campo { background: #2a3942; } }
+/* menu +: le tre voci con lo stesso carattere */
+.wa-piu-voci label, .wa-piu-voci a { margin: 0; gap: 0; flex-direction: row; font-family: inherit; font-size: 1rem; font-weight: 700; line-height: 1.2; letter-spacing: 0; text-transform: none; color: #00384f; }
+/* Info messaggio: l'orario in cui l'ha visto */
+.ci-nome { flex: 1; min-width: 0; }
+.ci-ora { flex: none; color: var(--tenue); font-size: .8rem; }
+/* Home ufficio: il tondino con la foto come per tutti */
+.hu-testa { display: flex; align-items: center; gap: 14px; }
+.hu-foto { flex: none; width: 64px; height: 64px; border-radius: 999px; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: var(--primario-chiaro); color: var(--primario); font-weight: 800; font-size: 1.3rem; text-decoration: none; border: 3px solid var(--carta); box-shadow: 0 0 0 2px var(--bordo); }
+.hu-foto img { width: 100%; height: 100%; object-fit: cover; }
+.hu-testa .ig-saluto { flex: 1; min-width: 0; margin: 0; }
+
+
+/* ---------------------------------------------------------------- Calendario D (Giulia, 12/11/2026) */
+i.cal-grigio { background: #54595f; } i.cal-acqua { background: #1f8a70; } i.cal-ambra { background: #a16207; } i.cal-festa { background: #c0392b; }
+.cal-evento.cal-grigio { border-left-color: #54595f; } .cal-evento.cal-acqua { border-left-color: #1f8a70; }
+.cal-evento.cal-ambra { border-left-color: #a16207; } .cal-evento.cal-festa { border-left-color: #c0392b; }
+.kd-ev.cal-blu { --c: #2a72b0; } .kd-ev.cal-rosso { --c: #c0392b; } .kd-ev.cal-verde { --c: #2f8f2a; } .kd-ev.cal-arancio { --c: #e07b00; }
+.kd-ev.cal-viola { --c: #7b4bb7; } .kd-ev.cal-grigio { --c: #54595f; } .kd-ev.cal-acqua { --c: #1f8a70; } .kd-ev.cal-ambra { --c: #a16207; }
+.kd-ev.cal-festa { --c: #c0392b; }
+.kd-vista { display: flex; gap: 6px; margin: 0 0 10px; }
+.kd-vista a { flex: 1; display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 999px; border: 1px solid var(--bordo);
+  background: var(--carta); color: var(--testo); font-size: .9rem; font-weight: 600; text-decoration: none; }
+.kd-vista a.attiva { background: var(--testo); border-color: var(--testo); color: var(--carta); font-weight: 700; }
+.kd-filtri { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.kd-filtri a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid var(--bordo); background: var(--carta); color: var(--testo); font-size: .8rem; font-weight: 600; text-decoration: none; }
+.kd-filtri a.acceso { background: var(--testo); border-color: var(--testo); color: var(--carta); }
+.kd-filtri i { display: inline-block; width: 8px; height: 8px; border-radius: 99px; flex: none; }
+.kd-naviga { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-weight: 700; font-size: .95rem; }
+.kd-naviga span { flex: 1; text-align: center; min-width: 0; }
+.kd-freccia { flex: none; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--bordo); background: var(--carta);
+  display: flex; align-items: center; justify-content: center; color: var(--testo); text-decoration: none; font-size: 1.2rem; }
+.kd-settimana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; }
+.kd-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 190px; padding: 6px 2px; border-radius: 12px;
+  background: var(--carta); border: 1px solid var(--bordo); color: var(--testo); text-decoration: none; }
+.kd-col.scelto { border: 2px solid var(--primario); padding: 5px 1px; }
+.kd-testa { text-align: center; font-size: .7rem; font-weight: 700; color: var(--tenue); }
+.kd-testa b { display: block; font-size: 1rem; color: var(--testo); }
+.kd-col.oggi .kd-testa b { color: var(--primario); }
+.kd-testa.rosso, .kd-testa.rosso b, .kd-nome.rosso, .kd-giorno b.rosso { color: #c0392b; }
+.kd-turno { position: relative; text-align: center; font-size: .72rem; font-weight: 800; padding: 4px 0; border-radius: 6px; }
+.kd-ct { position: absolute; top: -6px; right: -4px; background: #00384f; color: #fff; font-style: normal; font-size: .5rem; font-weight: 800;
+  line-height: 1.2; padding: 1px 3px; border-radius: 5px; border: 1.5px solid #fff; }
+.kd-area { text-align: center; font-size: .62rem; font-weight: 700; line-height: 1.15; padding: 2px 1px; border-radius: 5px;
+  background: #dbe8f6; color: #1d4f80; overflow-wrap: break-word; }
+.kd-ev { font-size: .62rem; line-height: 1.2; padding: 2px 1px 2px 2px; border-radius: 5px; border-left: 2px solid var(--c, #54595f);
+  background: color-mix(in srgb, var(--c, #54595f) 13%, var(--carta)); color: var(--testo); overflow-wrap: break-word; word-break: break-word; -webkit-hyphens: auto; hyphens: auto; }
+.kd-altri { text-align: center; font-size: .62rem; font-weight: 700; color: var(--tenue); }
+.kd-mese { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; padding: 6px; margin: 0 0 14px; border-radius: 16px;
+  background: var(--carta); border: 1px solid var(--bordo); }
+.kd-nome { text-align: center; font-size: .72rem; font-weight: 700; color: var(--tenue); }
+.kd-giorno { display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-width: 0; min-height: 56px; padding: 3px 2px; border-radius: 8px;
+  color: var(--testo); text-decoration: none; }
+.kd-giorno > b { text-align: center; font-size: .78rem; }
+.kd-giorno.fuori { opacity: .35; }
+.kd-giorno.oggi > b { color: var(--primario); }
+.kd-giorno.scelto { outline: 2px solid var(--primario); background: color-mix(in srgb, var(--primario) 12%, var(--carta)); }
+.kd-giorno .kd-turno { font-size: .62rem; padding: 2px 0; border-radius: 5px; }
+.kd-giorno .kd-ct { top: -5px; right: -5px; font-size: .45rem; padding: 0 2px; border-width: 1px; }
+.kd-giorno .kd-area { font-size: .5rem; padding: 1px; border-radius: 4px; }
+.kd-punti { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; min-height: 5px; }
+.kd-punti i { display: block; width: 5px; height: 5px; border-radius: 99px; }
+.kd-giorno small { text-align: center; font-size: .5rem; font-weight: 700; color: var(--tenue); }
+.kd-mio-turno .cal-sigla { flex: none; width: auto; min-width: 44px; padding: 5px 8px; }
+.kd-cambio { display: block; margin: -2px 0 10px; text-align: center; font-size: .85rem; font-weight: 700; color: var(--testo); }

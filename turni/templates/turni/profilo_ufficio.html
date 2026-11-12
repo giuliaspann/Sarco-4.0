@@ -15,6 +15,7 @@
 </div>
 
 <div class="ig-tasti">
+  {% if nav_cal_tutti %}<a href="{% url 'turni:calendario' %}">Calendario</a>{% endif %}
   <a href="{% url 'turni:password' %}">Cambia password</a>
   <a href="{% url 'turni:menu' %}">Menu</a>
 </div>

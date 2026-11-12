@@ -123,12 +123,14 @@ def _sondaggio_json(m, utente):
         so = m.sondaggio
     except Sondaggio.DoesNotExist:
         return None
-    opzioni = list(so.opzioni.prefetch_related('voti'))
+    opzioni = list(so.opzioni.prefetch_related('voti__utente__dipendente'))
     totale = len({v.utente_id for o in opzioni for v in o.voti.all()})
     return {
         'id': so.pk, 'domanda': so.domanda, 'una_risposta': so.una_risposta, 'totale': totale,
         'opzioni': [{'id': o.pk, 'testo': o.testo, 'voti': len(o.voti.all()),
-                     'mia': any(v.utente_id == utente.pk for v in o.voti.all())} for o in opzioni],
+                     'mia': any(v.utente_id == utente.pk for v in o.voti.all()),
+                     # i tondini di chi ha votato (i primi tre), come nella proposta A
+                     'tondi': [tondo_di(v.utente) for v in list(o.voti.all())[:3]]} for o in opzioni],
     }
 
 
@@ -175,6 +177,11 @@ def _letta_fino(utente, chat):
 def _segna_letta(utente, chat, fino):
     lettura, _ = LetturaChat.objects.get_or_create(utente=utente, chat=chat)
     if fino > lettura.letta_fino:
+        # l'orario in cui ha visto ogni messaggio degli altri (per «Info messaggio»)
+        from .models import VistaMessaggio
+
+        nuovi = chat.messaggi.filter(pk__gt=lettura.letta_fino, pk__lte=fino).exclude(autore=utente).values_list('pk', flat=True)
+        VistaMessaggio.objects.bulk_create([VistaMessaggio(messaggio_id=pk, utente=utente) for pk in nuovi], ignore_conflicts=True)
         lettura.letta_fino = fino
         lettura.save(update_fields=['letta_fino'])
 
@@ -269,6 +276,7 @@ def messaggi(request):
         contesto['chat_aperta'] = chat
         contesto['chat'] = con_gruppi([_messaggio_json(m, request.user, responsabile, direzione, letto_fino) for m in ultimi])
         contesto['membri'] = membri_di(chat).count()
+        contesto['membri_tondi'] = [tondo_di(u) for u in membri_di(chat).select_related('dipendente')[:3]]
         contesto['ultimo_id'] = ultimi[-1].pk if ultimi else 0
         if ultimi:
             _segna_letta(request.user, chat, ultimi[-1].pk)
@@ -382,15 +390,17 @@ def info_messaggio(request, pk):
     if m.autore_id != request.user.pk and not e_direzione(request.user):
         raise PermissionDenied
     letture = dict(LetturaChat.objects.filter(chat=m.chat).values_list('utente_id', 'letta_fino'))
+    orari = dict(m.viste.values_list('utente_id', 'il'))
     letti, non_letti = [], []
     for u in membri_di(m.chat).exclude(pk=m.autore_id).select_related('dipendente'):
-        voce = {'nome': nome_di(u), 'tondo': tondo_di(u)}
+        voce = {'nome': nome_di(u), 'tondo': tondo_di(u), 'il': timezone.localtime(orari[u.pk]) if u.pk in orari else None}
         (letti if letture.get(u.pk, 0) >= m.pk else non_letti).append(voce)
-    letti.sort(key=lambda v: v['nome'])
+    # prima chi l'ha visto da poco, come su WhatsApp
+    letti.sort(key=lambda v: (v['il'] is None, -(v['il'].timestamp() if v['il'] else 0), v['nome']))
     non_letti.sort(key=lambda v: v['nome'])
     return render(request, 'turni/chat_info.html', {
         'm': _messaggio_json(m, request.user, e_responsabile(request.user), e_direzione(request.user)),
-        'chat': m.chat, 'letti': letti, 'non_letti': non_letti,
+        'chat': m.chat, 'letti': letti, 'non_letti': non_letti, 'm_oggi': timezone.localdate().strftime('%Y%m%d'),
     })
 
 

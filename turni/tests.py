@@ -463,7 +463,7 @@ class HomeTest(TestCase):
         self.assertContains(r, '>Analisi<')  # la stessa home per tutti i dipendenti (11/11)
         r2 = self.client.get(reverse('turni:miei_turni'))
         # Area personale come un profilo: niente ferie, permessi né malattia (10/11/2026)
-        for testo in ('I miei turni', 'Turni di tutti', reverse('turni:archivio_richieste')):
+        for testo in ('>Calendario<', 'Turni di tutti', reverse('turni:archivio_richieste')):
             self.assertContains(r2, testo)
         self.assertNotContains(r2, 'Pulizie da verificare')  # sta solo nella home, dentro Pulizia
         r3 = self.client.get(reverse('turni:richieste'), follow=True)  # Cambio turno e Ritardo / uscita nella pagina Richieste

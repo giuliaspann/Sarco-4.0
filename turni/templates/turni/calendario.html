@@ -1,35 +1,18 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Calendario{% endblock %}
 {% block contenuto %}
+{% if dip %}
+{# responsabile impianto: dal profilo, terza scheda della barra in alto #}
+<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+<div class="ig-schede">
+  <a href="{% url 'turni:miei_turni' %}">Calendario</a>
+  <span class="attiva">Eventi di tutti</span>
+  <a href="{% url 'turni:settimana_tutti' %}?settimana={{ kd_inizio|date:'Y-m-d' }}">Turni di tutti</a>
+</div>
+{% else %}
+{# ufficio: niente barra, solo «Calendario» dove vede tutto #}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
 <div class="intestazione"><h1>Calendario</h1></div>
-
-<div class="st-settimana cal-mese">
-  <a class="st-freccia" href="?mese={{ prec }}" aria-label="Mese prima">‹</a>
-  <span>{{ nome_mese }}</span>
-  <a class="st-freccia" href="?mese={{ succ }}" aria-label="Mese dopo">›</a>
-</div>
-
-<div class="cal-griglia">
-  {% for n in 'LMMGVSD' %}<span class="cal-nome">{{ n }}</span>{% endfor %}
-  {% for sett in griglia %}{% for c in sett %}
-  <a class="cal-giorno{% if c.fuori %} fuori{% endif %}{% if c.data == oggi %} oggi{% endif %}{% if c.data == scelto %} scelto{% endif %}"
-     href="?mese={{ c.data|date:'Y-m' }}&amp;giorno={{ c.data|date:'Y-m-d' }}" aria-label="{{ c.data|date:'j F' }}{% if c.n %}, {{ c.n }} eventi{% endif %}">
-    <b>{{ c.data.day }}</b>
-    <span class="cal-punti">{% for cl in c.classi %}<i class="{{ cl }}"></i>{% endfor %}</span>
-  </a>
-  {% endfor %}{% endfor %}
-</div>
-
-<div class="cal-legenda">{% for k, n, cl in tipi %}<span><i class="{{ cl }}"></i>{{ n }}</span>{% endfor %}</div>
-
-<h2 class="rq-sezione">{{ scelto|date:'l j F'|capfirst }}</h2>
-{% for e in del_giorno %}
-<a class="cal-evento {{ e.classe }}" href="{{ e.url }}">
-  <span class="cal-evento-testo"><span class="cal-tipo">{{ e.nome_tipo }}{% if e.ora %} · {{ e.ora }}{% endif %}</span><b>{{ e.titolo }}</b><small>{{ e.sotto }}</small></span>
-  <span class="sg-freccia">›</span>
-</a>
-{% empty %}
-<div class="vuoto"><p>Niente in programma.</p></div>
-{% endfor %}
+{% endif %}
+{% include 'turni/_calendario_d.html' %}
 {% endblock %}

@@ -938,6 +938,17 @@ class FotoUtente(models.Model):
         verbose_name_plural = 'foto utenti'
 
 
+class VistaMessaggio(models.Model):
+    """Quando una persona ha visto un messaggio (per «Info messaggio» con l'orario, Giulia 12/11/2026)."""
+
+    messaggio = models.ForeignKey(MessaggioChat, on_delete=models.CASCADE, related_name='viste')
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['messaggio', 'utente'], name='una_vista_per_messaggio')]
+
+
 class Sondaggio(models.Model):
     """Un sondaggio in una chat: compare nella chat come messaggio, ognuno vota toccando un'opzione."""
 

@@ -57,7 +57,9 @@ class ChatNuovaTest(TestCase):
         self.assertEqual(self.client.get(reverse('turni:info_messaggio', args=[m.pk])).status_code, 403)  # solo chi l'ha scritto
         self.client.force_login(self.a.utente)
         self.assertIn('wa-spunte lette', self.client.get(self.url).content.decode())
-        self.assertContains(self.client.get(reverse('turni:info_messaggio', args=[m.pk])), 'Letto da 1')
+        info = self.client.get(reverse('turni:info_messaggio', args=[m.pk]))
+        self.assertContains(info, 'Letto da 1')
+        self.assertContains(info, 'oggi alle')  # l'orario in cui l'ha visto
 
     def test_sondaggio_una_risposta(self):
         self.client.force_login(self.a.utente)
@@ -78,3 +80,4 @@ class ChatNuovaTest(TestCase):
         self.client.post(reverse('turni:foto_profilo'), {'foto': jpg()})
         self.assertTrue(uff.foto_profilo.foto)
         self.assertContains(self.client.get(reverse('turni:profilo')), reverse('turni:foto_utente_img', args=[uff.pk]))
+        self.assertContains(self.client.get(reverse('turni:home')), 'hu-foto')  # anche in home

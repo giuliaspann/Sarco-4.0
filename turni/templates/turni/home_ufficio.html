@@ -2,9 +2,13 @@
 {% block titolo %}Oggi{% endblock %}
 {% block contenuto %}
 {# la home dell'ufficio (Giulia, 11/11): ogni giorno, persone, azienda #}
-<div class="ig-saluto">
-  <h1>Ciao {{ nome }}</h1>
-  <span>{{ oggi_data|date:'D j M' }}</span>
+{# il tondino con la foto in home per tutti, anche l'ufficio (Giulia, 12/11): toccandolo si va al profilo #}
+<div class="hu-testa">
+  <a class="hu-foto" href="{% url 'turni:profilo' %}" aria-label="Il mio profilo">{% if nav_foto %}<img src="{{ nav_foto }}" alt="">{% else %}{{ nome|slice:':1'|upper }}{% endif %}</a>
+  <div class="ig-saluto">
+    <h1>Ciao {{ nome }}</h1>
+    <span>{{ oggi_data|date:'D j M' }}</span>
+  </div>
 </div>
 
 {% for f in fermi_aperti %}
@@ -16,7 +20,7 @@
   {% for v in principali %}
   <a href="{{ v.url }}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true">{{ v.icona|safe }}</svg></span><b>{{ v.nome }}</b>{% if v.badge %}<i class="home-badge">{{ v.badge }}</i>{% endif %}</a>
   {% endfor %}
-  <a href="{% url 'turni:calendario' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg></span><b>Calendario</b>{% if eventi_settimana %}<i class="home-badge">{{ eventi_settimana }}</i>{% endif %}</a>
+  {% if nav_cal_tutti %}<a href="{% url 'turni:calendario' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></svg></span><b>Calendario</b>{% if eventi_settimana %}<i class="home-badge">{{ eventi_settimana }}</i>{% endif %}</a>{% endif %}
 </div>
 
 {% if persone %}

@@ -13,7 +13,7 @@
 <section class="ci-gruppo">
   <p class="ci-titolo letti"><svg class="wa-spunte lette" viewBox="0 0 18 12" aria-hidden="true"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>Letto da {{ letti|length }}</p>
   {% for p in letti %}
-  <div class="ci-persona"><span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span><span>{{ p.nome }}</span></div>
+  <div class="ci-persona"><span class="wa-tondo">{% if p.tondo.foto %}<img src="{{ p.tondo.foto }}" alt="">{% else %}{{ p.tondo.iniziali }}{% endif %}</span><span class="ci-nome">{{ p.nome }}</span>{% if p.il %}<small class="ci-ora">{% if p.il|date:'Ymd' == m_oggi %}oggi{% else %}{{ p.il|date:'j/m' }}{% endif %} alle {{ p.il|time:'H:i' }}</small>{% endif %}</div>
   {% empty %}<p class="tenue piccolo ci-vuoto">Nessuno l'ha ancora letto.</p>{% endfor %}
 </section>
 

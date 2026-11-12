@@ -84,7 +84,7 @@ def sezioni_per(request):
 
     turni = []
     if dip:
-        turni += [voce('I miei turni', r('turni:miei_turni'), 'calendario', nav.get('nav_area', 0)),
+        turni += [voce('Calendario', r('turni:miei_turni'), 'calendario', nav.get('nav_area', 0)),
                   voce('Turni di tutti', r('turni:settimana_tutti'), 'tutti'),
                   voce('Squadra', r('turni:squadra'), 'squadra'),
                   voce('Cambio turno', r('turni:nuovo_cambio'), 'cambio'),

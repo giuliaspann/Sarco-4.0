@@ -16,35 +16,13 @@
   <h1>{{ dip.nome_breve }}</h1>
 </div>
 
+{# Calendario e Turni di tutti nella barra in alto (Giulia, 12/11): «I miei turni» è dentro il calendario #}
 <div class="ig-schede">
-  <span class="attiva">I miei turni</span>
-  <a href="{% url 'turni:settimana_tutti' %}?settimana={{ inizio|date:'Y-m-d' }}">Turni di tutti</a>
+  <span class="attiva">Calendario</span>
+  {% if nav_cal_tutti %}<a href="{% url 'turni:calendario' %}">Eventi di tutti</a>{% endif %}
+  <a href="{% url 'turni:settimana_tutti' %}?settimana={{ kd_scelto|date:'Y-m-d' }}">Turni di tutti</a>
 </div>
-<div class="naviga mese ap-naviga">
-  <a class="freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
-  <span class="ap-settimana">{{ inizio|date:'j' }}{% if inizio.month != fine.month %} {{ inizio|date:'M' }}{% endif %} – {{ fine|date:'j F' }}</span>
-  <a class="freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
-</div>
-{% for settimana in settimane %}
-{% if not settimana.caricata %}
-<p class="cal-vuota">Turni non ancora pubblicati</p>
-{% else %}
-<div class="sett-ap">
-  {% for c in settimana.giorni %}
-  <div class="{% if c.data == oggi %}oggi{% endif %}{% if c.data < oggi %} passato{% endif %}">
-    <span class="sett-giorno">{{ c.data|date:'D'|slice:':3' }}</span>
-    {% if c.turno %}
-      {% if c.turno.sigla_postazione %}<span class="cal-sigla sett-imp">{{ c.turno.sigla_postazione }}</span>{% endif %}
-      {% if c.turno.sigla_fascia %}<span class="cal-sigla {{ c.turno.classe_solo_fascia }}">{{ c.turno.sigla_fascia }}</span>{% endif %}
-      {% if c.turno.capoturno and c.turno.lavora %}<span class="cal-sigla f-capo">CT</span>{% endif %}
-    {% endif %}
-    {% if c.riunione %}<span class="rn-pallino" title="Riunione"></span>{% endif %}
-    {% if c.fermo %}<span class="rn-pallino st-pallino-fermo" title="Fermo impianto programmato"></span>{% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
-{% endfor %}
+{% include 'turni/_calendario_d.html' %}
 
 {# Avvisi (Giulia, 10/11): un riquadro per ogni cosa, riunioni e richieste singole, niente accorpato #}
 {% if riunioni or da_leggere or da_rispondere or aperte_cambi or aperte_ferie or aperti_avvisi %}

@@ -1,0 +1,68 @@
+{# Calendario D (Giulia, 12/11/2026): Settimana a sinistra (si apre così) e Mese; il dettaglio del giorno toccato sotto #}
+<div class="kd-vista">
+  <a class="{% if kd_vista == 'settimana' %}attiva{% endif %}" href="{{ kd_settimana }}"{% if kd_vista == 'settimana' %} aria-current="page"{% endif %}>Settimana</a>
+  <a class="{% if kd_vista == 'mese' %}attiva{% endif %}" href="{{ kd_mese }}"{% if kd_vista == 'mese' %} aria-current="page"{% endif %}>Mese</a>
+</div>
+{% if kd_filtri %}
+<div class="kd-filtri">
+  {% for f in kd_filtri %}<a class="{% if f.acceso %}acceso{% endif %}" href="{{ f.url }}" aria-pressed="{% if f.acceso %}true{% else %}false{% endif %}"><i class="{{ f.classe }}"></i>{{ f.nome }}</a>{% endfor %}
+</div>
+{% endif %}
+<div class="kd-naviga">
+  <a class="kd-freccia" href="{{ kd_prec }}" aria-label="{% if kd_vista == 'mese' %}Mese{% else %}Settimana{% endif %} prima">‹</a>
+  <span>{{ kd_titolo }}</span>
+  <a class="kd-freccia" href="{{ kd_succ }}" aria-label="{% if kd_vista == 'mese' %}Mese{% else %}Settimana{% endif %} dopo">›</a>
+</div>
+
+{% if kd_vista == 'settimana' %}
+<div class="kd-settimana">
+  {% for c in kd_griglia.0 %}
+  <a class="kd-col{% if c.data == kd_scelto %} scelto{% endif %}{% if c.data == kd_oggi %} oggi{% endif %}" href="{{ c.url }}" aria-label="{{ c.data|date:'l j F' }}">
+    <span class="kd-testa{% if c.rosso %} rosso{% endif %}">{{ c.data|date:'D'|slice:':1' }}<b>{{ c.data.day }}</b></span>
+    {% if c.turno %}
+      {% if c.turno.sigla_fascia %}<span class="kd-turno {{ c.turno.classe_solo_fascia }}">{{ c.turno.sigla_fascia }}{% if c.turno.capoturno and c.turno.lavora %}<i class="kd-ct">CT</i>{% endif %}</span>
+      {% elif c.turno.capoturno %}<span class="kd-turno f-capo">CT</span>{% endif %}
+      {% if c.turno.sigla_postazione %}<span class="kd-area" title="{{ c.turno.get_postazione_display }}">{{ c.turno.sigla_postazione }}</span>{% endif %}
+    {% endif %}
+    {% if c.festa %}<span class="kd-ev cal-festa">{{ c.festa }}</span>{% endif %}
+    {% for e in c.eventi %}<span class="kd-ev {{ e.classe }}">{{ e.breve }}</span>{% endfor %}
+    {% if c.altri %}<span class="kd-altri">+{{ c.altri }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% if kd_senza_turni %}<p class="cal-vuota">Turni non ancora pubblicati</p>{% endif %}
+{% else %}
+<div class="kd-mese">
+  {% for n in 'LMMGVSD' %}<span class="kd-nome{% if forloop.last %} rosso{% endif %}">{{ n }}</span>{% endfor %}
+  {% for riga in kd_griglia %}{% for c in riga %}
+  <a class="kd-giorno{% if c.fuori %} fuori{% endif %}{% if c.data == kd_scelto %} scelto{% endif %}{% if c.data == kd_oggi %} oggi{% endif %}" href="{{ c.url }}"
+     aria-label="{{ c.data|date:'j F' }}{% if c.festa %}, {{ c.festa }}{% endif %}{% if c.n %}, {{ c.n }} eventi{% endif %}">
+    <b{% if c.rosso %} class="rosso"{% endif %}>{{ c.data.day }}</b>
+    {% if c.turno and not c.fuori %}
+      {% if c.turno.sigla_fascia %}<span class="kd-turno {{ c.turno.classe_solo_fascia }}">{{ c.turno.sigla_fascia }}{% if c.turno.capoturno and c.turno.lavora %}<i class="kd-ct">CT</i>{% endif %}</span>
+      {% elif c.turno.capoturno %}<span class="kd-turno f-capo">CT</span>{% endif %}
+      {% if c.turno.sigla_postazione %}<span class="kd-area">{{ c.turno.sigla_postazione }}</span>{% endif %}
+    {% endif %}
+    <span class="kd-punti">{% for cl in c.classi %}<i class="{{ cl }}"></i>{% endfor %}</span>
+    {% if kd_tutti and c.n > 1 %}<small>{{ c.n }} eventi</small>{% endif %}
+  </a>
+  {% endfor %}{% endfor %}
+</div>
+{% endif %}
+
+<h2 class="rq-sezione">{{ kd_scelto|date:'l j F'|capfirst }}</h2>
+{% if kd_turno %}
+<div class="cal-evento kd-mio-turno">
+  <span class="cal-sigla {{ kd_turno.classe_solo_fascia }}">{% if kd_turno.sigla_fascia %}{{ kd_turno.sigla_fascia }}{% else %}CT{% endif %}</span>
+  <span class="cal-evento-testo"><b>{{ kd_turno.descrizione_fascia }}</b>{% if kd_turno.lavora %}<small>{{ kd_turno.nome_postazione }}{% if kd_turno.orario %} · {{ kd_turno.orario }}{% endif %}</small>{% endif %}</span>
+</div>
+{% if kd_scelto >= kd_oggi %}<a class="kd-cambio" href="{% url 'turni:settimana_tutti' %}?settimana={{ kd_scelto|date:'Y-m-d' }}">Chiedi un cambio per questo giorno ›</a>{% endif %}
+{% endif %}
+{% for e in kd_del_giorno %}
+{% if e.url %}<a class="cal-evento {{ e.classe }}" href="{{ e.url }}">{% else %}<div class="cal-evento {{ e.classe }}">{% endif %}
+  <span class="cal-evento-testo"><span class="cal-tipo">{{ e.nome_tipo }}{% if e.ora %} · {{ e.ora }}{% endif %}</span><b>{{ e.titolo }}</b>{% if e.sotto %}<small>{{ e.sotto }}</small>{% endif %}</span>
+  {% if e.url %}<span class="sg-freccia">›</span>{% endif %}
+{% if e.url %}</a>{% else %}</div>{% endif %}
+{% empty %}
+{% if not kd_turno %}<div class="vuoto"><p>Niente in programma.</p></div>{% endif %}
+{% endfor %}
