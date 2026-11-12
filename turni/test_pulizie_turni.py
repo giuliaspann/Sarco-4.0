@@ -132,13 +132,13 @@ class PulizieTurnoTest(TestCase):
         self.assertEqual(len(con_pozzetti_domani), 1)
         self.assertNotEqual(con_pozzetti[0].dipendente, con_pozzetti_domani[0].dipendente)
 
-    def test_linea_incolore_un_ora_prima_della_fine_con_foto(self):
+    def test_linea_incolore_un_ora_e_un_quarto_prima_della_fine_con_foto(self):
         t = self.persona('A', '1T', 'IMP2')
         genera_pulizie(t)
         p = t.pulizie.get(elemento__nome='Incolore')
         self.entra(t)
         url = reverse('turni:pulizie_turno', args=[t.pk])
-        self.assertContains(self.client.get(reverse('turni:pulizie')), 'Dalle 13:00')
+        self.assertContains(self.client.get(reverse('turni:pulizie')), 'Dalle 12:45')  # 1:15 prima della fine (Giulia, 12/11)
         self.client.post(url, {'azione': 'fatta', 'pulizia': p.pk, 'foto_prima': foto(), 'foto': foto()})
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # alle 12 è troppo presto

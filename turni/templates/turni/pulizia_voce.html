@@ -1,0 +1,66 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ p.titolo }}{% endblock %}
+{% block contenuto %}
+{# Scheda della pulizia (Giulia, 12/11/2026): cosa, chi, dove, a che punto è; i tasti di chi deve agire adesso #}
+<a class="tasto-indietro" href="{% url 'turni:pulizie_adesso' %}?giorno={{ p.turno.data|date:'Y-m-d' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>In corso</a>
+<div class="intestazione"><h1>{{ p.titolo }}</h1></div>
+
+<div class="pv-scheda">
+  <span class="pp-turno {{ classe }} pv-turno">{{ nome_turno }} · {{ p.turno.data|date:'D j/m' }}</span>
+  <p class="pv-riga"><b>Dove</b><span>{{ area|default:'—' }}</span></p>
+  <p class="pv-riga"><b>Chi</b><span>{{ persone|join:', ' }}</span></p>
+  {% if quando %}<p class="pv-riga"><b>Quando</b><span>{{ quando }}</span></p>{% endif %}
+  <p class="pv-riga"><b>Stato</b><span>{{ stato }}</span></p>
+  {% if e.istruzioni %}<p class="tenue piccolo">{{ e.istruzioni }}</p>{% endif %}
+  {% if p.nota %}<p class="tenue piccolo">{{ p.nota }}</p>{% endif %}
+</div>
+
+<h2 class="rq-sezione">A che punto è</h2>
+<ol class="pv-passi">
+  {% for s in passi %}<li class="{% if s.no %}no{% elif s.fatto %}fatto{% elif s.attesa %}attesa{% endif %}"><span>{{ s.testo }}</span>{% if s.ora %}<small>{{ s.ora }}</small>{% endif %}</li>{% endfor %}
+</ol>
+
+{% if da_fare %}
+  {% if e.con_avvio and not iniziata and capo or e.con_avvio and not iniziata and manut or e.con_avvio and not iniziata and mie %}
+  <form method="post" class="pv-azione">{% csrf_token %}
+    <button class="bottone pieno" name="azione" value="iniziata">Pulizia {{ nome_corto }} iniziata</button>
+  </form>
+  {% endif %}
+
+  {% if e.con_avvio and iniziata %}
+    {% if manut or capo %}
+    <form method="post" class="pv-azione">{% csrf_token %}<input type="hidden" name="azione" value="manutentore">
+      <button class="pv-spunta{% if ok_man %} accesa{% endif %}" name="fatto" value="{% if ok_man %}0{% else %}1{% endif %}" aria-pressed="{% if ok_man %}true{% else %}false{% endif %}"><i>{% if ok_man %}✓{% endif %}</i>Manutentore: completato</button>
+    </form>
+    {% elif ok_man %}<p class="pv-nota">✓ Manutentore: completato</p>{% endif %}
+    {% if capo %}
+    <form method="post" class="pv-azione">{% csrf_token %}
+      <button class="bottone pieno" name="azione" value="conclusa"{% if not ok_man %} disabled{% endif %}>Pulizia {{ nome_corto }} conclusa</button>
+      {% if not ok_man %}<p class="tenue piccolo pv-centro">Si conclude dopo la spunta «Manutentore: completato».</p>{% endif %}
+    </form>
+    {% endif %}
+  {% endif %}
+
+  {% if capo and not e.con_avvio %}
+  <form method="post" enctype="multipart/form-data" class="pv-azione pv-conferma">{% csrf_token %}
+    <h2 class="rq-sezione">{% if via_ct %}Conferma del Capo Turno{% else %}Conferma pulizia{% endif %}</h2>
+    {% if colleghi %}
+    <label>Fatta da
+      <select name="fatta_da">{% for d in colleghi %}<option value="{{ d.pk }}"{% if d.pk == assegnata_a %} selected{% endif %}>{{ d.nome_breve }}</option>{% endfor %}</select>
+    </label>
+    <p class="tenue piccolo">Se l'ha fatta un collega libero in quel momento, scegli il suo nome.</p>
+    {% endif %}
+    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" data-riduci{% if serve_foto %} required{% endif %}><span>📷 Foto della pulizia finita{% if not serve_foto %} (facoltativa){% endif %}</span></label>
+    <label>Nota (facoltativa)<input type="text" name="nota" maxlength="300"></label>
+    <div class="pv-due">
+      <button class="bottone pieno" name="azione" value="conferma">Conferma pulizia</button>
+      {% if e.avviso == 'ENTRO' %}<button class="bottone rifiuta" name="azione" value="non_ancora" formnovalidate>Non ancora</button>{% endif %}
+    </div>
+  </form>
+  {% endif %}
+
+  {% for r in mie %}
+  <a class="bottone pieno pv-azione" href="{% url 'turni:pulizie_turno' r.turno_id %}?fai=assegnata&voce={{ r.pk }}">Conferma pulizia</a>
+  {% endfor %}
+{% endif %}
+{% endblock %}

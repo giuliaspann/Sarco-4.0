@@ -1,0 +1,38 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}In corso adesso{% endblock %}
+{% block contenuto %}
+{# Timeline 4 (Giulia, 12/11/2026): turni in ordine 1T, 2T, G, N; quello in corso è aperto con le pulizie per impianto #}
+<a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizia</a>
+<div class="intestazione"><h1>In corso adesso</h1></div>
+<div class="kd-naviga">
+  <a class="kd-freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno prima">‹</a>
+  <span>{{ titolo }}{% if ora %} · ore {{ ora|time:'H:i' }}{% endif %}</span>
+  <a class="kd-freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno dopo">›</a>
+</div>
+
+{% for t in turni %}
+<section class="pa-turno">
+  <a class="pa-testa {{ t.classe }}" href="?giorno={{ giorno|date:'Y-m-d' }}&apri={% if t.aperto %}-{% else %}{{ t.sigla }}{% endif %}" aria-expanded="{% if t.aperto %}true{% else %}false{% endif %}">
+    <span class="pa-riga"><b>{{ t.nome }} · {{ t.ore }}</b>{% if t.adesso %}<i class="pa-adesso">ADESSO</i>{% endif %}<b>{{ t.ok }}/{{ t.tot }}</b></span>
+    <span class="pa-barra"><i class="pa-pieno pa-w{{ t.perc }}"></i></span>
+  </a>
+  {% if t.aperto %}
+  <div class="pa-corpo">
+    {% for a in t.aree %}
+    <div class="pa-area">
+      <h3>{{ a.nome }}</h3>
+      {% for v in a.voci %}
+      {% if v.pk %}<a class="pa-voce" href="{% url 'turni:pulizia_voce' v.pk %}">{% else %}<div class="pa-voce">{% endif %}
+        <span><b>{{ v.nome }}</b> · <small>{{ v.persone|join:', '|default:'da assegnare' }}</small></span>
+        <span class="pp-stato pp-{{ v.stato }}">{{ v.stato_nome }}</span>
+      {% if v.pk %}</a>{% else %}</div>{% endif %}
+      {% endfor %}
+    </div>
+    {% empty %}
+    <p class="tenue piccolo">Nessuna pulizia in questo turno.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

@@ -15,6 +15,15 @@
 <a class="stato-imp" href="{% url 'turni:fermo' f.pk %}"><span class="pall rosso"></span>{{ f.get_impianto_display }} fermo dalle {{ f.fermo_dal|time:'H:i' }}{% if f.fermo_dal|date:'Ymd' != oggi_data|date:'Ymd' %} del {{ f.fermo_dal|date:'j/m' }}{% endif %}<span class="sg-freccia">›</span></a>
 {% endfor %}
 
+{# gli stessi tasti di tutti i dipendenti, oltre ai suoi (Giulia, 12/11/2026), grandi come quelli di «Ogni giorno» #}
+<p class="hu-sezione">Lavoro</p>
+<div class="ig-azioni hu-griglia">
+  <a href="{% url 'turni:pulizie' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3l-4 9M6 12h12l-1.5 9h-9z"/></svg></span><b>Pulizia</b></a>
+  <a href="{% url 'turni:mn_scelta' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z"/></svg></span><b>Manutenzione</b></a>
+  <a href="{% url 'turni:produzione_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg></span><b>Produzione</b></a>
+  <a href="{% url 'turni:analisi_nuova' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg></span><b>Analisi</b></a>
+</div>
+
 <p class="hu-sezione">Ogni giorno</p>
 <div class="ig-azioni hu-griglia">
   {% for v in principali %}

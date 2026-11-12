@@ -142,9 +142,30 @@ def programma(request, cosa):
     })
 
 
+def solo_ri(utente):
+    """Il responsabile impianto (non piazzale, non ufficio): le sue straordinarie passano dal responsabile piazzale."""
+    dip = getattr(utente, 'dipendente', None)
+    return bool(dip and dip.resp_impianto and not dip.resp_piazzale and not utente.is_staff)
+
+
 def _programma_pulizia(utente, luogo, giorno, turno, testo):
     """La pulizia va al Capo Turno di quel giorno e turno (accettata in automatico); se i turni di quel giorno
-    non sono ancora caricati resta come fermo/avviso e lo si dice."""
+    non sono ancora caricati resta come fermo/avviso e lo si dice. Quella del responsabile impianto
+    va prima al responsabile piazzale, che la manda al Capo Turno (Giulia, 12/11/2026)."""
+    from .pulizie import resp_piazzale, richiedi_pulizia
+
+    if solo_ri(utente):
+        from .models import Straordinaria
+
+        s = Straordinaria.objects.create(luogo=luogo, giorno=giorno, turno=turno, testo=testo, chiesta_da=utente)
+        mn.avvisa(resp_piazzale(), utente, f'🧹 Pulizia straordinaria · {Luogo(luogo).label}',
+                  f'{giorno:%a %d/%m} {dict(TURNI).get(turno, turno).split(" ·")[0]}: {testo}', reverse('turni:notifiche'),
+                  tipo='straordinaria', oggetto_id=s.pk)
+        return f'Pulizia straordinaria in {Luogo(luogo).label} per {giorno:%d/%m}: la riceve il responsabile piazzale, che la manda al Capo Turno'
+    return _al_capo(utente, luogo, giorno, turno, testo)
+
+
+def _al_capo(utente, luogo, giorno, turno, testo):
     from .pulizie import richiedi_pulizia
 
     turni = Turno.objects.filter(data=giorno, fascia=FASCIA_DI[turno], capoturno=True, dipendente__attivo=True).select_related('dipendente')

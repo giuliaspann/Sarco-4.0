@@ -281,11 +281,9 @@ def pulizia_generale_in_attesa():
 
 
 def da_convalidare_piazzale():
-    """Quelle che convalida solo lui e quelle che hanno già l'ok del Capo Turno."""
-    from django.db.models import Q
+    """Quelle che convalida solo lui, quelle che hanno già l'ok del Capo Turno e le straordinarie fatte dal Capo Turno."""
+    from .piano_pulizie import Q_AL_RP
 
-    C = ElementoPulizia.Convalida
     return Pulizia.objects.filter(
-        Q(elemento__convalida=C.PIAZZALE) | Q(elemento__convalida=C.CT_RP, ok_capoturno_il__isnull=False),
-        stato=Pulizia.Stato.FATTA, turno__data__gte=timezone.localdate() - timedelta(days=3),
+        Q_AL_RP, stato=Pulizia.Stato.FATTA, turno__data__gte=timezone.localdate() - timedelta(days=3),
     ).select_related('turno__dipendente', 'elemento', 'ok_capoturno_da__dipendente')

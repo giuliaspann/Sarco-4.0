@@ -16,6 +16,12 @@ tondino di chi l'ha generata; Conferma / Rifiuta per quello che aspetta una risp
     <b>{{ r.titolo }}</b>{% if r.testo %} <span>{{ r.testo|truncatechars:110 }}</span>{% endif %}
     <small>{{ r.quando }}{% if r.esito %} · {{ r.esito }}{% endif %}</small>
   </a>
+  {% if r.tasto %}
+  <span class="nt-tasti">
+    {% if r.tasto.azione %}<form method="post" action="{% url 'turni:pulizia_voce' r.tasto.pk %}">{% csrf_token %}<button class="nt-conferma" name="azione" value="{{ r.tasto.azione }}">{{ r.tasto.testo }}</button></form>
+    {% else %}<a class="nt-conferma" href="{% url 'turni:pulizia_voce' r.tasto.pk %}">{{ r.tasto.testo }}</a>{% endif %}
+  </span>
+  {% endif %}
   {% if r.azioni %}
   <span class="nt-tasti">
     <a class="nt-conferma" href="{% url 'turni:notifica_scelta' r.tipo r.oggetto_id 'conferma' %}">Conferma</a>

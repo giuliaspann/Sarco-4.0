@@ -4,6 +4,7 @@
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
 <div class="intestazione"><h1>Pulizia</h1></div>
 
+
 {% if richieste %}
 <h2 class="rq-sezione">Da fare per te</h2>
 {% for v in richieste %}
@@ -27,14 +28,20 @@
 {# Capo Turno in servizio: due tasti (Giulia, 10/11): aggiunge una pulizia fatta; vede le pulizie programmate del turno e le verifica #}
 {# tre tasti uno sotto l'altro a tutta larghezza, come Manutenzione (Giulia, 10/11) #}
 <div class="mn-capo">
+  {# Programma e In corso adesso per tutti (Giulia, 12/11/2026), come gli altri tasti del Capo Turno #}
+  <a class="mn-capo-tasto" href="{% url 'turni:pulizie_programma' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span><b>Calendario pulizie</b></span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:pulizie_adesso' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span><b>In corso adesso</b></span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:pulizie_turno' turno.pk %}?fai=libera"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span><b>Aggiungi pulizia completata</b></span></a>
-  <a class="mn-capo-tasto" href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span><span><b>Vedi pulizie programmate</b></span>{% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% endif %}</a>
-  <a class="mn-capo-tasto" href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span><b>Programma pulizia</b></span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span><span><b>Verifica pulizie</b></span>{% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% endif %}</a>
+  <a class="mn-capo-tasto" href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></span><span><b>Pulizia straordinaria</b></span></a>
 </div>
 {% else %}
-<div class="ig-azioni">
+{# tutti i tasti della stessa grandezza, due per riga (Giulia, 12/11/2026) #}
+<div class="pp-tasti">
+  <a href="{% url 'turni:pulizie_programma' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Calendario pulizie</a>
+  <a href="{% url 'turni:pulizie_adesso' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>In corso adesso</a>
   {% if e_capo %}
-  <a href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span>Verifica{% if da_verificare %}<i class="home-badge">{{ da_verificare }}</i>{% endif %}</a>
+  <a href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span>Verifica pulizie{% if da_verificare %}<i class="home-badge">{{ da_verificare }}</i>{% endif %}</a>
   {% endif %}
   {% if turno %}
   <a href="{% url 'turni:pulizie_turno' turno.pk %}?fai=libera"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>Aggiungi</a>
@@ -43,10 +50,10 @@
   <a href="{% url 'turni:richiedi_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></span>Richiedi</a>
   {% endif %}
   {% if puo_programmare %}
-  <a href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>Programma pulizia</a>
+  <a href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></span>Pulizia straordinaria</a>
   {% endif %}
   {% if resp_piazzale %}
-  <a href="{% url 'turni:pulizie_piazzale' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4h7a4 4 0 0 1 0 8H6"/></svg></span>Piazzale</a>
+  <a href="{% url 'turni:pulizie_piazzale' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg></span>Piazzale</a>
   {% endif %}
 </div>
 {% endif %}

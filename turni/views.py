@@ -163,20 +163,8 @@ def contesto_oggi(request, dip):
 
 
 def vede_analisi(dip, turno=None):
-    """Il tasto "Analisi" solo per chi lavora in laboratorio: mansione "Analista laboratorio"
-    o di turno oggi al Laboratorio Analisi (Giulia, 10/11/2026)."""
-    from .models import Mansione, Postazione
-
-    if dip is None:
-        return False
-    if Mansione.ANALISTA in dip.mansioni:
-        return True
-    # la stessa home per tutti i dipendenti, Analisi compresa (Giulia, 11/11/2026);
-    # Capi Turno, responsabile piazzale e responsabile impianto hanno compiti diversi: per loro resta solo il laboratorio
-    capo_oggi = bool(turno and turno.lavora and turno.capoturno)
-    if not (capo_oggi or dip.resp_piazzale or dip.resp_impianto):
-        return True
-    return bool(turno and turno.lavora and any(p == Postazione.ANALISI for p, _ in turno.lista_incarichi))
+    """Il tasto "Analisi" per tutti i dipendenti, come Pulizia, Manutenzione e Produzione (Giulia, 12/11/2026)."""
+    return dip is not None
 
 
 def pulizie_da_verificare(utente):
@@ -188,7 +176,7 @@ def pulizie_da_verificare(utente):
     if fasce == set():  # Capo Turno della notte, la mattina dopo
         giorno, fasce = oggi - timedelta(days=1), fasce_del_capo(utente, oggi - timedelta(days=1))
     q = Pulizia.objects.filter(turno__data=giorno, stato=Pulizia.Stato.FATTA, ok_capoturno_il__isnull=True).exclude(
-        elemento__convalida=ElementoPulizia.Convalida.PIAZZALE)
+        elemento__convalida=ElementoPulizia.Convalida.PIAZZALE).exclude(elemento__isnull=True, turno__capoturno=True)
     if fasce is not None:
         q = q.filter(turno__fascia__in=fasce)
     return q.count()
@@ -455,6 +443,14 @@ def squadra(request):
 @login_required
 def pulizie(request, turno_id=None):
     dip = dipendente_di(request)
+    if dip is None and request.user.is_staff and turno_id is None and not request.GET.get('fai'):
+        # l'ufficio ha gli stessi tasti di tutti (Giulia, 12/11/2026): senza turno, con quelli che gli spettano
+        from .pulizie import puo_richiedere
+
+        return render(request, 'turni/pulizia.html', {
+            'turno': None, 'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
+            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user),
+            'e_capo': True, 'da_verificare': pulizie_da_verificare(request.user)})
     if dip is None:
         return render(request, 'turni/nessun_dipendente.html')
     if turno_id is None:
@@ -600,7 +596,7 @@ def pulizie(request, turno_id=None):
                     # i controlli di fine turno non aspettano nessuno: vanno subito in archivio
                     p.stato, p.verificata_il = Pulizia.Stato.VERIFICATA, timezone.now()
                 p.save()
-                if el and el.convalida == ElementoPulizia.Convalida.PIAZZALE:
+                if (el and el.convalida == ElementoPulizia.Convalida.PIAZZALE) or (not el and turno.capoturno):
                     from . import manutenzione as mn
 
                     mn.avvisa(resp_piazzale(), request.user, f'✅ {el.tasto or p.titolo} · {dip.nome_breve}', 'Da convalidare',
@@ -778,7 +774,7 @@ def capoturno(request):
                 fatte.append(p)
             elif p.stato == Pulizia.Stato.DA_FARE:
                 da_fare.append(p)
-            elif p.stato == Pulizia.Stato.FATTA and (p.ok_capoturno_il or (p.elemento_id and p.elemento.convalida == ElementoPulizia.Convalida.PIAZZALE)):
+            elif __import__('turni.piano_pulizie', fromlist=['va_al_rp']).va_al_rp(p):
                 al_responsabile.append(p)
             else:
                 da_verificare.append(p)  # fatte, da rifare o non eseguibili: decide il Capo Turno

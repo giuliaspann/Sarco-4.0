@@ -64,15 +64,12 @@ def sezioni_per(request):
     sezioni = []
 
     lavoro = []
-    if dip:
+    if dip or u.is_staff:
+        # Pulizia, Manutenzione, Produzione e Analisi per tutti, ufficio compreso (Giulia, 12/11/2026)
         lavoro += [voce('Pulizia', r('turni:pulizie'), 'pulizia'),
                    voce('Manutenzione', r('turni:mn_scelta'), 'manutenzione'),
-                   voce('Produzione', r('turni:produzione_nuova'), 'produzione')]
-        from .pulizie import turno_attuale
-        from .views import vede_analisi
-
-        if vede_analisi(dip, turno_attuale(dip)):  # solo chi lavora in laboratorio
-            lavoro.append(voce('Analisi', r('turni:analisi_nuova'), 'analisi'))
+                   voce('Produzione', r('turni:produzione_nuova'), 'produzione'),
+                   voce('Analisi', r('turni:analisi_nuova'), 'analisi')]
     if dip or u.is_staff:
         lavoro += [voce('Fermo', r('turni:nuovo_fermo'), 'fermo'), voce('Ripartenza', r('turni:ripartenza'), 'riparti')]
     if e_capoturno(u, timezone.localdate()):
@@ -197,7 +194,7 @@ def profilo(request):
 # (cambi turno, pulizie da verificare o convalidare, manutenzioni, pezzi, turni cambiati...). Nessuna area "Da fare":
 # ogni cosa ha la sua riga, e quelle che chiedono una risposta hanno Conferma / Rifiuta.
 
-TIPI_CON_RISPOSTA = ('cambio', 'cambio_ufficio', 'manutenzione', 'pulizia_ct', 'pulizia_rp', 'riunione')
+TIPI_CON_RISPOSTA = ('cambio', 'cambio_ufficio', 'manutenzione', 'pulizia_ct', 'pulizia_rp', 'riunione', 'straordinaria')
 
 
 def _tondino(utente):
@@ -256,6 +253,9 @@ def _oggetto(tipo, oggetto_id):
     if tipo == 'riunione':
         from .models import InvitoRiunione
         return InvitoRiunione.objects.filter(pk=oggetto_id).select_related('riunione__creata_da', 'dipendente').first()
+    if tipo == 'straordinaria':
+        from .models import Straordinaria
+        return Straordinaria.objects.filter(pk=oggetto_id).select_related('chiesta_da').first()
     return None
 
 
@@ -272,6 +272,8 @@ def puo_rispondere(tipo, ogg, utente):
     if tipo == 'riunione':
         from .views_riunioni import puo_rispondere as puo_rispondere_riunione
         return puo_rispondere_riunione(ogg, utente)
+    if tipo == 'straordinaria':
+        return bool(dip and dip.resp_piazzale and ogg.stato == ogg.Stato.ATTESA)
     if tipo == 'cambio':
         return bool(dip and ogg.collega_id == dip.pk and ogg.stato == CambioTurno.Stato.ATTESA_COLLEGA and not ogg.scaduto)
     if tipo == 'cambio_ufficio':
@@ -283,14 +285,15 @@ def puo_rispondere(tipo, ogg, utente):
             return False
         if ogg.elemento_id and ogg.elemento.convalida == ElementoPulizia.Convalida.PIAZZALE:
             return False
+        if not ogg.elemento_id and ogg.turno.capoturno:
+            return False  # straordinaria fatta dal Capo Turno: la convalida direttamente il responsabile piazzale
         fasce = fasce_del_capo(utente, ogg.turno.data)
         return fasce is None and utente.is_staff or bool(fasce and ogg.turno.fascia in fasce)
     if tipo == 'pulizia_rp':
         if not e_resp_piazzale(utente) or ogg.stato != Pulizia.Stato.FATTA:
             return False
-        C = ElementoPulizia.Convalida
-        return bool(ogg.elemento_id and (ogg.elemento.convalida == C.PIAZZALE
-                                         or (ogg.elemento.convalida == C.CT_RP and ogg.ok_capoturno_il)))
+        from .piano_pulizie import va_al_rp
+        return va_al_rp(ogg)
     return False
 
 
@@ -368,7 +371,8 @@ def in_attesa(request):
             if fasce == set():
                 continue
             q = Pulizia.objects.filter(turno__data=giorno, stato=Pulizia.Stato.FATTA, ok_capoturno_il__isnull=True).exclude(
-                elemento__convalida=ElementoPulizia.Convalida.PIAZZALE).select_related('turno__dipendente__utente', 'elemento')
+                elemento__convalida=ElementoPulizia.Convalida.PIAZZALE).exclude(elemento__isnull=True, turno__capoturno=True
+                                                                                ).select_related('turno__dipendente__utente', 'elemento')
             if fasce is not None:
                 q = q.filter(turno__fascia__in=fasce)
             for p in q:
@@ -380,6 +384,24 @@ def in_attesa(request):
             riga('pulizia_rp', p.pk, f'Pulizia da convalidare · {p.turno.dipendente.nome_breve}', p.titolo,
                  r('turni:pulizie_piazzale'), p.ok_capoturno_il or p.fatta_il, p.turno.dipendente.utente)
     return righe
+
+
+def _tasto_avviso(n, utente):
+    """Avviso automatico delle pulizie (Giulia, 12/11/2026): il tasto giusto finché la pulizia non è fatta."""
+    from .models import Pulizia
+    from .piano_pulizie import nome_corto
+
+    p = Pulizia.objects.filter(pk=n.oggetto_id).select_related('elemento').first() if n.oggetto_id else None
+    if p is None or p.stato != Pulizia.Stato.DA_FARE:
+        return None
+    e = p.elemento
+    if e and e.con_avvio and not p.iniziata_il:
+        return {'testo': f'Pulizia {nome_corto(e)} iniziata', 'azione': 'iniziata', 'pk': p.pk}
+    if e and e.con_avvio:
+        return {'testo': f'Pulizia {nome_corto(e)} conclusa', 'pk': p.pk}
+    if e and e.avviso == 'ENTRO':
+        return {'testo': 'Rispondi', 'pk': p.pk}
+    return {'testo': 'Apri', 'pk': p.pk}
 
 
 def _righe_notifiche(request):
@@ -404,7 +426,8 @@ def _righe_notifiche(request):
         viste.add(chiave)
         righe.append({'tipo': n.tipo, 'oggetto_id': n.oggetto_id, 'titolo': re.sub(r'^[^\w(]+', '', n.titolo),
                       'testo': n.testo, 'url': n.url, 'quando_dt': n.creata_il, 'mittente': n.mittente,
-                      'azioni': azioni, 'esito': esito, 'nuova': n.letta_il is None})
+                      'azioni': azioni, 'esito': esito, 'nuova': n.letta_il is None,
+                      'tasto': _tasto_avviso(n, u) if n.tipo == 'avviso_pulizia' else None})
     for a in attese:
         if a['tipo'] and (a['tipo'], a['oggetto_id']) in viste:
             continue  # c'è già la notifica di questa richiesta
@@ -463,6 +486,18 @@ def notifica_scelta(request, tipo, oggetto_id, scelta):
                 from .views_riunioni import rispondi
                 rispondi(ogg, conferma)
                 fatto = f'Partecipazione confermata: {ogg.riunione.titolo}.' if conferma else 'Hai detto che non partecipi alla riunione.'
+            elif tipo == 'straordinaria':
+                from .views_programma import _al_capo
+
+                ogg.stato = ogg.Stato.INOLTRATA if conferma else ogg.Stato.RIFIUTATA
+                ogg.gestita_da, ogg.gestita_il = request.user, timezone.now()
+                ogg.save()
+                if conferma:
+                    fatto = _al_capo(request.user, ogg.luogo, ogg.giorno, ogg.turno, ogg.testo) + '.'
+                else:
+                    fatto = 'Pulizia straordinaria non approvata.'
+                    mn.avvisa([ogg.chiesta_da_id], request.user, '🧹 Pulizia straordinaria non approvata',
+                              (nota or ogg.testo)[:300], reverse('turni:pulizie_programma'))
             elif tipo == 'cambio':
                 svc.risposta_collega(ogg, conferma)
                 fatto = "Cambio confermato: ora decide l'ufficio." if conferma else 'Cambio rifiutato.'
@@ -504,7 +539,8 @@ def notifica_scelta(request, tipo, oggetto_id, scelta):
     dip = getattr(request.user, 'dipendente', None)
     mittente = {'cambio': lambda: ogg.richiedente.utente, 'cambio_ufficio': lambda: ogg.richiedente.utente,
                 'manutenzione': lambda: ogg.segnalata_da,
-                'riunione': lambda: ogg.riunione.creata_da}.get(tipo, lambda: ogg.turno.dipendente.utente)()
+                'riunione': lambda: ogg.riunione.creata_da,
+                'straordinaria': lambda: ogg.chiesta_da}.get(tipo, lambda: ogg.turno.dipendente.utente)()
     contesto = {'conferma': conferma, 'tipo': tipo, 'tondino': _tondino(mittente), 'ogg': ogg}
     if tipo == 'riunione':
         from .views_riunioni import quando as quando_riunione
@@ -516,6 +552,9 @@ def notifica_scelta(request, tipo, oggetto_id, scelta):
                         persone=[(ogg.richiedente, _righe_cambio(ogg, ogg.richiedente)), (ogg.collega, _righe_cambio(ogg, ogg.collega))])
     elif tipo == 'manutenzione':
         contesto.update(titolo=f'Richiesta di manutenzione · {ogg.macchina.nome}')
+    elif tipo == 'straordinaria':
+        from .models import Luogo
+        contesto.update(titolo=f'Pulizia straordinaria · {Luogo(ogg.luogo).label} · {ogg.giorno:%d/%m} {ogg.turno}: {ogg.testo}')
     else:
         contesto.update(titolo=f'{ogg.turno.dipendente.nome_breve} · {ogg.titolo}',
                         due_passaggi=tipo == 'pulizia_ct' and ogg.elemento_id

@@ -192,8 +192,9 @@ class TastoAnalisiTest(TestCase):
         self.client.force_login(d.utente)
         return self.client.get(reverse('turni:oggi'))
 
-    def test_capo_turno_in_impianto_non_vede_analisi(self):
-        self.assertNotContains(self.entra('CAPO PROVA', capo=True), reverse('turni:analisi_nuova'))
+    def test_anche_il_capo_turno_vede_analisi(self):
+        # Pulizia, Manutenzione, Produzione e Analisi per tutti i dipendenti (Giulia, 12/11/2026)
+        self.assertContains(self.entra('CAPO PROVA', capo=True), reverse('turni:analisi_nuova'))
 
     def test_tutti_gli_altri_dipendenti_la_vedono(self):
         # la stessa home per tutti i dipendenti (Giulia, 11/11/2026)

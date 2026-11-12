@@ -249,6 +249,12 @@ class Turno(models.Model):
         return ORARI_PULIZIE.get(self.fascia, '') if self.lavora else ''
 
     @property
+    def inizio(self):
+        """Quando comincia il turno (il Capo Turno senza fascia come il 1° turno)."""
+        ore = {Fascia.POMERIGGIO: (14, 0), Fascia.NOTTE: (22, 0), Fascia.GIORNALIERO: (8, 0)}.get(self.fascia, (6, 0))
+        return timezone.make_aware(datetime.combine(self.data, time(*ore)))
+
+    @property
     def fine(self):
         """Quando finisce il turno (la notte finisce il mattino dopo); il Capo Turno senza fascia come il 1° turno."""
         ore = {Fascia.POMERIGGIO: (22, 0), Fascia.NOTTE: (6, 0), Fascia.GIORNALIERO: (17, 30)}.get(self.fascia, (14, 0))
@@ -385,6 +391,28 @@ class ElementoPulizia(models.Model):
     promemoria = models.BooleanField('ricordalo in Oggi', default=False)
     # se al controllo c'è un problema, diventa una segnalazione di guasto di questa macchina (con la foto)
     macchina = models.ForeignKey('Macchina', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+
+    # avvisi automatici sul telefono (Giulia, 12/11/2026): ottiche a metà turno, pozzetti entro le 7,
+    # vagli 45 minuti prima della fine, Incolore 1:15 prima della fine, carrelli alle 16
+    class Avviso(models.TextChoices):
+        NESSUNO = '', 'Nessun avviso'
+        META = 'META', 'A metà turno'
+        PRIMA = 'PRIMA', 'Minuti prima della fine del turno'
+        ORA = 'ORA', "A un'ora precisa"
+        ENTRO = 'ENTRO', "Se non è fatta entro un'ora precisa (chiede al Capo Turno)"
+
+    class AvvisoA(models.TextChoices):
+        CT_MAN = 'CT_MAN', 'Capo Turno e manutentore'
+        CT = 'CT', 'Capo Turno'
+        ADDETTI = 'ADDETTI', 'Chi deve fare la pulizia'
+        MAN = 'MAN', 'Manutentori'
+
+    avviso = models.CharField('avviso automatico', max_length=6, choices=Avviso.choices, blank=True, default='')
+    avviso_minuti = models.PositiveSmallIntegerField('minuti prima della fine', null=True, blank=True)
+    avviso_ora = models.TimeField("all'ora", null=True, blank=True)
+    avviso_a = models.CharField('a chi', max_length=8, choices=AvvisoA.choices, blank=True, default='')
+    # macchine ottiche: «Pulizia iniziata», spunta del manutentore, poi «Pulizia conclusa»
+    con_avvio = models.BooleanField('tasti Iniziata / Conclusa con la spunta del manutentore', default=False)
 
     class Meta:
         verbose_name = 'mezzo / zona da pulire'
@@ -543,6 +571,14 @@ class Pulizia(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
     )
     ok_capoturno_il = models.DateTimeField(null=True, blank=True)
+    # «Pulizia iniziata» e spunta «Manutentore: completato» (macchine ottiche, Giulia 12/11/2026)
+    iniziata_il = models.DateTimeField(null=True, blank=True)
+    ok_manutentore_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+'
+    )
+    ok_manutentore_il = models.DateTimeField(null=True, blank=True)
+    # a volte la fa un collega libero in quel momento: il Capo Turno cambia il nome (es. pozzetti)
+    fatta_da = models.ForeignKey('Dipendente', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
 
     class Meta:
         verbose_name_plural = 'pulizie'
@@ -1872,3 +1908,42 @@ class ConversazioneAssistente(models.Model):
                 if testo:
                     righe.append({'chi': 'bot', 'testo': testo})
         return righe
+
+
+class AvvisoPulizia(models.Model):
+    """Gli avvisi automatici già mandati (uno per voce, giorno e turno), così non partono due volte."""
+
+    chiave = models.CharField(max_length=80, unique=True)
+    inviato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'avviso pulizia inviato'
+        verbose_name_plural = 'avvisi pulizie inviati'
+
+
+class Straordinaria(models.Model):
+    """Pulizia straordinaria chiesta dal responsabile impianto: passa dal responsabile piazzale,
+    che la manda al Capo Turno del giorno e turno scelti (Giulia, 12/11/2026)."""
+
+    class Stato(models.TextChoices):
+        ATTESA = 'ATTESA', 'Da approvare'
+        INOLTRATA = 'INOLTRATA', 'Mandata al Capo Turno'
+        RIFIUTATA = 'RIFIUTATA', 'Non approvata'
+
+    luogo = models.CharField(max_length=10)
+    giorno = models.DateField()
+    turno = models.CharField(max_length=2)
+    testo = models.CharField(max_length=1000)
+    chiesta_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    chiesta_il = models.DateTimeField(auto_now_add=True)
+    stato = models.CharField(max_length=10, choices=Stato.choices, default=Stato.ATTESA)
+    gestita_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    gestita_il = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'pulizia straordinaria (dal responsabile impianto)'
+        verbose_name_plural = 'pulizie straordinarie (dal responsabile impianto)'
+        ordering = ['-chiesta_il']
+
+    def __str__(self):
+        return f'{self.giorno:%d/%m} {self.turno} · {self.testo[:40]}'

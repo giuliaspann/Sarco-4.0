@@ -1,0 +1,48 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Calendario pulizie{% endblock %}
+{% block contenuto %}
+{# Programma pulizie (Giulia, 12/11/2026): Giorno = proposta A, Settimana = proposta S2, colori dei turni, frecce per scorrere #}
+<a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizia</a>
+<div class="intestazione pp-testa"><h1>Pulizie</h1>{% if puo_straordinaria %}<a class="pp-straordinaria" href="{% url 'turni:programma' 'pulizia' %}">+ Straordinaria</a>{% endif %}</div>
+
+<div class="kd-vista">
+  <a class="{% if vista == 'giorno' %}attiva{% endif %}" href="?vista=giorno&giorno={{ giorno|date:'Y-m-d' }}{% if area %}&area={{ area }}{% endif %}"{% if vista == 'giorno' %} aria-current="page"{% endif %}>Giorno</a>
+  <a class="{% if vista == 'settimana' %}attiva{% endif %}" href="?vista=settimana&giorno={{ giorno|date:'Y-m-d' }}{% if area %}&area={{ area }}{% endif %}"{% if vista == 'settimana' %} aria-current="page"{% endif %}>Settimana</a>
+</div>
+<div class="kd-naviga">
+  <a class="kd-freccia" href="?vista={{ vista }}&giorno={{ prec|date:'Y-m-d' }}{% if area %}&area={{ area }}{% endif %}" aria-label="{% if vista == 'giorno' %}Giorno{% else %}Settimana{% endif %} prima">‹</a>
+  <span>{{ titolo }}{% if vista == 'giorno' and giorno == oggi %} · oggi{% endif %}</span>
+  <a class="kd-freccia" href="?vista={{ vista }}&giorno={{ succ|date:'Y-m-d' }}{% if area %}&area={{ area }}{% endif %}" aria-label="{% if vista == 'giorno' %}Giorno{% else %}Settimana{% endif %} dopo">›</a>
+</div>
+<div class="kd-filtri pp-filtri">
+  <a class="{% if not area %}acceso{% endif %}" href="?vista={{ vista }}&giorno={{ giorno|date:'Y-m-d' }}">Tutti</a>
+  {% for a, nome in aree %}<a class="{% if area == a %}acceso{% endif %}" href="?vista={{ vista }}&giorno={{ giorno|date:'Y-m-d' }}&area={{ a }}">{{ nome }}</a>{% endfor %}
+</div>
+
+{% if vista == 'giorno' %}
+  {% for b in blocchi %}{% if b.voci %}
+  <section class="pp-blocco">
+    <h2 class="pp-turno {{ b.classe }}">{{ b.nome }} · {{ b.ore }}</h2>
+    {% for v in b.voci %}
+    {% if v.pk %}<a class="pp-voce" href="{% url 'turni:pulizia_voce' v.pk %}">{% else %}<div class="pp-voce">{% endif %}
+      <span class="pp-testo"><b>{{ v.icona }} {{ v.nome }}{% if v.area_nome %} · {{ v.area_nome }}{% endif %}</b>
+        <small>{{ v.persone|join:', '|default:'da assegnare' }}</small>
+        {% if v.quando %}<small class="pp-quando">{{ v.quando }}</small>{% endif %}</span>
+      <span class="pp-stato pp-{{ v.stato }}">{{ v.stato_nome }}</span>
+    {% if v.pk %}</a>{% else %}</div>{% endif %}
+    {% endfor %}
+  </section>
+  {% endif %}{% endfor %}
+  {% if vuoto %}<p class="tenue piccolo">Nessuna pulizia in programma{% if area %} in questa area{% endif %}: forse i turni di questo giorno non sono ancora caricati.</p>{% endif %}
+{% else %}
+  <div class="pp-tabella">
+    <span></span>
+    {% for g in giorni %}<a class="pp-giorno{% if g.oggi %} oggi{% endif %}" href="?vista=giorno&giorno={{ g.data|date:'Y-m-d' }}{% if area %}&area={{ area }}{% endif %}">{{ g.sigla }}<b>{{ g.data.day }}</b></a>{% endfor %}
+    {% for r in righe %}
+      <span class="pp-sigla {{ r.classe }}">{{ r.sigla }}</span>
+      {% for c in r.celle %}<a class="pp-cella {{ c.classe }}{% if c.speciale %} speciale{% endif %}" href="?vista=giorno&giorno={{ c.giorno|date:'Y-m-d' }}{% if area %}&area={{ area }}{% endif %}">{{ c.testo }}</a>{% endfor %}
+    {% endfor %}
+  </div>
+  <p class="tenue piccolo pp-legenda">Numero = pulizie del turno · ✓ tutte convalidate · 2/5 = convalidate su previste · bordo rosso = pulizia speciale (vagli, carrelli, straordinarie). Tocca una casella per il dettaglio.</p>
+{% endif %}
+{% endblock %}
