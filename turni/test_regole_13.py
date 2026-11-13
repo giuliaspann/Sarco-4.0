@@ -208,16 +208,19 @@ class RuoliAccessoTest(TestCase):
 
     def test_ruoli(self):
         r = self.client.get(reverse('turni:accessi'))
-        for testo in ('Responsabile Impianto', 'Responsabile Piazzale', 'Operaio (OdL e Capo Turno)', 'Manutentore', 'Ufficio', 'Quale ufficio'):
+        for testo in ('Responsabile Impianto', 'Responsabile Piazzale', 'Operaio (OdL e Capo Turno)', 'Manutentore', 'Ufficio'):
             self.assertContains(r, testo)
+        self.assertNotContains(r, 'Quale ufficio')
         self.assertTrue(self.attiva('MARINO LEO', 'RI').resp_impianto)
         self.assertTrue(self.attiva('LOMBARDI GINO', 'RP').resp_piazzale)
         self.assertIn('MANUTENTORE', self.attiva('NERI UGO', 'MAN').mansioni)
         op = self.attiva('ROSSI MARIO', 'OPERAIO')
         self.assertEqual((op.ruolo_app, op.resp_impianto, op.resp_piazzale), ('OPERAIO', False, False))
-        hr = self.attiva('VERDI ANNA', 'UFFICIO', 'RESP_TURNI')
-        self.assertTrue(hr.utente.is_staff)
-        d = self.attiva('SANTORO ANTONIO', 'UFFICIO', 'DIREZIONE')
+        uff = self.attiva('VERDI ANNA', 'UFFICIO')
+        self.assertEqual((uff.ruolo_app, uff.ruolo_accesso), ('RESP_TURNI', 'Ufficio'))
+        self.assertTrue(uff.utente.is_staff)
+        # chi è già direzione resta direzione
+        d = Dipendente.objects.create(nome='SANTORO ANTONIO', ruolo_app=RuoloApp.DIREZIONE)
+        self.client.post(reverse('turni:accessi'), {'azione': 'attiva', 'dipendente': d.pk, 'ruolo': 'UFFICIO'})
+        d.refresh_from_db()
         self.assertEqual(d.ruolo_app, 'DIREZIONE')
-        self.assertFalse(d.utente.is_staff)
-        self.assertEqual(self.attiva('SPINA ALICE', 'UFFICIO', 'AMMINIS').ruolo_accesso, 'Ufficio · Amministrazione')

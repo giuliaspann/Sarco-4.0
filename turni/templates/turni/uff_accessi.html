@@ -22,8 +22,7 @@
 <form method="post" class="scheda mc-form">{% csrf_token %}
   <h2>Attiva accesso</h2>
   <label class="mc-campo">Nome<select name="dipendente" required><option value="">Scegli…</option>{% for d in tutti %}<option value="{{ d.pk }}">{{ d.nome_breve }}{% if d.utente and d.utente.is_active %} · ha già l'accesso: nuovo PIN{% endif %}</option>{% endfor %}</select></label>
-  <label class="mc-campo">Ruolo<select name="ruolo" data-mostra-se="UFFICIO" data-mostra="#scegli-ufficio">{% for v, n in ruoli %}<option value="{{ v }}"{% if v == 'OPERAIO' %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
-  <label class="mc-campo" id="scegli-ufficio" hidden>Quale ufficio<select name="ufficio">{% for v, n in uffici %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
+  <label class="mc-campo">Ruolo<select name="ruolo">{% for v, n in ruoli %}<option value="{{ v }}"{% if v == 'OPERAIO' %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
   <p class="tenue piccolo">L'app crea nome utente e PIN e li mostra una sola volta, da stampare o consegnare. Per chi ha già l'accesso crea un PIN nuovo e quello vecchio smette di funzionare.</p>
   <button class="bottone pieno piena-larghezza" name="azione" value="attiva">Attiva accesso</button>
 </form>

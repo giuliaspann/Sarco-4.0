@@ -228,7 +228,7 @@ def accessi_view(request):
 
             ruolo = request.POST.get('ruolo')
             if ruolo in dict(RUOLI_ACCESSO):
-                imposta_ruolo(dip, ruolo, request.POST.get('ufficio', ''))
+                imposta_ruolo(dip, ruolo)
             dip.attivo = True
             dip.save(update_fields=['attivo'])
             from .views import _consegna_credenziali
@@ -244,7 +244,6 @@ def accessi_view(request):
         'attivi': [d for d in tutti if d.utente and d.utente.is_active],
         'tutti': tutti,
         'ruoli': __import__('turni.accessi', fromlist=['RUOLI_ACCESSO']).RUOLI_ACCESSO,
-        'uffici': __import__('turni.accessi', fromlist=['UFFICI']).UFFICI,
     })
 
 

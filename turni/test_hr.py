@@ -157,10 +157,10 @@ class UfficioNuovoTest(TestCase):
                                'Sì, approva')  # già decisa
 
     def test_attiva_e_disattiva_accesso(self):
-        self.client.post(reverse('turni:accessi'), {'azione': 'attiva', 'dipendente': self.nuovo.pk, 'ruolo': 'UFFICIO', 'ufficio': 'DIREZIONE'})  # ruoli del 13/11/2026
+        self.client.post(reverse('turni:accessi'), {'azione': 'attiva', 'dipendente': self.nuovo.pk, 'ruolo': 'UFFICIO'})  # ruoli del 13/11/2026
         self.nuovo.refresh_from_db()
         self.assertIsNotNone(self.nuovo.utente)
-        self.assertEqual(self.nuovo.ruolo_app, 'DIREZIONE')
+        self.assertEqual(self.nuovo.ruolo_app, 'RESP_TURNI')
         self.client.post(reverse('turni:accessi'), {'azione': 'disattiva', 'dipendente': self.nuovo.pk})
         self.nuovo.utente.refresh_from_db()
         self.assertFalse(self.nuovo.utente.is_active)

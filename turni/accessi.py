@@ -46,7 +46,8 @@ def nome_utente_per(dip):
 
 
 # Gestione accessi: i ruoli da scegliere (Giulia, 13/11/2026). «Operaio» vale per OdL e Capi Turno
-# (il Capo Turno lo decide il file turni); «Ufficio» si divide in HR / ufficio turni, Direzione, Amministrazione.
+# (il Capo Turno lo decide il file turni); «Ufficio» è uno solo: chi è già direzione o amministrazione lo resta,
+# gli altri diventano ufficio (HR / ufficio turni).
 RUOLI_ACCESSO = [('RI', 'Responsabile Impianto'), ('RP', 'Responsabile Piazzale'), ('OPERAIO', 'Operaio (OdL e Capo Turno)'),
                  ('MAN', 'Manutentore'), ('UFFICIO', 'Ufficio')]
 UFFICI = [('RESP_TURNI', 'HR / ufficio turni'), ('DIREZIONE', 'Direzione'), ('AMMINIS', 'Amministrazione')]
@@ -55,7 +56,7 @@ UFFICI = [('RESP_TURNI', 'HR / ufficio turni'), ('DIREZIONE', 'Direzione'), ('AM
 def ruolo_accesso(dip):
     """Il ruolo come lo vede l'ufficio in Gestione accessi."""
     if dip.ruolo_app in dict(UFFICI):
-        return 'Ufficio · ' + dict(UFFICI)[dip.ruolo_app]
+        return 'Ufficio'
     if dip.resp_impianto:
         return 'Responsabile Impianto'
     if dip.resp_piazzale:
@@ -73,7 +74,7 @@ def imposta_ruolo(dip, ruolo, ufficio=''):
     if ruolo == 'MAN':
         mansioni.append('MANUTENTORE')
     if ruolo == 'UFFICIO':
-        dip.ruolo_app = ufficio if ufficio in dict(UFFICI) else 'RESP_TURNI'
+        dip.ruolo_app = dip.ruolo_app if dip.ruolo_app in dict(UFFICI) else 'RESP_TURNI'
         mansioni = [m for m in mansioni if m != 'OPERAIO'] + (['UFFICIO'] if 'UFFICIO' not in mansioni else [])
     else:
         dip.ruolo_app = 'OPERAIO'
