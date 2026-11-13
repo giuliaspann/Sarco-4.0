@@ -157,7 +157,6 @@ class RegoleTest(TestCase):
         r = self.client.get(reverse('turni:settimana_tutti') + '?vista=area')
         self.assertContains(r, 'Impianto 1</th>', count=1)
         self.assertContains(r, '<td class="vp-ruolo">CT</td>')
-        self.assertNotContains(self.client.get(reverse('turni:menu')), reverse('turni:squadra'))
 
     def test_direzione_e_amministrazione_home_ufficio(self):
         d = self.dip('SANTORO ANTONIO', ruolo_app=RuoloApp.DIREZIONE)

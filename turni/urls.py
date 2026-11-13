@@ -8,7 +8,6 @@ app_name = 'turni'
 
 urlpatterns = [
     path('', views.home, name='home'),
-    path('menu/', views_menu.menu, name='menu'),
     path('manutenzione/in-corso/', views_mn_capo.in_corso, name='mn_in_corso'),
     path('programma/<str:cosa>/', views_programma.programma, name='programma'),
     path('riunioni/', views_riunioni.elenco, name='riunioni'),
