@@ -1,0 +1,13 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{% if pdf %}PDF{% else %}Foto{% endif %}{% endblock %}
+{% block contenuto %}
+{# PDF e foto dentro l'app, con il tasto indietro (Giulia, 13/11/2026) #}
+<a class="tasto-indietro" href="{{ indietro }}" data-indietro><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Indietro</a>
+<div class="intestazione"><h1>{% if nome %}{{ nome }}{% elif pdf %}PDF{% else %}Foto{% endif %}</h1></div>
+{% if pdf %}
+<iframe class="vd-pdf" src="{{ u }}{% if '?' in u %}&{% else %}?{% endif %}dentro=1" title="{{ nome|default:'PDF' }}"></iframe>
+{% else %}
+<img class="vd-foto" src="{{ u }}" alt="{{ nome|default:'Foto' }}">
+{% endif %}
+<button type="button" class="bottone pieno piena-larghezza vd-condividi" data-condividi="{{ u }}" data-nome="{{ nome|default:'documento' }}" data-pdf="{% if pdf %}1{% endif %}">Salva, stampa o invia</button>
+{% endblock %}

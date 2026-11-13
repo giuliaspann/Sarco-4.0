@@ -1,8 +1,20 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Responsabile piazzale{% endblock %}
+{% block titolo %}Da convalidare{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizia</a>
-<div class="intestazione"><h1>Responsabile piazzale</h1></div>
+<div class="intestazione"><h1>Da convalidare</h1></div>
+
+{# richieste di pulizia e straordinarie arrivate al RP: le approva e le assegna (Giulia, 13/11/2026) #}
+{% if da_approvare %}
+<h2 class="rq-sezione">Richieste da approvare · {{ da_approvare|length }}</h2>
+{% for s in da_approvare %}
+<a class="pl-riga" href="{% url 'turni:richiesta_rp' s.pk %}">
+  <span class="home-icona">🧹</span>
+  <span class="rq-testo"><b>{{ s.testo|default:s.get_tipo_display|truncatechars:60 }}</b><small>{{ s.get_tipo_display }} · {{ s.giorno|date:'D j/m' }} {{ s.turno }} · da {{ s.chiesta_da.dipendente.nome_breve|default:s.chiesta_da.username }}</small></span>
+  <span class="stato-chip attesa">Da approvare</span>
+</a>
+{% endfor %}
+{% endif %}
 
 {% if generale %}
 <section class="scheda rp-generale">
@@ -38,7 +50,7 @@
     <input type="hidden" name="pulizia" value="{{ p.pk }}">
     <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">
     <button class="bottone pieno" name="azione" value="convalida">Convalida</button>
-    <button class="bottone avviso-btn" name="azione" value="rifare">Da rifare</button>
+    <button class="bottone rifiuta" name="azione" value="rifare">Da rifare</button>
   </form>
 </div>
 {% empty %}

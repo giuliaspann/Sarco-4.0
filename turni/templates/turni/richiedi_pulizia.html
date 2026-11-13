@@ -6,7 +6,7 @@
 <div class="rp-passi">
   <span class="ok">1 · Area</span>
   <span class="{% if area %}ok{% endif %}">2 · Giorno e turno</span>
-  <span class="{% if area and giorno and fascia %}ok{% endif %}">3 · Chi la fa</span>
+  <span class="{% if area and giorno and fascia %}ok{% endif %}">3 · {% if al_rp %}Cosa va pulito{% else %}Chi la fa{% endif %}</span>
 </div>
 
 {% if not area %}
@@ -48,7 +48,15 @@
   <input type="hidden" name="fascia" value="{{ fascia }}">
   {% if torna %}<input type="hidden" name="torna" value="{{ torna }}">{% endif %}
   <p class="rp-riepilogo"><b>📍 {{ nome_area }} · {{ giorno|date:'D j M'|capfirst }} · {% for v, sigla, ore, classe in fasce %}{% if v == fascia %}<span class="cal-sigla {{ classe }} rp-sigla">{{ sigla }}</span>{% endif %}{% endfor %}</b><a class="link-piccolo" href="?area={{ area }}{% if torna %}&torna={{ torna }}{% endif %}">Cambia</a></p>
-  {% if vicini %}
+  {% if al_rp %}
+  {# chi non è il responsabile piazzale manda la richiesta a lui (Giulia, 13/11/2026) #}
+  <label>Cosa va pulito
+    <textarea name="nota" rows="3" maxlength="250" placeholder="Scrivi cosa e dove">{{ nota }}</textarea>
+  </label>
+  <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto di cosa va pulito</span></label>
+  <p class="tenue piccolo">La richiesta arriva al responsabile piazzale: se la approva, la assegna a chi di dovere.</p>
+  <button class="bottone pieno piena-larghezza pl-invia">Manda al responsabile piazzale</button>
+  {% elif vicini %}
   <p class="mn-sottotitolo">A chi la assegni?</p>
   <div class="scegli lista">
     {% for t in vicini %}<label><input type="radio" name="turno" value="{{ t.pk }}" required {% if scelto == t.pk|stringformat:'s' %}checked{% endif %}><span>{{ t.dipendente.nome_breve }}</span></label>{% endfor %}

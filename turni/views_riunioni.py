@@ -24,7 +24,7 @@ def puo_programmare_riunione(utente):
     dip = getattr(utente, 'dipendente', None)
     return bool(utente.is_authenticated and (
         utente.is_staff or e_responsabile(utente)
-        or (dip and (dip.resp_impianto or dip.resp_piazzale or dip.resp_manutenzione))))
+        or (dip and (dip.resp_impianto or dip.resp_piazzale or dip.resp_manutenzione or dip.ruolo_app == 'DIREZIONE'))))
 
 
 def quando(r):

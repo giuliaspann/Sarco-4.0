@@ -120,9 +120,8 @@ class PianoPulizieTest(TestCase):
         # «Conclusa» solo dopo la spunta del manutentore
         self.client.post(url, {'azione': 'conclusa'})
         self.assertEqual(Pulizia.objects.filter(elemento__nome='Macchine ottiche', stato=Pulizia.Stato.FATTA).count(), 0)
-        self.entra(man)
+        # la spunta «Manutentore completato» la mette il Capo Turno (Giulia, 13/11/2026)
         self.client.post(url, {'azione': 'manutentore', 'fatto': '1'})
-        self.entra(ct)
         self.client.post(url, {'azione': 'conclusa'})
         righe = Pulizia.objects.filter(elemento__nome='Macchine ottiche')
         self.assertEqual({r.stato for r in righe}, {Pulizia.Stato.FATTA})
@@ -222,7 +221,11 @@ class PianoPulizieTest(TestCase):
         self.assertFalse(ct.pulizie.exists())
         self.assertTrue(Notifica.objects.filter(utente=rp.utente, tipo='straordinaria').exists())
         self.client.force_login(rp.utente)
-        self.client.post(reverse('turni:notifica_scelta', args=['straordinaria', s.pk, 'conferma']))
+        # «Conferma» dalla notifica porta alla pagina dove il RP sceglie a chi assegnarla
+        r = self.client.get(reverse('turni:notifica_scelta', args=['straordinaria', s.pk, 'conferma']))
+        self.assertRedirects(r, reverse('turni:richiesta_rp', args=[s.pk]), fetch_redirect_response=False)
+        self.assertContains(self.client.get(reverse('turni:richiesta_rp', args=[s.pk])), 'Galli Rino')
+        self.client.post(reverse('turni:richiesta_rp', args=[s.pk]), {'azione': 'approva', 'turno': ct.pk})
         s.refresh_from_db()
         self.assertEqual(s.stato, Straordinaria.Stato.INOLTRATA)
         p = ct.pulizie.get()

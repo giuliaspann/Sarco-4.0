@@ -124,6 +124,12 @@ class IntestazioniSicurezza:
 
     def __call__(self, request):
         risposta = self.get_response(request)
+        if risposta.get('Content-Type', '').startswith('application/pdf'):
+            # il PDF si apre nella pagina «vedi» dell'app, con il tasto indietro (Giulia, 13/11/2026)
+            risposta['X-Frame-Options'] = 'SAMEORIGIN'
+            risposta.setdefault('Content-Security-Policy', "frame-ancestors 'self'")
+            if request.GET.get('dentro') == '1':
+                risposta['Content-Disposition'] = risposta.get('Content-Disposition', '').replace('attachment', 'inline')
         risposta.setdefault('Content-Security-Policy', CSP_ADMIN if request.path.startswith('/admin/') else CSP)
         risposta.setdefault('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), payment=()')
         return risposta

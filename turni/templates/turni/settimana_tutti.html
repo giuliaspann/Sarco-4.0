@@ -1,7 +1,8 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Turni di tutti{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:miei_turni' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Area personale</a>
+{# Turni di tutti come l'anteprima del caricamento turni (Giulia, 13/11/2026): Per Dipendente / Per Area #}
+<a class="tasto-indietro" href="{% if nav_dipendente %}{% url 'turni:miei_turni' %}{% else %}{% url 'turni:home' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if nav_dipendente %}Area personale{% else %}Home{% endif %}</a>
 
 {% if nav_dipendente %}
 <div class="ig-schede">
@@ -12,40 +13,63 @@
 {% else %}
 <div class="intestazione"><h1>Turni di tutti</h1></div>
 {% endif %}
-{# testa fissa (Giulia, 10/11): settimana su una riga piccola, la frase del cambio e i giorni restano in vista mentre si scorre #}
-<div class="st-testa" id="st-testa">
-  <div class="st-settimana">
-    <a class="st-freccia" href="?settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
-    <span>Sett. {{ lunedi|date:'W' }} | {{ lunedi|date:'j' }}{% if lunedi.month != giorni.6.month %} {{ lunedi|date:'F' }}{% endif %} – {{ giorni.6|date:'j F' }}</span>
-    <a class="st-freccia" href="?settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
-  </div>
-  <div class="gt-riga gt-testa">
-    <span class="gt-nome"></span>
-    {% for g in giorni %}<span class="gt-giorno {% if g == oggi %}oggi{% endif %}">{{ g|date:'D'|slice:':1' }}<b>{{ g.day }}</b></span>{% endfor %}
-  </div>
+
+<div class="vp-scelta" role="tablist">
+  <a href="?vista=dipendente&settimana={{ lunedi|date:'Y-m-d' }}" role="tab" class="{% if vista == 'dipendente' %}scelto{% endif %}" aria-selected="{% if vista == 'dipendente' %}true{% else %}false{% endif %}">Per Dipendente</a>
+  <a href="?vista=area&settimana={{ lunedi|date:'Y-m-d' }}" role="tab" class="{% if vista == 'area' %}scelto{% endif %}" aria-selected="{% if vista == 'area' %}true{% else %}false{% endif %}">Per Area</a>
+</div>
+<div class="kd-naviga">
+  <a class="kd-freccia" href="?vista={{ vista }}&settimana={{ prec|date:'Y-m-d' }}" aria-label="Settimana prima">‹</a>
+  <span>Sett. {{ lunedi|date:'W' }} | {{ lunedi|date:'j' }}{% if lunedi.month != giorni.6.month %} {{ lunedi|date:'F' }}{% endif %} – {{ giorni.6|date:'j F' }}</span>
+  <a class="kd-freccia" href="?vista={{ vista }}&settimana={{ succ|date:'Y-m-d' }}" aria-label="Settimana dopo">›</a>
 </div>
 
-<div class="st-tabella">
-{% for titolo, righe, fermi in gruppi %}
-  <p class="st-area">{{ titolo }}</p>
-  {% for f in fermi %}<p class="st-fermo">Fermo programmato · {{ f.testo }}</p>{% endfor %}
-  {% for r in righe %}
-  <div class="gt-riga {% if r.io %}io{% endif %}">
-    <span class="gt-nome st-nome" title="{{ r.dip.nome_breve }}"><b>{{ r.cognome }}</b>{% if r.nome_proprio %}<small>{{ r.nome_proprio }}</small>{% endif %}</span>
-    {% for c in r.celle %}
-      {% if c.cambiabile %}
-        <a class="gt-cella st-cella cambiabile {{ c.turno.classe_solo_fascia }}" href="{% url 'turni:nuovo_cambio' %}?giorno={{ c.giorno|date:'Y-m-d' }}&collega={{ r.dip.pk }}"
-           title="Chiedi il cambio a {{ r.nome }}">{{ c.turno.sigla_fascia|default:'CT' }}{% if c.turno.capoturno and c.turno.lavora %}<i class="st-ct">CT</i>{% endif %}</a>
-      {% elif c.turno %}
-        <span class="gt-cella st-cella {{ c.turno.classe_solo_fascia }}" title="{{ c.turno.descrizione }}">{{ c.turno.sigla_fascia|default:'CT' }}{% if c.turno.capoturno and c.turno.lavora %}<i class="st-ct">CT</i>{% endif %}</span>
-      {% else %}
-        <span class="gt-cella vuota">–</span>
-      {% endif %}
+<div class="vp-pastello">
+<ul class="legenda legenda-due-righe">
+  <li><i class="f-mattina">1T</i>1° turno</li>
+  <li><i class="f-pomeriggio">2T</i>2° turno</li>
+  <li><i class="f-notte">N</i>Notturno</li>
+  <li><i class="f-giorno">G</i>Giornaliero</li>
+  <li><i class="f-capo">CT</i>Capo Turno</li>
+  <li><i class="f-riposo">R</i>Riposo</li>
+  <li><i class="f-ferie">F</i>Ferie</li>
+</ul>
+
+{% if not righe %}
+<div class="vuoto"><p>I turni di questa settimana non sono ancora pubblicati.</p></div>
+{% elif vista == 'area' %}
+<div class="vp-scorre">
+<table class="vp-tabella vp-aree">
+  <thead><tr><th class="vp-fissa">Area</th><th>Turno</th><th>Ruolo</th>{% for g in giorni %}<th class="{% if g == oggi %}vp-oggi{% endif %}">{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
+  {% for b in aree %}
+  {% if not forloop.first %}<tbody class="vp-spazio" aria-hidden="true"><tr><td colspan="10"></td></tr></tbody>{% endif %}
+  <tbody class="vp-blocco">
+    {% for r in b.righe %}
+    <tr class="{{ r.classe }}">
+      {% if forloop.first %}<th class="vp-fissa vp-area" rowspan="{{ b.quante_area }}">{{ b.area }}</th>{% endif %}
+      {% if r.prima %}<td class="vp-turno {{ r.classe_turno }}" rowspan="{{ r.quante }}">{{ r.turno }}</td>{% endif %}
+      <td class="vp-ruolo">{{ r.ruolo|default:'–' }}</td>
+      {% for n in r.nomi %}<td>{{ n }}</td>{% endfor %}
+    </tr>
     {% endfor %}
-  </div>
+  </tbody>
   {% endfor %}
-{% empty %}
-  <div class="vuoto"><p>I turni di questa settimana non sono ancora pubblicati.</p></div>
-{% endfor %}
+</table>
+</div>
+{% else %}
+<div class="vp-scorre">
+<table class="vp-tabella">
+  <thead><tr><th class="vp-fissa">Dipendenti</th>{% for g in giorni %}<th class="{% if g == oggi %}vp-oggi{% endif %}">{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in righe %}
+    <tr class="{% if r.io %}vp-io{% endif %}">
+      <th class="vp-fissa vp-nome">{{ r.nome }}</th>
+      {% for c in r.caselle %}<td class="{{ c.classe }}" title="{{ c.titolo }}">{{ c.testo }}</td>{% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
 </div>
 {% endblock %}

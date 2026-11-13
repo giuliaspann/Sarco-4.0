@@ -79,13 +79,14 @@ def festivi_tra(dal, al):
 # ---------------------------------------------------------------- chi vede cosa
 
 def vede_tutti(utente):
-    """Ufficio e responsabile impianto (RI): calendario di tutti, con visite e scadenze di ognuno."""
+    """Ufficio (HR), responsabile impianto (RI) e direzione: calendario di tutti, con visite e scadenze (Giulia, 13/11/2026)."""
     from .richieste import e_responsabile
 
     if not utente.is_authenticated:
         return False
     dip = getattr(utente, 'dipendente', None)
-    return bool(utente.is_staff or (dip and dip.resp_impianto) or (dip is None and e_responsabile(utente)))
+    return bool(utente.is_staff or (dip and (dip.resp_impianto or dip.ruolo_app in ('DIREZIONE', 'RESP_TURNI')))
+                or (dip is None and e_responsabile(utente)))
 
 
 puo_vedere = vede_tutti

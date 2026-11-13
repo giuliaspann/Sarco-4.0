@@ -71,6 +71,7 @@ class RuoloApp(models.TextChoices):
     OPERAIO = 'OPERAIO', 'Dipendente'
     DIREZIONE = 'DIREZIONE', 'Direzione'
     RESP_TURNI = 'RESP_TURNI', 'Responsabile turni'
+    AMMINISTRAZIONE = 'AMMINIS', 'Amministrazione'  # come l'ufficio, senza le funzioni HR (Giulia, 13/11/2026)
 
 
 class Dipendente(models.Model):
@@ -115,6 +116,12 @@ class Dipendente(models.Model):
     @property
     def mansioni(self):
         return [m for m in self.mansione.split(',') if m]
+
+    @property
+    def ruolo_accesso(self):
+        from .accessi import ruolo_accesso
+
+        return ruolo_accesso(self)
 
     @property
     def mansioni_display(self):
@@ -1921,14 +1928,25 @@ class AvvisoPulizia(models.Model):
         verbose_name_plural = 'avvisi pulizie inviati'
 
 
+def percorso_foto_straordinaria(istanza, nome):
+    return f'pulizie/richieste/{timezone.now():%Y/%m}/{timezone.now():%d%H%M%S}.jpg'
+
+
 class Straordinaria(models.Model):
-    """Pulizia straordinaria chiesta dal responsabile impianto: passa dal responsabile piazzale,
-    che la manda al Capo Turno del giorno e turno scelti (Giulia, 12/11/2026)."""
+    """Pulizia chiesta al responsabile piazzale (Giulia, 13/11/2026): la chiedono tutti tranne il RP stesso
+    (operai, Capi Turno, responsabile impianto…); il RP la approva e la assegna a chi di dovere, oppure la rifiuta."""
+
+    class Tipo(models.TextChoices):
+        RICHIESTA = 'RICHIESTA', 'Richiesta di pulizia'
+        STRAORDINARIA = 'STRAORDINARIA', 'Pulizia straordinaria'
 
     class Stato(models.TextChoices):
         ATTESA = 'ATTESA', 'Da approvare'
-        INOLTRATA = 'INOLTRATA', 'Mandata al Capo Turno'
+        INOLTRATA = 'INOLTRATA', 'Approvata e assegnata'
         RIFIUTATA = 'RIFIUTATA', 'Non approvata'
+
+    tipo = models.CharField(max_length=14, choices=Tipo.choices, default=Tipo.STRAORDINARIA)
+    foto = models.ImageField('foto di cosa va pulito', upload_to=percorso_foto_straordinaria, blank=True)
 
     luogo = models.CharField(max_length=10)
     giorno = models.DateField()
@@ -1941,8 +1959,8 @@ class Straordinaria(models.Model):
     gestita_il = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        verbose_name = 'pulizia straordinaria (dal responsabile impianto)'
-        verbose_name_plural = 'pulizie straordinarie (dal responsabile impianto)'
+        verbose_name = 'pulizia chiesta al responsabile piazzale'
+        verbose_name_plural = 'pulizie chieste al responsabile piazzale'
         ordering = ['-chiesta_il']
 
     def __str__(self):

@@ -27,8 +27,11 @@ class ChatAziendaliTest(TestCase):
 
     def test_profili_e_chat_dalla_migrazione(self):
         self.assertEqual(list(Chat.objects.values_list('nome', flat=True)), [n for n, _ in CHAT])
+        # Bonomo (commerciale) e Marchese (RI) non sono più direzione (Giulia, 13/11/2026)
+        attesi = {'BONOMO MICHELANGELO': 'OPERAIO', 'MARCHESE LEONARDO': 'OPERAIO'}
         for nome, _, ruolo in PROFILI:
-            self.assertEqual(Dipendente.objects.get(nome=nome).ruolo_app, ruolo)
+            self.assertEqual(Dipendente.objects.get(nome=nome).ruolo_app, attesi.get(nome, ruolo))
+        self.assertTrue(Dipendente.objects.get(nome='MARCHESE LEONARDO').resp_impianto)
 
     def test_dashboard_mostra_tutte_le_chat(self):
         self.client.login(username='drame', password='123456')

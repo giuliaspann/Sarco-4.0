@@ -25,9 +25,13 @@ ORARI = {'1T': (time(6), time(14)), '2T': (time(14), time(22)), 'N': (time(22), 
 FASCIA_DI = {'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE}
 
 
-def puo_programmare(utente):
-    """Capo Turno in servizio, responsabile impianto, responsabile piazzale, responsabile manutenzione, ufficio."""
+def puo_programmare(utente, cosa='manutenzione'):
+    """Manutenzione: Capo Turno in servizio, responsabili, ufficio. Pulizia straordinaria: tutti
+    (chi non è il RP la manda al RP, Giulia 13/11/2026)."""
     from .views import e_capoturno
+
+    if cosa == 'pulizia':
+        return utente.is_authenticated and (utente.is_staff or getattr(utente, 'dipendente', None) is not None)
 
     dip = getattr(utente, 'dipendente', None)
     return (utente.is_staff or e_capoturno(utente, timezone.localdate())
@@ -82,7 +86,7 @@ def programma_fermo(utente, motivo, giorno, turno, impianto, dalle, alle, testo,
 def programma(request, cosa):
     if cosa not in ('manutenzione', 'pulizia'):
         raise PermissionDenied
-    if not puo_programmare(request.user):
+    if not puo_programmare(request.user, cosa):
         raise PermissionDenied
     indietro = reverse('turni:mn_scelta') if cosa == 'manutenzione' else reverse('turni:pulizie')
     luogo = request.POST.get('luogo') or request.GET.get('luogo') or ''
@@ -142,26 +146,15 @@ def programma(request, cosa):
     })
 
 
-def solo_ri(utente):
-    """Il responsabile impianto (non piazzale, non ufficio): le sue straordinarie passano dal responsabile piazzale."""
-    dip = getattr(utente, 'dipendente', None)
-    return bool(dip and dip.resp_impianto and not dip.resp_piazzale and not utente.is_staff)
-
-
 def _programma_pulizia(utente, luogo, giorno, turno, testo):
-    """La pulizia va al Capo Turno di quel giorno e turno (accettata in automatico); se i turni di quel giorno
-    non sono ancora caricati resta come fermo/avviso e lo si dice. Quella del responsabile impianto
-    va prima al responsabile piazzale, che la manda al Capo Turno (Giulia, 12/11/2026)."""
-    from .pulizie import resp_piazzale, richiedi_pulizia
+    """La assegna direttamente solo il responsabile piazzale (al Capo Turno di quel giorno e turno); gli altri
+    la mandano al RP, che la approva e la assegna (Giulia, 13/11/2026)."""
+    from .models import Straordinaria
+    from .pulizie import chiedi_al_rp, e_resp_piazzale
 
-    if solo_ri(utente):
-        from .models import Straordinaria
-
-        s = Straordinaria.objects.create(luogo=luogo, giorno=giorno, turno=turno, testo=testo, chiesta_da=utente)
-        mn.avvisa(resp_piazzale(), utente, f'🧹 Pulizia straordinaria · {Luogo(luogo).label}',
-                  f'{giorno:%a %d/%m} {dict(TURNI).get(turno, turno).split(" ·")[0]}: {testo}', reverse('turni:notifiche'),
-                  tipo='straordinaria', oggetto_id=s.pk)
-        return f'Pulizia straordinaria in {Luogo(luogo).label} per {giorno:%d/%m}: la riceve il responsabile piazzale, che la manda al Capo Turno'
+    if not e_resp_piazzale(utente):
+        chiedi_al_rp(utente, Straordinaria.Tipo.STRAORDINARIA, luogo, giorno, turno, testo)
+        return f'Pulizia straordinaria in {Luogo(luogo).label} per {giorno:%d/%m}: la riceve il responsabile piazzale, che la assegna'
     return _al_capo(utente, luogo, giorno, turno, testo)
 
 

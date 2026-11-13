@@ -158,13 +158,8 @@ POSTAZIONI_AREA = {
 
 
 def puo_richiedere(utente):
-    """Le pulizie le chiedono il responsabile impianto, il responsabile piazzale, l'ufficio
-    e il Capo Turno in servizio ("Pulizia richiesta", Giulia 10/11)."""
-    from .views import e_capoturno
-
-    dip = getattr(utente, 'dipendente', None)
-    return (utente.is_staff or bool(dip and (dip.resp_impianto or dip.resp_piazzale))
-            or e_capoturno(utente, timezone.localdate()))
+    """Tutti possono chiedere una pulizia (Giulia, 13/11/2026): il RP la assegna, gli altri la mandano al RP."""
+    return utente.is_authenticated and (utente.is_staff or getattr(utente, 'dipendente', None) is not None)
 
 
 def in_turno(giorno, fascia, area):
@@ -223,7 +218,8 @@ ORA_NOTTE = 17  # entro quest'ora il responsabile piazzale assegna le pulizie de
 
 
 def e_resp_piazzale(utente):
-    return utente.is_staff or bool(getattr(getattr(utente, 'dipendente', None), 'resp_piazzale', False))
+    """Convalida le pulizie solo il responsabile piazzale, non l'ufficio (Giulia, 13/11/2026)."""
+    return bool(getattr(getattr(utente, 'dipendente', None), 'resp_piazzale', False))
 
 
 def resp_piazzale():
@@ -287,3 +283,65 @@ def da_convalidare_piazzale():
     return Pulizia.objects.filter(
         Q_AL_RP, stato=Pulizia.Stato.FATTA, turno__data__gte=timezone.localdate() - timedelta(days=3),
     ).select_related('turno__dipendente', 'elemento', 'ok_capoturno_da__dipendente')
+
+
+
+# ---------------------------------------------------------------- richieste al responsabile piazzale (Giulia, 13/11/2026)
+# Tutti possono chiedere una pulizia o una straordinaria; assegna direttamente solo il RP. Le altre richieste
+# (operai, Capi Turno, responsabile impianto, ufficio) arrivano al RP, che le approva e sceglie a chi darle.
+
+def chiedi_al_rp(utente, tipo, luogo, giorno, fascia, testo, foto=None):
+    from . import manutenzione as mn
+    from .models import Luogo, Straordinaria
+
+    s = Straordinaria(tipo=tipo, luogo=luogo, giorno=giorno, turno=fascia, testo=(testo or '')[:1000], chiesta_da=utente)
+    if foto:
+        salva_foto(s, foto)
+    s.save()
+    nome = Luogo(luogo).label if luogo in Luogo.values else luogo
+    mn.avvisa(resp_piazzale(), utente, f'🧹 {s.get_tipo_display()} · {nome}',
+              f'{giorno:%a %d/%m} {fascia}: {testo}'[:300], f'/turni/pulizie/richieste/{s.pk}/', tipo='straordinaria', oggetto_id=s.pk)
+    return s
+
+
+def approva_richiesta(utente, s, turno):
+    """Il RP approva e assegna: diventa una pulizia della persona scelta (con la foto della richiesta)."""
+    from django.core.files.base import ContentFile
+
+    from . import manutenzione as mn
+    from .models import Luogo, Straordinaria
+
+    nome = Luogo(s.luogo).label if s.luogo in Luogo.values else s.luogo
+    da = getattr(getattr(s.chiesta_da, 'dipendente', None), 'nome_breve', '') or (s.chiesta_da.get_username() if s.chiesta_da else '')
+    p = Pulizia(turno=turno, elemento=None, richiesta_da=utente, nota=f'{nome}: {s.testo} (chiesta da {da})'[:300])
+    if s.foto:
+        with s.foto.open('rb') as f:
+            p.foto_richiesta.save('richiesta.jpg', ContentFile(f.read()), save=False)
+    p.save()
+    s.stato, s.gestita_da, s.gestita_il = Straordinaria.Stato.INOLTRATA, utente, timezone.now()
+    s.save()
+    mn.avvisa([turno.dipendente.utente_id], utente, '🧹 Ti assegnano una pulizia', f'{p.titolo}',
+              f'/turni/pulizie/{turno.pk}/', tipo='pulizia', oggetto_id=p.pk)
+    if s.chiesta_da_id:
+        mn.avvisa([s.chiesta_da_id], utente, '✅ Pulizia approvata', f'{nome}: assegnata a {turno.dipendente.nome_breve}',
+                  f'/turni/pulizie/voce/{p.pk}/')
+    return p
+
+
+def rifiuta_richiesta(utente, s, nota=''):
+    from . import manutenzione as mn
+    from .models import Straordinaria
+
+    s.stato, s.gestita_da, s.gestita_il = Straordinaria.Stato.RIFIUTATA, utente, timezone.now()
+    s.save()
+    if s.chiesta_da_id:
+        mn.avvisa([s.chiesta_da_id], utente, '🧹 Pulizia non approvata', (nota or s.testo)[:300], '/turni/pulizie/')
+
+
+
+def usa_telefono(turno):
+    """Gli operatori di linea dell'Impianto 1 non usano il telefono: le loro conferme le manda il Capo Turno."""
+    if not turno or not turno.lavora or turno.capoturno:
+        return True
+    return not any(p == 'IMP1' and (r or '').upper() == 'ODL' for p, r in turno.lista_incarichi) and not (
+        turno.postazione == 'IMP1' and (turno.ruolo or '').upper() == 'ODL')

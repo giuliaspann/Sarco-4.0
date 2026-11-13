@@ -2725,3 +2725,27 @@ a.bottone.pv-azione { display: flex; align-items: center; justify-content: cente
 
 .pp-tasti a { position: relative; }
 .pp-tasti .home-badge { top: 8px; right: 10px; }
+
+/* nome e cognome per esteso nella home (Giulia, 13/11/2026) */
+.ig-io-nome { font-weight: 700; font-size: 1rem; color: var(--testo); overflow-wrap: anywhere; }
+/* mentre si scrive (chat e moduli) la barra in basso sparisce (Giulia, 13/11/2026) */
+body.scrive .ig-menu { display: none; }
+/* PDF e foto dentro l'app, con il tasto indietro (Giulia, 13/11/2026) */
+.vd-pdf { display: block; width: 100%; height: 60vh; border: 1px solid var(--bordo); border-radius: 12px; background: #fff; margin: 0 0 12px; }
+.vd-foto { display: block; width: 100%; height: auto; border-radius: 12px; margin: 0 0 12px; }
+.vd-condividi { margin-bottom: 12px; }
+/* con la barra nascosta il campo del messaggio scende in fondo, sopra la tastiera (Giulia, 13/11/2026) */
+body.scrive .scrivi, body.scrive .wa-scrivi, body.scrive .wa-solo-admin { bottom: calc(8px + env(safe-area-inset-bottom)); }
+/* filtri del calendario su due righe, quattro per riga (Giulia, 13/11/2026) */
+.kd-filtri:not(.pp-filtri) { display: grid; grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 6px 4px; }
+.kd-filtri:not(.pp-filtri) a { padding: 0 8px; gap: 5px; font-size: .76rem; white-space: nowrap; min-width: 0; }
+.kd-filtri:not(.pp-filtri) i { width: 7px; height: 7px; }
+@media (max-width: 370px) { .kd-filtri:not(.pp-filtri) a { padding: 0 6px; gap: 4px; font-size: .7rem; } }
+
+/* anteprima e Turni di tutti: nomi interi, area una volta per blocco, la propria riga e oggi in evidenza (Giulia, 13/11/2026) */
+.vp-nome { max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }
+.vp-aree th.vp-area { vertical-align: top; white-space: nowrap; }
+.vp-tabella tr.vp-io th, .vp-tabella tr.vp-io td { box-shadow: inset 0 2px 0 var(--primario), inset 0 -2px 0 var(--primario); font-weight: 800; }
+.vp-tabella thead th.vp-oggi { background: var(--primario) !important; }
+
+.vb-apri { color: var(--testo); text-decoration: none; }

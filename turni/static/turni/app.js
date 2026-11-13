@@ -700,3 +700,58 @@ document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.add
     document.querySelectorAll('.ci-persona[data-nome]').forEach(r => { r.hidden = q && !r.dataset.nome.includes(q); });
   });
 })();
+
+
+// ---------------------------------------------------------------- PDF e foto con il tasto indietro (Giulia, 13/11/2026)
+// aperti da soli, sul telefono l'app a tutto schermo non ha modo di tornare indietro: li apro nella pagina «vedi»
+(function () {
+  const FOTO = /\/turni\/(foto\/\d+|messaggi\/foto\/\d+|statistiche\/analisi\/\d+\/foto|produzione\/\d+\/foto|manutenzione\/fermi\/\d+\/foto\/\w+|manutenzione\/foto\/\w+\/\d+)\/$/;
+  const PDF = /\/pdf\/$/;
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href]');
+    if (!a || a.closest('[data-vedi-no]') || e.defaultPrevented) return;
+    let url;
+    try { url = new URL(a.href, location.href); } catch (err) { return; }
+    if (url.origin !== location.origin || location.pathname === '/turni/vedi/') return;
+    const doc = /\/turni\/messaggi\/documento\/\d+\/$/.test(url.pathname) && /\.pdf$/i.test(a.textContent.trim());
+    if (!(PDF.test(url.pathname) || FOTO.test(url.pathname) || doc)) return;
+    e.preventDefault();
+    const q = new URLSearchParams({ u: url.pathname + url.search });
+    if (doc) { q.set('tipo', 'pdf'); q.set('nome', a.textContent.trim()); }
+    location.href = '/turni/vedi/?' + q.toString();
+  });
+  // «Indietro»: torna alla pagina di prima
+  document.querySelectorAll('[data-indietro]').forEach(a => a.addEventListener('click', e => {
+    if (history.length > 1 && document.referrer.startsWith(location.origin)) { e.preventDefault(); history.back(); }
+  }));
+  // «Salva, stampa o invia»: il foglio di condivisione del telefono (File, Stampa, Mail…); altrimenti si scarica
+  document.querySelectorAll('[data-condividi]').forEach(b => b.addEventListener('click', async () => {
+    const url = b.dataset.condividi;
+    try {
+      const r = await fetch(url, { credentials: 'same-origin' });
+      const blob = await r.blob();
+      const nome = (b.dataset.nome || 'documento').replace(/[\\/:*?"<>|]/g, '') + (b.dataset.pdf ? (/\.pdf$/i.test(b.dataset.nome) ? '' : '.pdf') : '.jpg');
+      const file = new File([blob], nome, { type: blob.type });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+    } catch (err) { /* annullato */ }
+  }));
+})();
+
+// ---------------------------------------------------------------- mentre si scrive, la barra in basso sparisce (Giulia, 13/11/2026)
+(function () {
+  const scrive = el => el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && /^(text|search|email|number|tel|url|password)$/.test(el.type)));
+  document.addEventListener('focusin', e => { if (scrive(e.target)) document.body.classList.add('scrive'); });
+  document.addEventListener('focusout', e => { if (scrive(e.target)) setTimeout(() => { if (!scrive(document.activeElement)) document.body.classList.remove('scrive'); }, 50); });
+})();
+
+
+// Gestione accessi: «Quale ufficio» compare solo se il ruolo è «Ufficio» (Giulia, 13/11/2026)
+document.querySelectorAll('select[data-mostra-se]').forEach(s => {
+  const altro = document.querySelector(s.dataset.mostra);
+  if (!altro) return;
+  const aggiorna = () => { altro.hidden = s.value !== s.dataset.mostraSe; };
+  s.addEventListener('change', aggiorna);
+  aggiorna();
+});

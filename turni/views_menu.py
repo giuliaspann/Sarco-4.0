@@ -83,12 +83,11 @@ def sezioni_per(request):
     if dip:
         turni += [voce('Calendario', r('turni:miei_turni'), 'calendario', nav.get('nav_area', 0)),
                   voce('Turni di tutti', r('turni:settimana_tutti'), 'tutti'),
-                  voce('Squadra', r('turni:squadra'), 'squadra'),
                   voce('Cambio turno', r('turni:nuovo_cambio'), 'cambio'),
                   voce('Ritardo / uscita', r('turni:nuovo_avviso'), 'orologio'),
                   voce('Le mie richieste', r('turni:richieste'), 'richieste')]
     elif ufficio:
-        turni += [voce('Turni di tutti', r('turni:settimana_tutti'), 'tutti'), voce('Squadra', r('turni:squadra'), 'squadra')]
+        turni += [voce('Turni di tutti', r('turni:settimana_tutti'), 'tutti')]
     if turni:
         sezioni.append(('Turni', turni))
 
@@ -158,7 +157,8 @@ def home_ufficio(request):
                         'sotto': 'Visite mediche, corsi sicurezza, patentini'})
         persone.append({**voce('Documenti', r('turni:documenti_ufficio'), 'documenti'), 'sotto': 'Buste paga, regolamenti, presa visione'})
     azienda = [{**voce('Archivio', r('turni:archivio'), 'archivio'), 'sotto': 'Gli stessi tasti del Capo Turno', 'blu': True}]
-    nome = (u.first_name or u.username).split()[0].capitalize()
+    dip = getattr(u, 'dipendente', None)
+    nome = dip.nome_breve if dip else (u.first_name or u.username).split()[0].capitalize()
     return render(request, 'turni/home_ufficio.html', {
         'principali': principali[:4], 'persone': persone, 'azienda': azienda,
         'nome': nome,
@@ -288,7 +288,7 @@ def puo_rispondere(tipo, ogg, utente):
         if not ogg.elemento_id and ogg.turno.capoturno:
             return False  # straordinaria fatta dal Capo Turno: la convalida direttamente il responsabile piazzale
         fasce = fasce_del_capo(utente, ogg.turno.data)
-        return fasce is None and utente.is_staff or bool(fasce and ogg.turno.fascia in fasce)
+        return bool(fasce and ogg.turno.fascia in fasce)
     if tipo == 'pulizia_rp':
         if not e_resp_piazzale(utente) or ogg.stato != Pulizia.Stato.FATTA:
             return False
@@ -391,10 +391,14 @@ def _tasto_avviso(n, utente):
     from .models import Pulizia
     from .piano_pulizie import nome_corto
 
-    p = Pulizia.objects.filter(pk=n.oggetto_id).select_related('elemento').first() if n.oggetto_id else None
+    from .views_pulizie_piano import _e_capo
+
+    p = Pulizia.objects.filter(pk=n.oggetto_id).select_related('elemento', 'turno').first() if n.oggetto_id else None
     if p is None or p.stato != Pulizia.Stato.DA_FARE:
         return None
     e = p.elemento
+    if e and e.con_avvio and not _e_capo(utente, p):
+        return {'testo': 'Apri', 'pk': p.pk}  # il manutentore riceve l'avviso, ma i tasti delle ottiche sono del Capo Turno
     if e and e.con_avvio and not p.iniziata_il:
         return {'testo': f'Pulizia {nome_corto(e)} iniziata', 'azione': 'iniziata', 'pk': p.pk}
     if e and e.con_avvio:
@@ -479,6 +483,8 @@ def notifica_scelta(request, tipo, oggetto_id, scelta):
         messages.info(request, 'Questa richiesta non aspetta più una tua risposta.')
         return redirect('turni:notifiche')
     conferma = scelta == 'conferma'
+    if tipo == 'straordinaria' and conferma:
+        return redirect('turni:richiesta_rp', ogg.pk)  # il RP sceglie a chi assegnarla (Giulia, 13/11/2026)
     if request.method == 'POST':
         nota = (request.POST.get('nota') or '').strip()[:300]
         try:
@@ -487,17 +493,10 @@ def notifica_scelta(request, tipo, oggetto_id, scelta):
                 rispondi(ogg, conferma)
                 fatto = f'Partecipazione confermata: {ogg.riunione.titolo}.' if conferma else 'Hai detto che non partecipi alla riunione.'
             elif tipo == 'straordinaria':
-                from .views_programma import _al_capo
+                from .pulizie import rifiuta_richiesta
 
-                ogg.stato = ogg.Stato.INOLTRATA if conferma else ogg.Stato.RIFIUTATA
-                ogg.gestita_da, ogg.gestita_il = request.user, timezone.now()
-                ogg.save()
-                if conferma:
-                    fatto = _al_capo(request.user, ogg.luogo, ogg.giorno, ogg.turno, ogg.testo) + '.'
-                else:
-                    fatto = 'Pulizia straordinaria non approvata.'
-                    mn.avvisa([ogg.chiesta_da_id], request.user, '🧹 Pulizia straordinaria non approvata',
-                              (nota or ogg.testo)[:300], reverse('turni:pulizie_programma'))
+                rifiuta_richiesta(request.user, ogg, nota)
+                fatto = 'Richiesta non approvata.'
             elif tipo == 'cambio':
                 svc.risposta_collega(ogg, conferma)
                 fatto = "Cambio confermato: ora decide l'ufficio." if conferma else 'Cambio rifiutato.'
@@ -554,7 +553,7 @@ def notifica_scelta(request, tipo, oggetto_id, scelta):
         contesto.update(titolo=f'Richiesta di manutenzione · {ogg.macchina.nome}')
     elif tipo == 'straordinaria':
         from .models import Luogo
-        contesto.update(titolo=f'Pulizia straordinaria · {Luogo(ogg.luogo).label} · {ogg.giorno:%d/%m} {ogg.turno}: {ogg.testo}')
+        contesto.update(titolo=f'{ogg.get_tipo_display()} · {Luogo(ogg.luogo).label} · {ogg.giorno:%d/%m} {ogg.turno}: {ogg.testo}')
     else:
         contesto.update(titolo=f'{ogg.turno.dipendente.nome_breve} · {ogg.titolo}',
                         due_passaggi=tipo == 'pulizia_ct' and ogg.elemento_id

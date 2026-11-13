@@ -21,14 +21,14 @@
 </ol>
 
 {% if da_fare %}
-  {% if e.con_avvio and not iniziata and capo or e.con_avvio and not iniziata and manut or e.con_avvio and not iniziata and mie %}
+  {% if e.con_avvio and not iniziata and capo %}
   <form method="post" class="pv-azione">{% csrf_token %}
     <button class="bottone pieno" name="azione" value="iniziata">Pulizia {{ nome_corto }} iniziata</button>
   </form>
   {% endif %}
 
   {% if e.con_avvio and iniziata %}
-    {% if manut or capo %}
+    {% if capo %}
     <form method="post" class="pv-azione">{% csrf_token %}<input type="hidden" name="azione" value="manutentore">
       <button class="pv-spunta{% if ok_man %} accesa{% endif %}" name="fatto" value="{% if ok_man %}0{% else %}1{% endif %}" aria-pressed="{% if ok_man %}true{% else %}false{% endif %}"><i>{% if ok_man %}✓{% endif %}</i>Manutentore: completato</button>
     </form>

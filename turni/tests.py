@@ -189,11 +189,11 @@ class PulizieTest(TestCase):
             self.client.post(reverse('turni:capoturno') + f'?giorno={p.turno.data}', {'pulizia': p.pk, 'azione': 'segnala', 'nota': 'rifare angolo'})
             p.refresh_from_db()
             self.assertEqual(p.stato, Pulizia.Stato.FATTA)
-            # l'ufficio sì
+            # e nemmeno l'ufficio: verificano solo i Capi Turno (Giulia, 13/11/2026)
             self.client.force_login(get_user_model().objects.create_user('uff', is_staff=True))
-            self.client.post(reverse('turni:capoturno') + f'?giorno={p.turno.data}', {'pulizia': p.pk, 'azione': 'segnala', 'nota': 'rifare angolo'})
+            self.assertEqual(self.client.get(reverse('turni:capoturno') + f'?giorno={p.turno.data}').status_code, 403)
             p.refresh_from_db()
-            self.assertEqual(p.stato, Pulizia.Stato.SEGNALATA)
+            self.assertEqual(p.stato, Pulizia.Stato.FATTA)
 
     def test_non_si_toccano_turni_altrui(self):
         altrui = Turno.objects.get(dipendente=self.spano, data=LUNEDI)
@@ -248,7 +248,7 @@ class PulizieTest(TestCase):
         url = reverse('turni:pulizie_turno', args=[turno.pk])
         with self.settings(MEDIA_ROOT=self._tmp()):
             r = self.client.get(url)
-            for t in ('Aggiungi</a>', 'Nastro Imp. 1'):  # «Richiedi pulizia» solo per i responsabili
+            for t in ('Pulizia aggiuntiva completata</a>', 'Nastro Imp. 1'):  # «Richiedi pulizia» solo per i responsabili
                 self.assertContains(r, t)
             # una sola pulizia assegnata: si apre subito il modulo con foto prima e dopo
             r = self.client.get(url + '?fai=assegnata')
@@ -296,12 +296,10 @@ class PulizieTest(TestCase):
         url = reverse('turni:richiedi_pulizia')
         self.client.login(username='spano.mauro', password='123456')
         with self.a(LUNEDI), mock.patch('pywebpush.webpush'), self.settings(MEDIA_ROOT=self._tmp()):
-            # solo il responsabile impianto e il responsabile piazzale
-            self.assertEqual(self.client.get(url).status_code, 403)
-            self.assertNotContains(self.client.get(reverse('turni:pulizie')), 'Richiedi</a>')
-            self.spano.resp_impianto = True
+            # tutti la chiedono, ma chi non è il responsabile piazzale la manda a lui (Giulia, 13/11/2026)
+            self.assertContains(self.client.get(reverse('turni:pulizie')), 'Richiedi pulizia</a>')
+            self.spano.resp_piazzale = True
             self.spano.save()
-            self.assertContains(self.client.get(reverse('turni:pulizie')), 'Richiedi</a>')
             # 1 · area, 2 · giorno e turno, 3 · chi la fa (con la foto)
             self.assertContains(self.client.get(url), 'Dove va fatta la pulizia?')
             self.assertContains(self.client.get(url, {'area': 'IMP2'}), 'Che giorno?')
@@ -532,7 +530,8 @@ class TurniProvaTest(TestCase):
         # una seconda volta non fa nulla
         self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
         self.assertEqual(dip.turni.count(), 14)
-        self.assertNotContains(self.client.get(url), 'Genera turni di prova')
+        self.assertNotIn(f'value="{dip.pk}">\n        <button class="link-piccolo" name="azione" value="turni_prova"',
+                         self.client.get(url).content.decode())
 
 
 class SettimanaTuttiTest(TestCase):
@@ -547,22 +546,17 @@ class SettimanaTuttiTest(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_griglia_per_impianto_e_celle_cambiabili(self):
+    def test_per_dipendente_e_per_area_come_l_anteprima(self):
         r = self.client.get(reverse('turni:settimana_tutti'))
         self.assertEqual(r.status_code, 200)
-        gruppi = {t: righe for t, righe, _ in r.context['gruppi']}
-        # Drame e Spano lavorano soprattutto all'Impianto 1, Crimi soprattutto da palista
-        self.assertEqual({x['nome'] for x in gruppi['Impianto 1']}, {'Spano’ A. M.', 'Drame B.'})
-        self.assertIn('Crimi B.', {x['nome'] for x in gruppi['Palista']})
-        spano = next(x for x in gruppi['Impianto 1'] if x['nome'].startswith('Spano'))
-        # lunedì (oggi) non si cambia; martedì Spano riposa e Drame lavora: si può chiedere
-        self.assertFalse(spano['celle'][0]['cambiabile'])
-        self.assertTrue(spano['celle'][1]['cambiabile'])
-        # giovedì hanno lo stesso turno: niente da cambiare
-        self.assertFalse(spano['celle'][3]['cambiabile'])
-        io = next(x for x in gruppi['Impianto 1'] if x['io'])
-        self.assertFalse(any(c['cambiabile'] for c in io['celle']))
-        self.assertContains(r, f"collega={spano['dip'].pk}")
+        nomi = [x['nome'] for x in r.context['righe']]
+        self.assertEqual(nomi, sorted(nomi, key=str.upper) and nomi)  # ordine alfabetico del file
+        io = next(x for x in r.context['righe'] if x['io'])
+        self.assertEqual(io['nome'], 'Drame Bouba')
+        self.assertEqual(len(io['caselle']), 7)
+        r = self.client.get(reverse('turni:settimana_tutti') + '?vista=area')
+        self.assertTrue(r.context['aree'])
+        self.assertContains(r, 'Per Area')
 
 
 class PostazioniOrariTest(TestCase):

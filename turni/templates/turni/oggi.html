@@ -7,6 +7,8 @@
     {% if dip.foto %}<img src="{% url 'turni:foto_profilo_img' dip.pk %}?v={{ dip.foto.name|slice:'-12:' }}" alt="">{% else %}<span>{{ dip.nome_breve|slice:':1' }}{{ dip.nome_breve.split|last|slice:':1' }}</span>{% endif %}
   </a>
   <a class="ig-io-turno" href="{% url 'turni:miei_turni' %}">
+    {# nome e cognome per esteso (Giulia, 13/11/2026) #}
+    <span class="ig-io-nome">{{ dip.nome_breve }}</span>
     <small>{{ oggi_data|date:'l j F'|capfirst }}</small>
     {% if turno_oggi %}
       {% if turno_oggi.lavora and turno_oggi.posti %}

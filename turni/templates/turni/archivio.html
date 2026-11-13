@@ -1,20 +1,10 @@
 {% extends 'turni/base.html' %}
 {% block titolo %}Archivio{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:menu' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Menu</a>
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
 <h1 class="ig-titolo">Archivio</h1>
 
-{# stile Instagram: le ultime pulizie approvate in una griglia di foto #}
-{% if foto_recenti %}
-<div class="ig-griglia-foto">
-  {% for p in foto_recenti %}
-  <a href="{% url 'turni:archivio_voce' 'pulizie' p.pk %}">
-    <img src="{% url 'turni:foto' p.pk %}" alt="Pulizia {{ p.turno.data|date:'j/m' }}" loading="lazy">
-    <span>{% if p.turno.sigla_postazione %}{{ p.turno.sigla_postazione }} · {% endif %}{{ p.turno.data|date:'j/m' }}</span>
-  </a>
-  {% endfor %}
-</div>
-{% endif %}
+{# solo i tasti degli storici: le foto stanno dentro ciascun archivio (Giulia, 13/11/2026) #}
 
 {# tasti a tutta larghezza, uno sotto l'altro; Inventario raccoglie mezzi, componenti, piazzale e ricambi (Giulia, 10/11) #}
 <div class="mn-capo ac-home">

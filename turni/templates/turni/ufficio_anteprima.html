@@ -38,7 +38,7 @@
   <tbody class="vp-blocco">
     {% for r in b.righe %}
     <tr class="{{ r.classe }}">
-      <th class="vp-fissa vp-area">{{ b.area }}</th>
+      {% if forloop.first %}<th class="vp-fissa vp-area" rowspan="{{ b.righe|length }}">{{ b.area }}</th>{% endif %}
       {% if r.prima %}<td class="vp-turno {{ r.classe_turno }}" rowspan="{{ r.quante }}">{{ r.turno|default:'–' }}</td>{% endif %}
       <td class="vp-ruolo">{{ r.ruolo }}</td>
       {% for n in r.nomi %}<td>{{ n }}</td>{% endfor %}

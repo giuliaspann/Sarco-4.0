@@ -45,6 +45,42 @@ def nome_utente_per(dip):
     return nome
 
 
+# Gestione accessi: i ruoli da scegliere (Giulia, 13/11/2026). «Operaio» vale per OdL e Capi Turno
+# (il Capo Turno lo decide il file turni); «Ufficio» si divide in HR / ufficio turni, Direzione, Amministrazione.
+RUOLI_ACCESSO = [('RI', 'Responsabile Impianto'), ('RP', 'Responsabile Piazzale'), ('OPERAIO', 'Operaio (OdL e Capo Turno)'),
+                 ('MAN', 'Manutentore'), ('UFFICIO', 'Ufficio')]
+UFFICI = [('RESP_TURNI', 'HR / ufficio turni'), ('DIREZIONE', 'Direzione'), ('AMMINIS', 'Amministrazione')]
+
+
+def ruolo_accesso(dip):
+    """Il ruolo come lo vede l'ufficio in Gestione accessi."""
+    if dip.ruolo_app in dict(UFFICI):
+        return 'Ufficio · ' + dict(UFFICI)[dip.ruolo_app]
+    if dip.resp_impianto:
+        return 'Responsabile Impianto'
+    if dip.resp_piazzale:
+        return 'Responsabile Piazzale'
+    if 'MANUTENTORE' in dip.mansioni:
+        return 'Manutentore'
+    return 'Operaio'
+
+
+def imposta_ruolo(dip, ruolo, ufficio=''):
+    """Applica il ruolo scelto in Gestione accessi."""
+    mansioni = [m for m in dip.mansioni if m != 'MANUTENTORE']
+    dip.resp_impianto = ruolo == 'RI'
+    dip.resp_piazzale = ruolo == 'RP'
+    if ruolo == 'MAN':
+        mansioni.append('MANUTENTORE')
+    if ruolo == 'UFFICIO':
+        dip.ruolo_app = ufficio if ufficio in dict(UFFICI) else 'RESP_TURNI'
+        mansioni = [m for m in mansioni if m != 'OPERAIO'] + (['UFFICIO'] if 'UFFICIO' not in mansioni else [])
+    else:
+        dip.ruolo_app = 'OPERAIO'
+    dip.mansione = ','.join(dict.fromkeys(mansioni)) or 'OPERAIO'
+    dip.save(update_fields=['resp_impianto', 'resp_piazzale', 'ruolo_app', 'mansione'])
+
+
 def crea_credenziali(dip):
     """Crea l'utente se manca e gli assegna un PIN nuovo. Restituisce (nome utente, PIN)."""
     pin = genera_pin()
@@ -55,8 +91,8 @@ def crea_credenziali(dip):
         dip.save(update_fields=['utente'])
     utente.set_password(pin)  # cambia anche l'impronta di sessione: il vecchio PIN smette di valere ovunque
     utente.is_active = True
-    if dip.ruolo_app == 'RESP_TURNI':
-        utente.is_staff = True  # pagine dell'ufficio
+    if not utente.is_superuser:
+        utente.is_staff = dip.ruolo_app == 'RESP_TURNI'  # pagine dell'ufficio HR solo per HR / ufficio turni
     utente.save()
     if dip.ruolo_app == 'RESP_TURNI':
         from django.contrib.auth.models import Permission

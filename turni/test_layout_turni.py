@@ -404,6 +404,11 @@ class ProgrammaTest(TestCase):
 
         from .models import Comunicazione, Notifica, Pulizia
 
+        # la pulizia straordinaria la assegna direttamente il responsabile piazzale (Giulia, 13/11/2026)
+        rp = Dipendente.objects.create(nome='RESP PIAZZALE', resp_piazzale=True)
+        rp.utente = get_user_model().objects.create_user('rp.prova')
+        rp.save()
+        self.client.force_login(rp.utente)
         self.client.post(reverse('turni:programma', args=['pulizia']),
                          {'luogo': 'IMP1', 'descrizione': 'Tramoggia', 'giorno': self.giorno.isoformat(), 'turno': '2T',
                           'fermo': '1', 'impianto': 'IMP1', 'dalle': '15:00', 'alle': '17:30'})

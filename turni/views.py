@@ -48,8 +48,7 @@ def dipendente_di(request):
 
 
 def e_capoturno(user, giorno):
-    if user.is_staff:
-        return True
+    """Capo Turno quel giorno (o la notte cominciata ieri). L'ufficio non verifica le pulizie (Giulia, 13/11/2026)."""
     dip = getattr(user, 'dipendente', None)
     return bool(dip) and dip.turni.filter(data__in=[giorno, giorno - timedelta(days=1)], capoturno=True).exists()
 
@@ -62,8 +61,6 @@ def fasce_del_capo(user, giorno):
     if dip:
         for f in dip.turni.filter(data=giorno, capoturno=True).values_list('fascia', flat=True):
             fasce.add(Fascia.MATTINA if f == Fascia.ALTRO else f)  # Capo Turno senza fascia: come il 1° turno
-    if not fasce and user.is_staff:
-        return None
     return fasce
 
 
@@ -74,10 +71,18 @@ def leggi_data(valore, predefinita):
         return predefinita
 
 
+RUOLI_UFFICIO = ('RESP_TURNI', 'DIREZIONE', 'AMMINIS')
+
+
 @login_required
 def home(request):
-    """Per l'operaio: pagina di scorciatoie (un pulsante grande per ogni cosa che può fare)."""
+    """Per l'operaio: pagina di scorciatoie (un pulsante grande per ogni cosa che può fare).
+    HR, direzione e amministrazione hanno la home dell'ufficio (Giulia, 13/11/2026)."""
     dip = dipendente_di(request)
+    if dip is not None and dip.ruolo_app in RUOLI_UFFICIO:
+        from .views_menu import home_ufficio
+
+        return home_ufficio(request)
     if dip is None:
         from .richieste import e_responsabile
 
@@ -327,73 +332,100 @@ def cognome_nome(dip):
     return (' '.join(parole[:-1]), parole[-1]) if len(parole) > 1 else (dip.nome_breve, '')
 
 
+# ruoli e aree come nel Layout Turni (Giulia, 13/11/2026)
+ORDINE_RUOLI = ['CT', 'OdL', 'Pal', 'Man', 'An', 'Aut']
+ORDINE_SIGLE = ['1T', '2T', 'N', 'G']
+
+
+def incarichi_di(t):
+    """[(area, ruolo)] del turno: «Impianto 1 · Palista + Sabbia - Sarco · Operatore di Linea» con le sigle degli incarichi."""
+    sigle = [r for _, r in t.lista_incarichi] if t.incarichi else []
+    if t.capoturno and 'CT' not in sigle:
+        sigle = ['CT'] + sigle
+    aree = [p.split(' · ')[0].strip() for p in (t.posto or '').split(' + ') if p.strip()]
+    if not aree:
+        aree = [t.get_postazione_display() if t.postazione else t.descrizione_fascia]
+    if not sigle:
+        sigle = [t.ruolo or '']
+    if t.capoturno and len(aree) < len(sigle):
+        aree = [aree[0]] + aree  # il CT sta nella stessa area del suo primo incarico
+    return [(aree[min(k, len(aree) - 1)], sigle[k]) for k in range(len(sigle))]
+
+
+def casella_tutti(t):
+    """Come l'anteprima del caricamento: «1T | Impianto 1», «1T | Impianto 1 | Pal», il CT sempre in fondo."""
+    if t is None:
+        return {'testo': '–', 'classe': 'vuota', 'titolo': ''}
+    if not t.lavora:
+        return {'testo': t.sigla_fascia or 'R', 'classe': t.classe_fascia, 'titolo': t.get_fascia_display()}
+    inc = incarichi_di(t)
+    aree = list(dict.fromkeys(a for a, _ in inc))
+    ruoli = [r for _, r in inc if r and r not in ('OdL', 'CT')]
+    parti = [t.sigla_fascia or '1T', ' + '.join(aree)] + ruoli + (['CT'] if t.capoturno else [])
+    return {'testo': ' | '.join(p for p in parti if p), 'classe': t.classe_fascia, 'titolo': t.posto or t.descrizione}
+
+
 @login_required
 def settimana_tutti(request):
-    """Come il file Excel: tutti i dipendenti della settimana, raggruppati per impianto/postazione,
-    una casella colorata per giorno. Toccando il giorno di un collega si chiede il cambio."""
-    from collections import Counter
-
+    """Turni di tutti come l'anteprima del caricamento turni (Giulia, 13/11/2026): «Per Dipendente» in ordine
+    alfabetico con turno, area e ruolo in ogni casella; «Per Area» come il Layout Turni. Frecce per la settimana."""
     oggi = timezone.localdate()
     base = leggi_data(request.GET.get('settimana'), oggi)
     lunedi = base - timedelta(days=base.weekday())
     giorni = [lunedi + timedelta(days=i) for i in range(7)]
     mio = dipendente_di(request)
-
     per_dip = {}
     for t in Turno.objects.filter(data__in=giorni, settimana__pubblicata=True, dipendente__attivo=True).select_related('dipendente'):
         per_dip.setdefault(t.dipendente, {})[t.data] = t
-    miei = per_dip.get(mio, {}) if mio else {}
 
-    gruppi = {}
-    for dip, turni in per_dip.items():
-        lavoro = [t for t in turni.values() if t.lavora]
-        posti = Counter(t.postazione for t in lavoro if t.postazione)
-        if posti:
-            chiave = posti.most_common(1)[0][0]
-            titolo = Postazione(chiave).label
-        else:
-            fasce = Counter(t.fascia for t in lavoro)
-            chiave = fasce.most_common(1)[0][0] if fasce else 'zz'
-            titolo = {Fascia.GIORNALIERO: 'Giornalieri', Fascia.NOTTE: 'Notturno'}.get(chiave, 'Altri')
-        celle = []
-        for g in giorni:
+    righe = [{'nome': d.nome_breve, 'io': d == mio, 'caselle': [casella_tutti(turni.get(g)) for g in giorni]}
+             for d, turni in sorted(per_dip.items(), key=lambda x: x[0].nome)]
+
+    # Per Area: un blocco per area, dentro per turno e ruolo; una riga per posto, un nome per giorno
+    posti = {}
+    for d, turni in per_dip.items():
+        for k, g in enumerate(giorni):
             t = turni.get(g)
-            mio_t = miei.get(g)
-            cambiabile = (
-                mio and dip != mio and t and mio_t and g > oggi
-                and (t.fascia, t.postazione, t.capoturno) != (mio_t.fascia, mio_t.postazione, mio_t.capoturno)
-            )
-            celle.append({'turno': t, 'cambiabile': cambiabile, 'giorno': g})
-        # dentro il gruppo: prima chi fa più mattine, poi pomeriggi, notti...
-        fascia_tipica = Counter(t.fascia for t in lavoro).most_common(1)[0][0] if lavoro else 'zz'
-        gruppi.setdefault((chiave, titolo), []).append(
-            {'dip': dip, 'nome': nome_corto(dip), 'cognome': cognome_nome(dip)[0], 'nome_proprio': cognome_nome(dip)[1],
-             'celle': celle, 'io': dip == mio,
-             'ordine': (ORDINE_FASCE.index(fascia_tipica) if fascia_tipica in ORDINE_FASCE else 9, dip.nome)}
-        )
-
-    def ordine_gruppo(k):
-        chiave = k[0]
-        return ORDINE_GRUPPI.index(chiave) if chiave in ORDINE_GRUPPI else len(ORDINE_GRUPPI) + (chiave == 'zz')
-
-    fermi = fermi_programmati(giorni[0], giorni[-1])  # i fermi impianto comunicati compaiono da soli (Giulia, 11/11)
-    elenco = [(titolo, sorted(righe, key=lambda r: r['ordine']), fermi.get(chiave, []))
-              for (chiave, titolo), righe in sorted(gruppi.items(), key=lambda x: ordine_gruppo(x[0]))]
-    mia_riga = next((r for _, righe, _f in elenco for r in righe if r['io']), None)
-    return render(
-        request,
-        'turni/settimana_tutti.html',
-        {
-            'gruppi': elenco,
-            'giorni': giorni,
-            'oggi': oggi,
-            'lunedi': lunedi,
-            'prec': lunedi - timedelta(days=7),
-            'succ': lunedi + timedelta(days=7),
-            'mio': mio,
-            'mia_riga': mia_riga,
-        },
-    )
+            if not t or not t.lavora:
+                continue
+            sigla = t.sigla_fascia or '1T'
+            for area, ruolo in incarichi_di(t):
+                chiave = (area, sigla, ruolo or '')
+                posti.setdefault(chiave, [[] for _ in giorni])[k].append(d.nome_breve.split()[0])
+    def ordine_area(area):
+        a = area.lower()
+        for n, inizio in enumerate(['impianto 1', 'impianto 2', 'sabbia', 'piazzale', 'metalli', 'manutenzione', 'laboratorio']):
+            if a.startswith(inizio):
+                return (n, a)
+        return (9, a)
+    aree = []
+    for (area, sigla, ruolo), giorni_nomi in sorted(posti.items(), key=lambda x: (
+            ordine_area(x[0][0]), ORDINE_SIGLE.index(x[0][1]) if x[0][1] in ORDINE_SIGLE else 9,
+            ORDINE_RUOLI.index(x[0][2]) if x[0][2] in ORDINE_RUOLI else 9, x[0][2])):
+        if not aree or aree[-1]['area'] != area:
+            aree.append({'area': area, 'righe': []})
+        blocco = aree[-1]
+        classe = 'f-capo' if ruolo == 'CT' else Turno(fascia={'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE,
+                                                             'G': Fascia.GIORNALIERO}.get(sigla, Fascia.MATTINA)).classe_fascia
+        classe_turno = Turno(fascia={'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE,
+                                     'G': Fascia.GIORNALIERO}.get(sigla, Fascia.MATTINA)).classe_fascia
+        for n in range(max(len(x) for x in giorni_nomi)):
+            prima = not blocco['righe'] or blocco['righe'][-1]['turno'] != sigla
+            blocco['righe'].append({'turno': sigla, 'ruolo': ruolo, 'classe': classe, 'classe_turno': classe_turno, 'prima': prima,
+                                    'nomi': [x[n] if n < len(x) else '–' for x in giorni_nomi]})
+    for blocco in aree:
+        blocco['quante_area'] = len(blocco['righe'])
+        for k, r in enumerate(blocco['righe']):
+            if r['prima']:
+                n = 1
+                while k + n < len(blocco['righe']) and not blocco['righe'][k + n]['prima']:
+                    n += 1
+                r['quante'] = n
+    vista = 'area' if request.GET.get('vista') == 'area' else 'dipendente'
+    return render(request, 'turni/settimana_tutti.html', {
+        'righe': righe, 'aree': aree, 'vista': vista, 'giorni': giorni, 'oggi': oggi, 'lunedi': lunedi,
+        'prec': lunedi - timedelta(days=7), 'succ': lunedi + timedelta(days=7), 'mio': mio,
+    })
 
 
 @login_required
@@ -449,8 +481,8 @@ def pulizie(request, turno_id=None):
 
         return render(request, 'turni/pulizia.html', {
             'turno': None, 'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
-            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user),
-            'e_capo': True, 'da_verificare': pulizie_da_verificare(request.user)})
+            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user, 'pulizia'),
+            'e_capo': False, 'da_verificare': 0})
     if dip is None:
         return render(request, 'turni/nessun_dipendente.html')
     if turno_id is None:
@@ -658,8 +690,9 @@ def pulizie(request, turno_id=None):
 
         return render(request, 'turni/pulizia.html', {
             'turno': turno, 'richieste': richieste.select_related('elemento', 'richiesta_da__dipendente'),
+            'usa_telefono': __import__('turni.pulizie', fromlist=['usa_telefono']).usa_telefono(turno),
             'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
-            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user),
+            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user, 'pulizia'),
             'e_capo': e_capoturno(request.user, timezone.localdate()), 'da_verificare': pulizie_da_verificare(request.user)})
 
     genera_pulizie(turno)
@@ -831,7 +864,26 @@ def richiedi_pulizia_vista(request):
                 'nota': dati.get('nota', '')[:300], 'scelto': dati.get('turno', ''), 'fasce': fasce}
     if area:
         contesto['nome_area'] = Luogo(area).label
-    if area and giorno and fascia:
+    al_rp = not e_resp_piazzale(request.user)  # chi non è RP la manda al RP, che la approva e la assegna
+    contesto['al_rp'] = al_rp
+    if area and giorno and fascia and al_rp:
+        if request.method == 'POST':
+            from .models import Straordinaria
+            from .pulizie import chiedi_al_rp
+
+            testo = request.POST.get('nota', '').strip()
+            foto = request.FILES.get('foto')
+            if not testo and not foto:
+                messages.error(request, 'Scrivi cosa va pulito o fai la foto.')
+            else:
+                try:
+                    chiedi_al_rp(request.user, Straordinaria.Tipo.RICHIESTA, area, giorno, fascia, testo, foto)
+                except Exception:
+                    messages.error(request, 'La foto non si legge: riprova a scattarla.')
+                else:
+                    messages.success(request, 'Richiesta mandata al responsabile piazzale: se la approva la assegna a chi di dovere.')
+                    return redirect('turni:pulizie')
+    elif area and giorno and fascia:
         io = getattr(dipendente_di(request), 'pk', None)
         # solo chi lavora nell'area scelta
         vicini = [t for t in in_turno(giorno, fascia, area)[0] if t.dipendente_id != io]
@@ -910,20 +962,16 @@ def pulizie_piazzale(request):
         'ora_notte': ORA_NOTTE,
         'in_ritardo': adesso.hour >= ORA_NOTTE and any(not c.ricevute for c in capi),
         'da_convalidare': da_convalidare_piazzale(),
+        'da_approvare': __import__('turni.models', fromlist=['Straordinaria']).Straordinaria.objects.filter(stato='ATTESA')
+        .select_related('chiesta_da__dipendente').order_by('giorno', 'chiesta_il'),
     })
 
 
 @login_required
 def archivio(request):
     """Un solo posto per gli archivi: pulizie, manutenzione, produzione, analisi, fermi impianto.
-    In cima, come su Instagram, le ultime foto delle pulizie approvate (le vedono tutti i dipendenti)."""
-    foto = []
-    if dipendente_di(request) or request.user.is_staff:
-        foto = (
-            Pulizia.objects.filter(stato=Pulizia.Stato.VERIFICATA).exclude(foto='')
-            .select_related('turno').order_by('-verificata_il')[:9]
-        )
-    return render(request, 'turni/archivio.html', {'foto_recenti': foto})
+    Solo i tasti degli storici, niente foto in alto (Giulia, 13/11/2026)."""
+    return render(request, 'turni/archivio.html')
 
 
 @login_required
@@ -971,7 +1019,8 @@ def foto(request, pulizia_id):
     proprietario = p.turno.dipendente.utente_id == request.user.pk
     # le pulizie approvate stanno nell'archivio: le foto le vedono tutti i dipendenti
     in_archivio = p.stato == Pulizia.Stato.VERIFICATA and (dipendente_di(request) or request.user.is_staff)
-    if not (proprietario or in_archivio or e_capoturno(request.user, p.turno.data) or p.richiesta_da_id == request.user.pk):
+    if not (proprietario or in_archivio or e_capoturno(request.user, p.turno.data) or p.richiesta_da_id == request.user.pk
+            or e_resp_piazzale(request.user) or request.user.is_staff):
         raise PermissionDenied
     f = {'prima': p.foto_prima, 'richiesta': p.foto_richiesta}.get(request.GET.get('quale'), p.foto)
     if not f:
@@ -1421,3 +1470,22 @@ def archivio_analisi(request):
     giorni = [(g, list(r)) for g, r in groupby(analisi, key=lambda a: a.data)]
     return render(request, 'turni/archivio_analisi.html', {'giorni': giorni})
 
+
+
+@login_required
+def vedi(request):
+    """PDF e foto dentro l'app, con il tasto indietro (Giulia, 13/11/2026): aperti da soli, sul telefono
+    l'app a tutto schermo non ha modo di tornare indietro e bisognava chiuderla."""
+    from urllib.parse import urlsplit
+
+    u = request.GET.get('u', '')
+    parti = urlsplit(u)
+    if parti.scheme or parti.netloc or not parti.path.startswith('/turni/') or '//' in parti.path:
+        raise Http404
+    pdf = parti.path.endswith('/pdf/') or request.GET.get('tipo') == 'pdf'
+    indietro = request.META.get('HTTP_REFERER', '')
+    rif = urlsplit(indietro)
+    if rif.netloc != request.get_host() or not rif.path.startswith('/turni/') or rif.path == request.path:
+        indietro = reverse('turni:home')
+    return render(request, 'turni/vedi.html', {'u': u, 'pdf': pdf, 'indietro': indietro,
+                                               'nome': request.GET.get('nome', '')[:120]})

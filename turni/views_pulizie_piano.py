@@ -26,7 +26,7 @@ def _data(valore, predefinita):
 def _puo_straordinaria(utente):
     from .views_programma import puo_programmare
 
-    return puo_programmare(utente)
+    return puo_programmare(utente, 'pulizia')
 
 
 def _titolo_giorno(g):
@@ -143,9 +143,8 @@ def gruppo_di(p):
 def _e_capo(utente, p):
     from .views import fasce_del_capo
 
-    fasce = fasce_del_capo(utente, p.turno.data)
     f = pp.FASCE[pp.sigla(p.turno.fascia)]
-    return fasce is None or f in fasce
+    return f in fasce_del_capo(utente, p.turno.data)
 
 
 def _e_manutentore(utente, p):
@@ -226,10 +225,10 @@ def pulizia_voce(request, pk):
     if request.method == 'POST':
         azione = request.POST.get('azione')
         adesso = timezone.now()
-        if azione == 'iniziata' and e and e.con_avvio and da_fare and (capo or manut or mie):
+        if azione == 'iniziata' and e and e.con_avvio and da_fare and capo:
             Pulizia.objects.filter(pk__in=[r.pk for r in da_fare]).update(iniziata_il=adesso)
             messages.success(request, f'{e.nome}: pulizia iniziata.')
-        elif azione == 'manutentore' and e and e.con_avvio and (manut or capo):
+        elif azione == 'manutentore' and e and e.con_avvio and capo:
             fatto = request.POST.get('fatto') == '1'
             Pulizia.objects.filter(pk__in=[r.pk for r in righe]).update(
                 ok_manutentore_il=adesso if fatto else None, ok_manutentore_da=request.user if fatto else None)
@@ -294,3 +293,60 @@ def pulizia_voce(request, pk):
             ElementoPulizia.Modo.PULIZIA_FOTO, ElementoPulizia.Modo.FOTO_DOPO, ElementoPulizia.Modo.CONTROLLO_FOTO)),
         'nome_corto': pp.nome_corto(e) if e else '',
     })
+
+
+# ---------------------------------------------------------------- richieste al responsabile piazzale (Giulia, 13/11/2026)
+
+@login_required
+def richiesta_rp(request, pk):
+    """Il RP vede la richiesta (cosa, dove, quando, chi la chiede, foto) e la assegna a chi lavora in quel turno, o la rifiuta."""
+    from django.core.exceptions import PermissionDenied
+
+    from .models import Luogo, Straordinaria
+    from .pulizie import approva_richiesta, e_resp_piazzale, in_turno, rifiuta_richiesta
+
+    s = get_object_or_404(Straordinaria.objects.select_related('chiesta_da__dipendente'), pk=pk)
+    rp = e_resp_piazzale(request.user)
+    if not rp and s.chiesta_da_id != request.user.pk:
+        raise PermissionDenied
+    fascia = s.turno if s.turno in ('1T', '2T', 'N', 'G') else '1T'
+    vicini, altri = in_turno(s.giorno, fascia, s.luogo)
+    capo = next((t for t in vicini + altri if t.capoturno), None)
+    if request.method == 'POST' and rp and s.stato == Straordinaria.Stato.ATTESA:
+        if request.POST.get('azione') == 'approva':
+            t = next((x for x in vicini + altri if str(x.pk) == request.POST.get('turno')), None)
+            if not t:
+                messages.error(request, 'Scegli a chi assegnarla.')
+                return redirect('turni:richiesta_rp', s.pk)
+            approva_richiesta(request.user, s, t)
+            messages.success(request, f'Pulizia approvata e assegnata a {t.dipendente.nome_breve}.')
+        elif request.POST.get('azione') == 'rifiuta':
+            rifiuta_richiesta(request.user, s, (request.POST.get('nota') or '').strip())
+            messages.success(request, 'Richiesta non approvata: avvisato chi l\'aveva chiesta.')
+        from .models import Notifica
+
+        Notifica.objects.filter(utente=request.user, tipo='straordinaria', oggetto_id=s.pk).update(
+            esito='confermata' if s.stato == Straordinaria.Stato.INOLTRATA else 'rifiutata')
+        return redirect('turni:pulizie_piazzale')
+    return render(request, 'turni/richiesta_rp.html', {
+        's': s, 'rp': rp, 'nome_luogo': Luogo(s.luogo).label if s.luogo in Luogo.values else s.luogo,
+        'chi': getattr(getattr(s.chiesta_da, 'dipendente', None), 'nome_breve', '') or (s.chiesta_da.get_username() if s.chiesta_da else ''),
+        'persone': vicini + altri, 'proposto': capo.pk if capo else None, 'classe': pp.CLASSI.get(fascia, ''),
+        'nome_turno': pp.NOMI.get(fascia, ('', ''))[0],
+    })
+
+
+@login_required
+def foto_richiesta_rp(request, pk):
+    from django.core.exceptions import PermissionDenied
+    from django.http import FileResponse, Http404
+
+    from .models import Straordinaria
+    from .pulizie import e_resp_piazzale
+
+    s = get_object_or_404(Straordinaria, pk=pk)
+    if not (e_resp_piazzale(request.user) or s.chiesta_da_id == request.user.pk):
+        raise PermissionDenied
+    if not s.foto:
+        raise Http404
+    return FileResponse(s.foto.open('rb'), content_type='image/jpeg')

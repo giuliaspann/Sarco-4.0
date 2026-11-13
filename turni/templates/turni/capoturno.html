@@ -1,8 +1,8 @@
 {% extends 'turni/base.html' %}
-{% block titolo %}Verifica pulizie{% endblock %}
+{% block titolo %}Da verificare{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizia</a>
-<div class="intestazione"><h1>Verifica pulizie</h1></div>
+<div class="intestazione"><h1>Da verificare</h1></div>
 {# proposta B scelta da Giulia (11/11): data su una riga, poi le pulizie divise per stato #}
 <div class="st-settimana vp-giorno">
   <a class="st-freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno precedente">‹</a>
@@ -56,15 +56,16 @@
 {% endfor %}
 
 {% if al_responsabile %}
-<p class="vb-sezione">Dal responsabile piazzale · {{ al_responsabile|length }}</p>
+<p class="vb-sezione">In attesa del RP · {{ al_responsabile|length }}</p>
 <div class="vb-elenco">
-  {% for p in al_responsabile %}<div class="vb-riga"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }}</span></div>{% endfor %}
+  {% for p in al_responsabile %}<a class="vb-riga vb-apri" href="{% url 'turni:pulizia_voce' p.pk %}"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }} ›</span></a>{% endfor %}
 </div>
 {% endif %}
 
 <p class="vb-sezione">Ancora da fare · {{ da_fare|length }}</p>
 <div class="vb-elenco">
-  {% for p in da_fare %}<div class="vb-riga"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }}</span></div>
+  {# il CT apre la pulizia e la conferma per gli operatori dell'Impianto 1 (Giulia, 13/11/2026) #}
+  {% for p in da_fare %}<a class="vb-riga vb-apri" href="{% url 'turni:pulizia_voce' p.pk %}"><span>{{ p.titolo }}</span><span class="tenue">{{ p.turno.dipendente.nome_breve }} ›</span></a>
   {% empty %}<div class="vb-riga"><span class="tenue">Tutte fatte.</span></div>{% endfor %}
 </div>
 

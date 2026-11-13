@@ -224,11 +224,13 @@ def accessi_view(request):
             return _consegna_credenziali(request, senza)  # le tessere di tutti, una volta sola
         dip = get_object_or_404(Dipendente, pk=request.POST.get('dipendente') or 0)
         if azione == 'attiva':
+            from .accessi import RUOLI_ACCESSO, imposta_ruolo
+
             ruolo = request.POST.get('ruolo')
-            if ruolo in RuoloApp.values:
-                dip.ruolo_app = ruolo
+            if ruolo in dict(RUOLI_ACCESSO):
+                imposta_ruolo(dip, ruolo, request.POST.get('ufficio', ''))
             dip.attivo = True
-            dip.save(update_fields=['ruolo_app', 'attivo'])
+            dip.save(update_fields=['attivo'])
             from .views import _consegna_credenziali
             return _consegna_credenziali(request, [dip])  # la tessera con nome utente e PIN, una volta sola
         if dip.utente:
@@ -241,7 +243,8 @@ def accessi_view(request):
         'da_attivare': [d for d in tutti if not d.utente or not d.utente.is_active],
         'attivi': [d for d in tutti if d.utente and d.utente.is_active],
         'tutti': tutti,
-        'ruoli': RuoloApp.choices,
+        'ruoli': __import__('turni.accessi', fromlist=['RUOLI_ACCESSO']).RUOLI_ACCESSO,
+        'uffici': __import__('turni.accessi', fromlist=['UFFICI']).UFFICI,
     })
 
 
