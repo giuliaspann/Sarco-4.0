@@ -6,10 +6,15 @@ def navigazione(request):
     from .richieste import e_responsabile, extra_per
     from .views import e_capoturno
 
+    from .models import RuoloApp
+
     user = getattr(request, 'user', None)
     if not user or not user.is_authenticated:
         return {}
-    dip = getattr(user, 'dipendente', None)
+    # un dipendente collegato non basta per avere turni fisici (es. direzione/HR/amministrazione
+    # possono avere un dipendente collegato per altri motivi): solo ruolo_app OPERAIO li ha davvero
+    grezzo = getattr(user, 'dipendente', None)
+    dip = grezzo if grezzo and grezzo.ruolo_app == RuoloApp.OPERAIO else None
     responsabile = e_responsabile(user)
     contesto = {
         'nav_capoturno': e_capoturno(user, timezone.localdate()),

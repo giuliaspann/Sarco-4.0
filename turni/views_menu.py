@@ -94,12 +94,17 @@ def profilo(request):
     (nome, ruolo, cambio password, esci) invece della pagina di amministrazione."""
     from django.shortcuts import redirect
 
+    from .models import RuoloApp
     from .richieste import e_responsabile
 
     u = request.user
-    if getattr(u, 'dipendente', None):
+    dip = getattr(u, 'dipendente', None)
+    # un dipendente collegato non basta: direzione/HR/amministrazione sono "ufficio" anche se hanno
+    # un dipendente collegato (serve per altri motivi, es. HR) — solo chi lavora davvero a turni fisici
+    # (ruolo_app OPERAIO, come già distingue ufficio_dipendenti.html) va sulla sua Area personale
+    if dip and dip.ruolo_app == RuoloApp.OPERAIO:
         return redirect('turni:miei_turni')
-    nome = (u.get_full_name() or u.username).strip()
+    nome = (dip.nome_breve if dip else '') or (u.get_full_name() or u.username).strip()
     ruoli = [r for r, si in (('Ufficio', u.is_staff), ('Responsabile', e_responsabile(u))) if si]
     return render(request, 'turni/profilo_ufficio.html', {
         'nome': nome.title() if nome.islower() else nome,
@@ -248,9 +253,12 @@ def in_attesa(request):
             rr = inv.riunione
             riga('riunione', inv.pk, f'Riunione: {rr.titolo}', f'{quando_riunione(rr)} · {rr.luogo}',
                  r('turni:riunione', args=[rr.pk]), rr.creata_il, rr.creata_da)
-        for e in extra_per(dip):
-            if not e.mia:
-                riga('', None, 'Cercasi volontari', f'{e.data:%a %d/%m} · {e.descrizione_fascia}', r('turni:miei_turni'), e.creata_il)
+        from .models import RuoloApp
+
+        if dip.ruolo_app == RuoloApp.OPERAIO:  # i turni extra sono per chi lavora davvero a turni fisici
+            for e in extra_per(dip):
+                if not e.mia:
+                    riga('', None, 'Cercasi volontari', f'{e.data:%a %d/%m} · {e.descrizione_fascia}', r('turni:miei_turni'), e.creata_il)
         for i in Intervento.objects.filter(assegnata_a=dip, stato__in=[Intervento.Stato.SEGNALATA, Intervento.Stato.ASSEGNATA]
                                            ).select_related('macchina', 'segnalata_da__dipendente'):
             riga('manutenzione', i.pk, f'Manutenzione da eseguire · {i.macchina.nome}', i.descrizione,

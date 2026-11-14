@@ -89,10 +89,14 @@ def programma(request, cosa):
     if not puo_programmare(request.user, cosa):
         raise PermissionDenied
     indietro = reverse('turni:mn_scelta') if cosa == 'manutenzione' else reverse('turni:pulizie')
+    # il fermo impianto vero (non la pulizia in sé) resta riservato a chi potrebbe programmarlo
+    # anche da «Programma manutenzione»: Capo Turno in servizio, responsabili, ufficio (Giulia, 14/11/2026)
+    puo_fermo = cosa == 'manutenzione' or puo_programmare(request.user, 'manutenzione')
     luogo = request.POST.get('luogo') or request.GET.get('luogo') or ''
     if luogo not in Luogo.values:
         return render(request, 'turni/programma.html', {'cosa': cosa, 'passo': 'dove', 'indietro': indietro,
-                                                         'luoghi': [(v, Luogo(v).label) for v in LUOGHI]})
+                                                         'luoghi': [(v, Luogo(v).label) for v in LUOGHI],
+                                                         'puo_fermo': puo_fermo})
     macchine = Macchina.objects.filter(attiva=True, luogo=luogo).exclude(tipo=Macchina.Tipo.SEGNALETICA).order_by('nome')
     domani = timezone.localdate() + timedelta(days=1)
     if request.method == 'POST':
@@ -115,6 +119,8 @@ def programma(request, cosa):
             errore = 'Scegli il giorno (da oggi in poi).'
         elif turno not in ORARI:
             errore = 'Scegli il turno.'
+        elif fermo and not puo_fermo:
+            errore = 'Non puoi programmare anche il fermo impianto.'
         elif fermo and impianto not in dict(FermoImpianto.IMPIANTI):
             errore = "Scegli quale impianto sarà fermo."
         if errore:
@@ -143,6 +149,7 @@ def programma(request, cosa):
         'macchine': macchine if cosa == 'manutenzione' else None, 'turni': TURNI, 'domani': domani.isoformat(),
         'oggi': timezone.localdate().isoformat(),
         'impianti': FermoImpianto.IMPIANTI, 'impianto_proposto': luogo if luogo in dict(FermoImpianto.IMPIANTI) else '',
+        'puo_fermo': puo_fermo,
     })
 
 

@@ -86,7 +86,7 @@ def va_al_rp(p):
 
 Q_AL_RP = (Q(elemento__convalida=ElementoPulizia.Convalida.PIAZZALE)
            | Q(elemento__convalida=ElementoPulizia.Convalida.CT_RP, ok_capoturno_il__isnull=False)
-           | Q(elemento__isnull=True, turno__capoturno=True))
+           | Q(elemento__isnull=True))
 
 
 def stato_di(p):
@@ -257,10 +257,14 @@ def nome_corto(e):
     return e.nome.split()[-1].lower() if e.con_avvio else e.nome.lower()
 
 
-def testi(e, righe):
+def testi(e, righe, per='ct'):
+    """`per` distingue chi riceve l'avviso: solo il Capo Turno ha il tasto «Pulizia ... iniziata»
+    (Giulia, 14/11/2026), il Manutentore riceve lo stesso avviso ma solo come informazione."""
     A = ElementoPulizia.Avviso
     if e.avviso == A.META:
-        return f'🔔 {e.nome}: è metà turno', f'Quando cominciate tocca «Pulizia {nome_corto(e)} iniziata».'
+        testo = f'Quando cominciate tocca «Pulizia {nome_corto(e)} iniziata».' if per == 'ct' \
+            else f'Ti avvisiamo che state iniziando (o state per iniziare) «{e.nome.lower()}».'
+        return f'🔔 {e.nome}: è metà turno', testo
     if e.avviso == A.ENTRO:
         return f'🔔 {e.nome}: sono stati puliti?', f'Alle {e.avviso_ora:%H:%M} non risultano ancora fatti: rispondi e indica chi li ha puliti.'
     if e.avviso == A.PRIMA:
@@ -313,10 +317,27 @@ def controlla(adesso=None):
                     continue  # l'ha già mandato l'altro processo
                 if fatte:
                     continue  # già fatta: niente da ricordare
-                titolo, testo = testi(e, righe)
+                titolo, _ = testi(e, righe)
                 url = reverse('turni:pulizia_voce', args=[righe[0].pk]) if righe else reverse('turni:pulizie_adesso')
-                push.invia(destinatari(e, turni, righe), titolo, testo, url, tipo='avviso_pulizia',
-                           oggetto_id=righe[0].pk if righe else None)
+                oggetto_id = righe[0].pk if righe else None
+                A = ElementoPulizia.AvvisoA
+                if e.avviso == ElementoPulizia.Avviso.META and e.avviso_a == A.CT_MAN:
+                    # il Capo Turno ha il tasto per avviare, il Manutentore no (Giulia, 14/11/2026):
+                    # due testi diversi, non uno solo uguale per tutti
+                    from .pulizie import manutentore_del_turno
+
+                    ids_ct = [t.dipendente.utente_id for t in capi(turni, e)]
+                    m = manutentore_del_turno(turni[0]) if turni else None
+                    _, testo_ct = testi(e, righe, per='ct')
+                    _, testo_man = testi(e, righe, per='man')
+                    push.invia(ids_ct, titolo, testo_ct, url, tipo='avviso_pulizia', oggetto_id=oggetto_id)
+                    if m:
+                        push.invia([m.dipendente.utente_id], titolo, testo_man, url, tipo='avviso_pulizia',
+                                   oggetto_id=oggetto_id)
+                else:
+                    _, testo = testi(e, righe)
+                    push.invia(destinatari(e, turni, righe), titolo, testo, url, tipo='avviso_pulizia',
+                               oggetto_id=oggetto_id)
                 mandati += 1
     return mandati
 

@@ -378,7 +378,14 @@ def settimana_tutti(request):
     for t in Turno.objects.filter(data__in=giorni, settimana__pubblicata=True, dipendente__attivo=True).select_related('dipendente'):
         per_dip.setdefault(t.dipendente, {})[t.data] = t
 
-    righe = [{'nome': d.nome_breve, 'io': d == mio, 'caselle': [casella_tutti(turni.get(g)) for g in giorni]}
+    # una casella è «cambiabile» (tocchi e parti per chiedere un cambio) se chi guarda ha un dipendente,
+    # il turno non è il suo e il giorno non è già passato (Giulia, 14/11/2026: si parte dalla griglia)
+    def cambiabile(d, t, g):
+        return bool(mio and d != mio and t is not None and g > oggi)
+
+    righe = [{'nome': d.nome_breve, 'io': d == mio, 'dipendente_id': d.pk,
+              'caselle': [dict(casella_tutti(turni.get(g)), data=g.isoformat(), cambiabile=cambiabile(d, turni.get(g), g))
+                          for g in giorni]}
              for d, turni in sorted(per_dip.items(), key=lambda x: x[0].nome)]
 
     # Per Area: un blocco per area, dentro per turno e ruolo; una riga per posto, un nome per giorno
@@ -391,7 +398,9 @@ def settimana_tutti(request):
             sigla = t.sigla_fascia or '1T'
             for area, ruolo in incarichi_di(t):
                 chiave = (area, sigla, ruolo or '')
-                posti.setdefault(chiave, [[] for _ in giorni])[k].append(d.nome_breve.split()[0])
+                posti.setdefault(chiave, [[] for _ in giorni])[k].append(
+                    {'nome': d.nome_breve.split()[0], 'mio': d == mio, 'dip': d.pk, 'data': g.isoformat(),
+                     'cambiabile': cambiabile(d, t, g)})
     def ordine_area(area):
         a = area.lower()
         for n, inizio in enumerate(['impianto 1', 'impianto 2', 'sabbia', 'piazzale', 'metalli', 'manutenzione', 'laboratorio']):
@@ -411,8 +420,9 @@ def settimana_tutti(request):
                                      'G': Fascia.GIORNALIERO}.get(sigla, Fascia.MATTINA)).classe_fascia
         for n in range(max(len(x) for x in giorni_nomi)):
             prima = not blocco['righe'] or blocco['righe'][-1]['turno'] != sigla
+            vuota = lambda g: {'nome': '–', 'mio': False, 'dip': None, 'data': g.isoformat(), 'cambiabile': False}
             blocco['righe'].append({'turno': sigla, 'ruolo': ruolo, 'classe': classe, 'classe_turno': classe_turno, 'prima': prima,
-                                    'nomi': [x[n] if n < len(x) else '–' for x in giorni_nomi]})
+                                    'nomi': [x[n] if n < len(x) else vuota(giorni[k]) for k, x in enumerate(giorni_nomi)]})
     for blocco in aree:
         blocco['quante_area'] = len(blocco['righe'])
         for k, r in enumerate(blocco['righe']):

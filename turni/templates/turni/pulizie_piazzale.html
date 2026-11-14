@@ -41,7 +41,7 @@
 
 <h2 class="rq-sezione">Pulizie da convalidare</h2>
 {% for p in da_convalidare %}
-<div class="scheda rp-voce">
+<div class="scheda rp-voce" id="p-{{ p.pk }}">
   <b>{{ p.icona }} {{ p.titolo }}</b>
   <small class="tenue">{{ p.turno.dipendente.nome_breve }} · {{ p.fatta_il|date:'D j M H:i'|capfirst }}{% if p.ok_capoturno_il %} · ok di {{ p.ok_capoturno_da.dipendente.nome_breve|default:'Capo Turno' }}{% endif %}</small>
   {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}

@@ -32,7 +32,8 @@
     </label>
   </div>
 
-  {# il fermo impianto è facoltativo #}
+  {# il fermo impianto è facoltativo, e riservato a chi potrebbe programmarlo anche per manutenzione #}
+  {% if puo_fermo %}
   <label class="mc-spunta"><input type="checkbox" name="fermo" value="1" id="mc-fermo"{% if request.POST.fermo %} checked{% endif %}> Programma anche fermo {% if impianto_proposto %}{{ nome_luogo }}{% else %}impianto{% endif %}</label>
   <div class="mc-fermo" id="mc-fermo-dati"{% if not request.POST.fermo %} hidden{% endif %}>
     {% if impianto_proposto %}<input type="hidden" name="impianto" value="{{ impianto_proposto }}">
@@ -46,6 +47,7 @@
     </div>
     <p class="tenue piccolo">Ricevono l'avviso chi lavora in quel turno sull'impianto, i Capi Turno, i manutentori e i responsabili.</p>
   </div>
+  {% endif %}
 
   <button class="bottone pieno piena-larghezza mc-invia">Programma {{ cosa }}</button>
 </form>

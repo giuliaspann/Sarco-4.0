@@ -1,0 +1,9 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Accesso negato{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Home</a>
+<div class="intestazione"><h1>Accesso negato</h1></div>
+<div class="vuoto">
+  <p>Non puoi vedere questa pagina: non è tra quelle che il tuo ruolo può usare.</p>
+</div>
+{% endblock %}

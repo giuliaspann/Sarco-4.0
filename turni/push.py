@@ -74,8 +74,13 @@ def _invia_ora(utenti_ids, titolo, testo, url):
 
 def invia(utenti_ids, titolo, testo, url='/turni/', notifica=True, mittente=None, tipo='', oggetto_id=None):
     """Notifica sul telefono e, se notifica=True, una riga nel centro notifiche (il cuore in alto a destra).
-    I messaggi di chat e della bacheca passano notifica=False: stanno nella chat (l'aeroplanino)."""
-    utenti_ids = list(utenti_ids)
+    I messaggi di chat e della bacheca passano notifica=False: stanno nella chat (l'aeroplanino).
+    Chi ha l'accesso disattivato (Giulia, 14/11/2026) non deve ricevere più nulla, qualunque sia
+    la lista di destinatari calcolata da chi chiama: il controllo è qui, un'unica volta per tutti."""
+    from django.contrib.auth import get_user_model
+
+    utenti_ids = list(get_user_model().objects.filter(pk__in=list(utenti_ids), is_active=True)
+                       .values_list('pk', flat=True))
     if not utenti_ids:
         return
     if notifica:

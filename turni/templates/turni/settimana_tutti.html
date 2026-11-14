@@ -49,7 +49,9 @@
       {% if forloop.first %}<th class="vp-fissa vp-area" rowspan="{{ b.quante_area }}">{{ b.area }}</th>{% endif %}
       {% if r.prima %}<td class="vp-turno {{ r.classe_turno }}" rowspan="{{ r.quante }}">{{ r.turno }}</td>{% endif %}
       <td class="vp-ruolo">{{ r.ruolo|default:'–' }}</td>
-      {% for n in r.nomi %}<td>{{ n }}</td>{% endfor %}
+      {% for n in r.nomi %}
+      <td class="{% if n.mio %}vp-io{% endif %}">{% if n.cambiabile %}<a class="vp-cambia" href="{% url 'turni:nuovo_cambio' %}?giorno={{ n.data }}&collega={{ n.dip }}">{{ n.nome }}</a>{% else %}{{ n.nome }}{% endif %}</td>
+      {% endfor %}
     </tr>
     {% endfor %}
   </tbody>
@@ -64,7 +66,9 @@
   {% for r in righe %}
     <tr class="{% if r.io %}vp-io{% endif %}">
       <th class="vp-fissa vp-nome">{{ r.nome }}</th>
-      {% for c in r.caselle %}<td class="{{ c.classe }}" title="{{ c.titolo }}">{{ c.testo }}</td>{% endfor %}
+      {% for c in r.caselle %}
+      <td class="{{ c.classe }}" title="{{ c.titolo }}">{% if c.cambiabile %}<a class="vp-cambia" href="{% url 'turni:nuovo_cambio' %}?giorno={{ c.data }}&collega={{ r.dipendente_id }}">{{ c.testo }}</a>{% else %}{{ c.testo }}{% endif %}</td>
+      {% endfor %}
     </tr>
   {% endfor %}
   </tbody>

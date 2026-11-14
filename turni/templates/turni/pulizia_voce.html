@@ -30,7 +30,7 @@
   {% if e.con_avvio and iniziata %}
     {% if capo %}
     <form method="post" class="pv-azione">{% csrf_token %}<input type="hidden" name="azione" value="manutentore">
-      <button class="pv-spunta{% if ok_man %} accesa{% endif %}" name="fatto" value="{% if ok_man %}0{% else %}1{% endif %}" aria-pressed="{% if ok_man %}true{% else %}false{% endif %}"><i>{% if ok_man %}✓{% endif %}</i>Manutentore: completato</button>
+      <button class="pv-spunta{% if ok_man %} accesa{% endif %}" name="fatto" value="{% if ok_man %}0{% else %}1{% endif %}" aria-pressed="{% if ok_man %}true{% else %}false{% endif %}"{% if ok_man %} data-conferma="Togliere la spunta già data al Manutentore?"{% endif %}><i>{% if ok_man %}✓{% endif %}</i>Manutentore: completato</button>
     </form>
     {% elif ok_man %}<p class="pv-nota">✓ Manutentore: completato</p>{% endif %}
     {% if capo %}
@@ -50,7 +50,9 @@
     </label>
     <p class="tenue piccolo">Se l'ha fatta un collega libero in quel momento, scegli il suo nome.</p>
     {% endif %}
-    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" data-riduci{% if serve_foto %} required{% endif %}><span>📷 Foto della pulizia finita{% if not serve_foto %} (facoltativa){% endif %}</span></label>
+    {# niente «required» nativo (Giulia, 14/11/2026): il suo fumetto di errore si sovrapponeva al campo nota;
+       il controllo c'è già lato server, con il messaggio di errore normale della pagina #}
+    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" data-riduci><span>📷 Foto della pulizia finita{% if not serve_foto %} (facoltativa){% endif %}</span></label>
     <label>Nota (facoltativa)<input type="text" name="nota" maxlength="300"></label>
     <div class="pv-due">
       <button class="bottone pieno" name="azione" value="conferma">Conferma pulizia</button>

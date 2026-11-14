@@ -205,18 +205,21 @@ def _avvisa_rp(utente, p):
     from .pulizie import resp_piazzale
 
     mn.avvisa(resp_piazzale(), utente, f'✅ {p.titolo} · {p.turno.dipendente.nome_breve}', 'Confermata dal Capo Turno: da convalidare',
-              reverse('turni:pulizie_piazzale'), tipo='pulizia_rp', oggetto_id=p.pk)
+              reverse('turni:pulizie_piazzale') + f'#p-{p.pk}', tipo='pulizia_rp', oggetto_id=p.pk)
 
 
 @login_required
 def pulizia_voce(request, pk):
+    from .pulizie import usa_telefono
+
     p = get_object_or_404(Pulizia.objects.select_related('turno__dipendente', 'elemento'), pk=pk)
     righe = gruppo_di(p)
     e = p.elemento
     capo = _e_capo(request.user, p)
     manut = _e_manutentore(request.user, p)
     dip = getattr(request.user, 'dipendente', None)
-    mie = [r for r in righe if dip and r.turno.dipendente_id == dip.pk and r.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
+    mie = [r for r in righe if dip and r.turno.dipendente_id == dip.pk and usa_telefono(r.turno)
+           and r.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
     da_fare = [r for r in righe if r.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
     iniziata = any(r.iniziata_il for r in righe)
     ok_man = any(r.ok_manutentore_il for r in righe)
