@@ -172,17 +172,17 @@ def passaggi(righe):
     passi = []
     if e and e.avviso:
         inviato = AvvisoPulizia.objects.filter(chiave=f'{e.pk}-{p.turno.data.isoformat()}-{pp.sigla(p.turno.fascia)}').first()
-        passi.append({'testo': 'Avviso ' + pp.quando_di(e), 'ora': ora(inviato.inviato_il) if inviato else '', 'fatto': bool(inviato)})
+        passi.append({'testo': 'Avviso ' + pp.quando_di(e).removeprefix('avviso '), 'ora': ora(inviato.inviato_il) if inviato else '', 'fatto': bool(inviato)})
     if e and e.con_avvio:
         iniziata = primo('iniziata_il')
         passi.append({'testo': 'Pulizia iniziata', 'ora': ora(iniziata), 'fatto': bool(iniziata)})
-        man = primo('ok_manutentore_il')
-        chi_m = next((_chi(r.ok_manutentore_da) for r in righe if r.ok_manutentore_da_id), '')
-        passi.append({'testo': 'Manutentore: completato' + (f' ({chi_m})' if chi_m else ''), 'ora': ora(man), 'fatto': bool(man),
-                      'attesa': bool(iniziata and not man)})
+    if any(r.stato == Pulizia.Stato.NON_ESEGUITA for r in righe):
+        passi.append({'testo': 'Non eseguita: a fine turno non risultava fatta', 'ora': '', 'fatto': False, 'no': True})
+        return passi
     tutte_fatte = all(r.stato != Pulizia.Stato.DA_FARE for r in righe)
     chi_f = ', '.join(dict.fromkeys(r.fatta_da.nome_breve for r in righe if r.fatta_da_id))
-    passi.append({'testo': ('Conclusa' if not e or not e.controllo else 'Controllo fatto') + (f' · fatta da {chi_f}' if chi_f else ''),
+    passi.append({'testo': ('Controllo fatto' if e and (e.controllo or 'controllo' in (e.tasto or '').lower()) else 'Conclusa')
+                  + (f' · fatta da {chi_f}' if chi_f else ''),
                   'ora': ora(fatta), 'fatto': tutte_fatte})
     if via == 'CT_RP':
         ok = primo('ok_capoturno_il')
@@ -208,22 +208,33 @@ def _avvisa_rp(utente, p):
               reverse('turni:pulizie_piazzale') + f'#p-{p.pk}', tipo='pulizia_rp', oggetto_id=p.pk)
 
 
+def _serve(e):
+    """Le foto previste dalla colonna «Foto» del file: (prima, dopo)."""
+    M = ElementoPulizia.Modo
+    if not e:
+        return False, False
+    return e.modo == M.PULIZIA_FOTO, e.modo in (M.PULIZIA_FOTO, M.FOTO_DOPO, M.CONTROLLO_FOTO)
+
+
 @login_required
 def pulizia_voce(request, pk):
-    from .pulizie import usa_telefono
+    from .pulizie import avvisa_non_eseguibile, ha_file, salva_file, usa_telefono
 
     p = get_object_or_404(Pulizia.objects.select_related('turno__dipendente', 'elemento'), pk=pk)
     righe = gruppo_di(p)
     e = p.elemento
     capo = _e_capo(request.user, p)
-    manut = _e_manutentore(request.user, p)
     dip = getattr(request.user, 'dipendente', None)
     mie = [r for r in righe if dip and r.turno.dipendente_id == dip.pk and usa_telefono(r.turno)
            and r.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
     da_fare = [r for r in righe if r.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
     iniziata = any(r.iniziata_il for r in righe)
-    ok_man = any(r.ok_manutentore_il for r in righe)
     torna = reverse('turni:pulizia_voce', args=[p.pk])
+    serve_prima, serve_dopo = _serve(e)
+
+    def errore_file(ex):
+        msg = str(ex)
+        return f'{msg[:1].upper()}{msg[1:]}.' if 'troppo grande' in msg else 'Una foto non si legge: riprova a scattarla.'
 
     if request.method == 'POST':
         azione = request.POST.get('azione')
@@ -231,18 +242,16 @@ def pulizia_voce(request, pk):
         if azione == 'iniziata' and e and e.con_avvio and da_fare and capo:
             Pulizia.objects.filter(pk__in=[r.pk for r in da_fare]).update(iniziata_il=adesso)
             messages.success(request, f'{e.nome}: pulizia iniziata.')
-        elif azione == 'manutentore' and e and e.con_avvio and capo:
-            fatto = request.POST.get('fatto') == '1'
-            Pulizia.objects.filter(pk__in=[r.pk for r in righe]).update(
-                ok_manutentore_il=adesso if fatto else None, ok_manutentore_da=request.user if fatto else None)
-            messages.success(request, 'Spunta del manutentore segnata.' if fatto else 'Spunta del manutentore tolta.')
         elif azione in ('conclusa', 'conferma') and capo and da_fare:
-            if e and e.con_avvio and not ok_man:
-                messages.error(request, 'Prima serve la spunta «Manutentore: completato».')
+            if not da_fare[0].disponibile:
+                messages.error(request, f'{p.titolo} si conferma dalle {timezone.localtime(da_fare[0].da_quando):%H:%M}.')
                 return redirect(torna)
-            foto = request.FILES.get('foto')
-            serve_foto = e and e.modo in (ElementoPulizia.Modo.PULIZIA_FOTO, ElementoPulizia.Modo.FOTO_DOPO, ElementoPulizia.Modo.CONTROLLO_FOTO)
-            if serve_foto and not foto and not all(r.foto for r in da_fare):
+            prima = request.FILES.getlist('foto_prima')
+            dopo = request.FILES.getlist('foto')
+            if serve_prima and not prima and not all(ha_file(r, 'PRIMA') for r in da_fare):
+                messages.error(request, 'Serve la foto prima della pulizia.')
+                return redirect(torna)
+            if serve_dopo and not dopo and not all(ha_file(r, 'DOPO') for r in da_fare):
                 messages.error(request, 'Serve la foto della pulizia finita.')
                 return redirect(torna)
             # chi l'ha fatta davvero (a volte un collega libero in quel momento)
@@ -250,16 +259,16 @@ def pulizia_voce(request, pk):
             scelto = request.POST.get('fatta_da') or ''
             if scelto.isdigit():
                 fatta_da = Dipendente.objects.filter(pk=scelto, attivo=True).first()
-            from .pulizie import salva_foto
-
             for r in da_fare:
-                if foto:
-                    foto.seek(0)
-                    try:
-                        salva_foto(r, foto)
-                    except Exception:
-                        messages.error(request, 'La foto non si legge: riprova a scattarla.')
-                        return redirect(torna)
+                try:
+                    for files in (prima, dopo):
+                        for f in files:
+                            f.seek(0)
+                    salva_file(r, prima, 'PRIMA')
+                    salva_file(r, dopo, 'DOPO')
+                except Exception as ex:
+                    messages.error(request, errore_file(ex))
+                    return redirect(torna)
                 r.stato, r.fatta_il = Pulizia.Stato.FATTA, adesso
                 if fatta_da and len(da_fare) == 1:
                     r.fatta_da = fatta_da
@@ -271,8 +280,27 @@ def pulizia_voce(request, pk):
             if pp.percorso(da_fare[0]) != 'NESSUNA':
                 _avvisa_rp(request.user, da_fare[0])
             messages.success(request, f'{p.titolo}: confermata, inviata al responsabile piazzale.')
-        elif azione == 'non_ancora' and capo:
-            messages.info(request, 'Va bene: confermala quando è fatta.')
+        elif azione == 'impedita' and capo and da_fare:
+            # «Non si può fare» / «Non effettuata» del Capo Turno: motivo, nota e foto obbligatori
+            nota = (request.POST.get('nota') or '').strip()
+            foto = request.FILES.getlist('foto')
+            if not nota or not foto:
+                messages.error(request, 'Servono la nota e la foto che mostra il motivo.')
+                return redirect(torna + '?fai=impedita')
+            motivo = request.POST.get('motivo') if request.POST.get('motivo') in Pulizia.MOTIVI_IMPEDIMENTO else 'Altro'
+            for r in da_fare:
+                try:
+                    for f in foto:
+                        f.seek(0)
+                    salva_file(r, foto, 'MOTIVO')
+                except Exception as ex:
+                    messages.error(request, errore_file(ex))
+                    return redirect(torna + '?fai=impedita')
+                r.nota = f'{motivo}: {nota}'[:300]
+                r.stato, r.fatta_il = Pulizia.Stato.IMPEDITA, adesso
+                r.save()
+            avvisa_non_eseguibile(request.user, da_fare[0])
+            messages.success(request, f'Segnalato: {p.titolo}. I Capi Turno e il responsabile piazzale sono stati avvisati.')
         else:
             messages.error(request, 'Questa azione adesso non è possibile.')
         return redirect(torna)
@@ -290,11 +318,47 @@ def pulizia_voce(request, pk):
         'sigla': s, 'classe': pp.CLASSI.get(s, ''), 'nome_turno': pp.NOMI.get(s, ('', ''))[0],
         'area': dict(pp.AREE).get(pp.area_di(p.turno, e), ''), 'quando': pp.quando_di(e),
         'stato': pp.STATI[pp.stato_gruppo([pp.stato_di(r) for r in righe])],
-        'capo': capo, 'manut': manut, 'mie': mie, 'da_fare': da_fare, 'iniziata': iniziata, 'ok_man': ok_man,
+        'capo': capo, 'mie': mie, 'da_fare': da_fare, 'iniziata': iniziata,
         'colleghi': colleghi, 'assegnata_a': da_fare[0].turno.dipendente_id if len(da_fare) == 1 else None,
-        'via_ct': pp.percorso(p) == 'CT_RP', 'serve_foto': bool(e and e.modo in (
-            ElementoPulizia.Modo.PULIZIA_FOTO, ElementoPulizia.Modo.FOTO_DOPO, ElementoPulizia.Modo.CONTROLLO_FOTO)),
-        'nome_corto': pp.nome_corto(e) if e else '',
+        'via_ct': pp.percorso(p) == 'CT_RP', 'serve_prima': serve_prima, 'serve_foto': serve_dopo,
+        'nome_corto': pp.nome_corto(e) if e else '', 'fai': request.GET.get('fai', ''),
+        'motivi': Pulizia.MOTIVI_IMPEDIMENTO, 'allegati': [a for r in righe for a in r.allegati.all()],
+        'tasto': (e.tasto if e and e.tasto else 'Conferma pulizia'),
+    })
+
+
+@login_required
+def avviso_pulizia(request, pk):
+    """L'avviso con i 3 tasti (file del 21/11/2026): Effettuata (la stessa scheda di «Conferma pulizia»),
+    Non effettuata (la schermata «Non si può fare»), Ricordamelo tra 15 o 30 minuti. I tasti li usa solo chi conferma."""
+    from .pulizie import link_effettuata, link_non_effettuata, puo_rispondere_avviso
+
+    p = get_object_or_404(Pulizia.objects.select_related('turno__dipendente', 'elemento'), pk=pk)
+    e = p.elemento
+    if e is None or not e.avviso:
+        return redirect('turni:pulizia_voce', p.pk)
+    puo = puo_rispondere_avviso(request.user, p)
+    if request.method == 'POST':
+        minuti = request.POST.get('minuti')
+        if not puo or minuti not in ('15', '30'):
+            messages.error(request, 'Questa azione adesso non è possibile.')
+            return redirect('turni:avviso_pulizia', p.pk)
+        quando = timezone.now() + timedelta(minutes=int(minuti))
+        a, _ = AvvisoPulizia.objects.get_or_create(chiave=pp.chiave_avviso(p), defaults={'ultimo_il': timezone.now()})
+        a.rimanda_al = quando
+        a.save(update_fields=['rimanda_al'])
+        if quando >= p.turno.fine:
+            messages.info(request, "Il turno finisce prima: l'avviso non tornerà. A fine turno, se non è fatta, risulterà Non eseguita.")
+        else:
+            messages.success(request, f'Va bene: te lo ricordo alle {timezone.localtime(quando):%H:%M}.')
+        return redirect('turni:notifiche')
+    titolo, testo = pp.testi(e)
+    return render(request, 'turni/avviso_pulizia.html', {
+        'p': p, 'e': e, 'titolo': titolo, 'testo': testo, 'puo': puo,
+        'fatta': p.stato not in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA),
+        'stato': pp.STATI[pp.stato_di(p)],
+        'effettuata': link_effettuata(p), 'non_effettuata': link_non_effettuata(p),
+        'controllo': e.controllo,
     })
 
 

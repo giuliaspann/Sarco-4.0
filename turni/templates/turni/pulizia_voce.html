@@ -20,49 +20,52 @@
   {% for s in passi %}<li class="{% if s.no %}no{% elif s.fatto %}fatto{% elif s.attesa %}attesa{% endif %}"><span>{{ s.testo }}</span>{% if s.ora %}<small>{{ s.ora }}</small>{% endif %}</li>{% endfor %}
 </ol>
 
-{% if da_fare %}
+{% include 'turni/_allegati.html' %}
+
+{% if da_fare and fai == 'impedita' and capo %}
+  {# «Non si può fare» / «Non effettuata» del Capo Turno: motivo, nota e foto obbligatori #}
+  <form method="post" enctype="multipart/form-data" class="pv-azione pv-conferma">{% csrf_token %}
+    <h2 class="rq-sezione">Non si può fare</h2>
+    <label>Motivo
+      <select name="motivo">{% for m in motivi %}<option>{{ m }}</option>{% endfor %}</select>
+    </label>
+    <label>Nota (obbligatoria)<textarea name="nota" maxlength="280" rows="3" required></textarea></label>
+    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Foto o video del motivo (obbligatori)</span></label>
+    <button class="bottone rifiuta piena-larghezza" name="azione" value="impedita">⚠️ Segnala: non si può fare</button>
+  </form>
+  <a class="bottone leggero piena-larghezza pv-azione" href="{% url 'turni:pulizia_voce' p.pk %}">Annulla</a>
+{% elif da_fare %}
   {% if e.con_avvio and not iniziata and capo %}
   <form method="post" class="pv-azione">{% csrf_token %}
     <button class="bottone pieno" name="azione" value="iniziata">Pulizia {{ nome_corto }} iniziata</button>
   </form>
   {% endif %}
 
-  {% if e.con_avvio and iniziata %}
-    {% if capo %}
-    <form method="post" class="pv-azione">{% csrf_token %}<input type="hidden" name="azione" value="manutentore">
-      <button class="pv-spunta{% if ok_man %} accesa{% endif %}" name="fatto" value="{% if ok_man %}0{% else %}1{% endif %}" aria-pressed="{% if ok_man %}true{% else %}false{% endif %}"{% if ok_man %} data-conferma="Togliere la spunta già data al Manutentore?"{% endif %}><i>{% if ok_man %}✓{% endif %}</i>Manutentore: completato</button>
-    </form>
-    {% elif ok_man %}<p class="pv-nota">✓ Manutentore: completato</p>{% endif %}
-    {% if capo %}
-    <form method="post" class="pv-azione">{% csrf_token %}
-      <button class="bottone pieno" name="azione" value="conclusa"{% if not ok_man %} disabled{% endif %}>Pulizia {{ nome_corto }} conclusa</button>
-      {% if not ok_man %}<p class="tenue piccolo pv-centro">Si conclude dopo la spunta «Manutentore: completato».</p>{% endif %}
-    </form>
-    {% endif %}
-  {% endif %}
-
-  {% if capo and not e.con_avvio %}
+  {% if capo and e.con_avvio and iniziata or capo and not e.con_avvio %}
   <form method="post" enctype="multipart/form-data" class="pv-azione pv-conferma">{% csrf_token %}
-    <h2 class="rq-sezione">{% if via_ct %}Conferma del Capo Turno{% else %}Conferma pulizia{% endif %}</h2>
+    <h2 class="rq-sezione">{% if e.con_avvio %}Fine pulizia{% elif via_ct %}Conferma del Capo Turno{% else %}Conferma pulizia{% endif %}</h2>
     {% if colleghi %}
     <label>Fatta da
       <select name="fatta_da">{% for d in colleghi %}<option value="{{ d.pk }}"{% if d.pk == assegnata_a %} selected{% endif %}>{{ d.nome_breve }}</option>{% endfor %}</select>
     </label>
     <p class="tenue piccolo">Se l'ha fatta un collega libero in quel momento, scegli il suo nome.</p>
     {% endif %}
-    {# niente «required» nativo (Giulia, 14/11/2026): il suo fumetto di errore si sovrapponeva al campo nota;
-       il controllo c'è già lato server, con il messaggio di errore normale della pagina #}
-    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" data-riduci><span>📷 Foto della pulizia finita{% if not serve_foto %} (facoltativa){% endif %}</span></label>
-    <label>Nota (facoltativa)<input type="text" name="nota" maxlength="300"></label>
-    <div class="pv-due">
-      <button class="bottone pieno" name="azione" value="conferma">Conferma pulizia</button>
-      {% if e.avviso == 'ENTRO' %}<button class="bottone rifiuta" name="azione" value="non_ancora" formnovalidate>Non ancora</button>{% endif %}
+    {# niente «required» nativo (Giulia, 14/11/2026): il controllo c'è lato server, con il messaggio normale della pagina #}
+    <div class="pl-foto-due">
+      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*,video/*" multiple data-riduci><span>📷 Foto prima{% if not serve_prima %}<small class="pl-facolt">facoltative</small>{% endif %}</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Foto dopo{% if not serve_foto %}<small class="pl-facolt">facoltative</small>{% endif %}</span></label>
     </div>
+    <p class="tenue piccolo">Puoi aggiungere più foto e anche video.</p>
+    <label>Nota (facoltativa)<textarea name="nota" maxlength="300" rows="2"></textarea></label>
+    <button class="bottone pieno piena-larghezza" name="azione" value="{% if e.con_avvio %}conclusa{% else %}conferma{% endif %}">{% if e.con_avvio %}Pulizia {{ nome_corto }} conclusa{% else %}{{ tasto }}{% endif %}</button>
+    <a class="bottone rifiuta piena-larghezza pv-non-si-puo" href="?fai=impedita">Non si può fare</a>
   </form>
+  {% elif capo and e.con_avvio %}
+  <a class="bottone rifiuta piena-larghezza pv-azione" href="?fai=impedita">Non si può fare</a>
   {% endif %}
 
   {% for r in mie %}
-  <a class="bottone pieno pv-azione" href="{% url 'turni:pulizie_turno' r.turno_id %}?fai=assegnata&voce={{ r.pk }}">Conferma pulizia</a>
+  <a class="bottone pieno pv-azione" href="{% url 'turni:pulizie_turno' r.turno_id %}?fai=assegnata&voce={{ r.pk }}">{{ tasto }}</a>
   {% endfor %}
 {% endif %}
 {% endblock %}

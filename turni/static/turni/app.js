@@ -7,6 +7,7 @@ if ('serviceWorker' in navigator) {
 const LATO_MAX = 1600;
 
 async function riduci(file) {
+  if (!(file.type || '').startsWith('image/')) return file;  // i video si mandano come sono
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   const scala = Math.min(1, LATO_MAX / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement('canvas');
@@ -19,10 +20,12 @@ async function riduci(file) {
 
 document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
   input.addEventListener('change', async () => {
-    const files = [...input.files].slice(0, 12);
+    const files = [...input.files].slice(0, 20);
     const etichetta = input.closest('label');
     if (!files.length) return;
-    etichetta.querySelector('span').textContent = files.length > 1 ? files.length + ' foto pronte' : 'Foto pronta';
+    const video = files.filter(f => (f.type || '').startsWith('video/')).length;
+    const foto = files.length - video;
+    etichetta.querySelector('span').textContent = '✓ ' + [foto ? foto + ' foto' : '', video ? video + ' video' : ''].filter(Boolean).join(' e ');
     etichetta.classList.add('pronta');
     if (!window.DataTransfer || !window.createImageBitmap) return;
     try {

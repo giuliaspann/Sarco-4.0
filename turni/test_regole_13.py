@@ -94,20 +94,18 @@ class RegoleTest(TestCase):
         man = self.dip('NERI UGO', mansione=Mansione.MANUTENTORE)
         self.turno(man, ruolo='Man', postazione='MANUT', posto='Manutenzione · Manutentore')
         genera_pulizie(ta)
-        p = ta.pulizie.get(elemento__nome='Macchine ottiche')
+        p = ta.pulizie.get(elemento__nome='Macchine ottiche - metà turno')
         url = reverse('turni:pulizia_voce', args=[p.pk])
         for chi in (a, man):
             self.client.force_login(chi.utente)
-            self.assertNotContains(self.client.get(url), 'Pulizia ottiche iniziata')
+            self.assertNotContains(self.client.get(url), 'value="iniziata"')  # il tasto (il nome resta nelle istruzioni)
             self.client.post(url, {'azione': 'iniziata'})
-            self.client.post(url, {'azione': 'manutentore', 'fatto': '1'})
         p.refresh_from_db()
         self.assertIsNone(p.iniziata_il)
-        self.assertIsNone(p.ok_manutentore_il)
         ct = self.dip('GALLI RINO')
         self.turno(ct, capoturno=True, posto='Impianto 1 · Capo Turno')
         self.client.force_login(ct.utente)
-        self.assertContains(self.client.get(url), 'Pulizia ottiche iniziata')
+        self.assertContains(self.client.get(url), 'value="iniziata"')
 
     def test_ufficio_non_verifica_ne_convalida(self):
         u = get_user_model().objects.create_user('ufficio.prova', is_staff=True)

@@ -23,7 +23,7 @@ from .forms import AccessoForm, ImportaForm
 from .models import Dipendente, ElementoPulizia, Fascia, FASCE_LAVORATIVE, Postazione, Pulizia, Settimana, Turno
 from .pulizie import (ORA_NOTTE, promemoria_di, aggiungibili, capi_della_notte, da_convalidare_piazzale, e_resp_piazzale, elemento_da_scelta,
                       genera_pulizie, in_turno_oggi, mezzi_aggiungibili, passa_pulizia, pulizia_generale_in_attesa, resp_piazzale,
-                      richiedi_pulizia, salva_foto, scelte_pulizia, turno_attuale)
+                      richiedi_pulizia, salva_foto, scelte_pulizia, turno_attuale, ha_file, voce_notturne)
 from .pulizie import squadra as squadra_del_capo  # "squadra" è già la pagina «Con chi lavoro oggi»
 from .richieste import extra_per
 from .views_messaggi import non_letti_bacheca, non_letti_chat
@@ -573,6 +573,16 @@ def pulizie(request, turno_id=None):
             p.save()
             messages.success(request, 'Pulizia salvata in archivio.' if turno.capoturno else 'Pulizia inviata al Capo Turno.')
             return redirect('turni:pulizie')
+        if azione == 'notturne' and turno.capoturno and turno.fascia == Fascia.NOTTE:
+            from .pulizie import assegna_notturne
+
+            try:
+                p = assegna_notturne(request.user, turno)
+            except ValueError as e:
+                messages.error(request, str(e))
+                return redirect('turni:pulizie')
+            messages.success(request, 'Generiche Notturne registrate: affidale agli OdL e confermale a fine turno.')
+            return redirect('turni:pulizia_voce', p.pk)
         if azione == 'aggiungi':
             elemento = get_object_or_404(mezzi_aggiungibili(turno), pk=request.POST.get('elemento'))
             Pulizia.objects.get_or_create(turno=turno, elemento=elemento, defaults={'aggiunta_da_operaio': True})
@@ -596,22 +606,22 @@ def pulizie(request, turno_id=None):
             elif azione == 'rimuovi' and p.aggiunta_da_operaio and p.stato == Pulizia.Stato.DA_FARE:
                 p.delete()
             elif azione == 'impedita':
-                # foto obbligatoria: giustifica perché la pulizia non si è potuta fare
-                if not request.FILES.get('foto'):
-                    messages.error(request, 'Serve una foto che mostri il motivo.')
-                    return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=impedimento&voce={p.pk}')
-                if not _foto_pulizia(request, p):
-                    return redirect(reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=impedimento&voce={p.pk}')
-                motivo = request.POST.get('motivo') if request.POST.get('motivo') in Pulizia.MOTIVI_IMPEDIMENTO else 'Altro'
+                # «Non si può fare» (e «Non effettuata» dall'avviso): motivo, nota e foto obbligatori (file del 21/11/2026)
+                torna = reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=impedimento&voce={p.pk}'
                 nota = request.POST.get('nota', '').strip()
-                p.nota = (motivo + (f': {nota}' if nota else ''))[:300]
+                if not request.FILES.getlist('foto') or not nota:
+                    messages.error(request, 'Servono la nota e la foto che mostra il motivo.')
+                    return redirect(torna)
+                if not _foto_pulizia(request, p, motivo=True):
+                    return redirect(torna)
+                motivo = request.POST.get('motivo') if request.POST.get('motivo') in Pulizia.MOTIVI_IMPEDIMENTO else 'Altro'
+                p.nota = f'{motivo}: {nota}'[:300]
                 p.stato, p.fatta_il = Pulizia.Stato.IMPEDITA, timezone.now()
                 p.save()
-                from . import manutenzione as mn
+                from .pulizie import avvisa_non_eseguibile
 
-                mn.avvisa(mn.capiturno_oggi(), request.user, f'🧹 Pulizia non eseguibile · {dip.nome_breve}',
-                          f'{p.titolo}: {p.nota}', reverse('turni:capoturno'))
-                messages.success(request, f'Impedimento segnalato: {p.titolo}.')
+                avvisa_non_eseguibile(request.user, p)
+                messages.success(request, f'Segnalato: {p.titolo}. Il Capo Turno e il responsabile piazzale sono stati avvisati.')
             elif azione == 'fatta':
                 torna = reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=assegnata&voce={p.pk}' + ('&da=oggi' if request.POST.get('da') == 'oggi' else '')
                 el = p.elemento
@@ -619,11 +629,11 @@ def pulizie(request, turno_id=None):
                 if not p.disponibile:
                     manca = f'{p.titolo} si fa dalle {timezone.localtime(p.da_quando):%H:%M}.'
                 elif el and el.modo == ElementoPulizia.Modo.PULIZIA_FOTO and not (
-                        (request.FILES.get('foto_prima') or p.foto_prima) and (request.FILES.get('foto') or p.foto)):
+                        (request.FILES.getlist('foto_prima') or ha_file(p, 'PRIMA')) and (request.FILES.getlist('foto') or ha_file(p, 'DOPO'))):
                     manca = 'Servono la foto prima e la foto dopo.'
-                elif el and el.modo == ElementoPulizia.Modo.CONTROLLO_FOTO and not request.FILES.get('foto'):
+                elif el and el.modo == ElementoPulizia.Modo.CONTROLLO_FOTO and not request.FILES.getlist('foto'):
                     manca = 'Serve la foto del controllo.'
-                elif el and el.modo == ElementoPulizia.Modo.FOTO_DOPO and not (request.FILES.get('foto') or p.foto):
+                elif el and el.modo == ElementoPulizia.Modo.FOTO_DOPO and not (request.FILES.getlist('foto') or ha_file(p, 'DOPO')):
                     manca = 'Serve la foto dopo la pulizia.'
                 if manca:
                     messages.error(request, manca)
@@ -654,17 +664,19 @@ def pulizie(request, turno_id=None):
                 torna = reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=assegnata&voce={p.pk}' + ('&da=oggi' if request.POST.get('da') == 'oggi' else '')
                 nota = request.POST.get('nota', '').strip()
                 macchina = p.elemento.macchina
-                if not nota or (macchina and not request.FILES.get('foto')):
+                if not nota or (macchina and not request.FILES.getlist('foto')):
                     messages.error(request, 'Scrivi qual è il problema' + (' e fai la foto.' if macchina else '.'))
                     return redirect(torna)
                 if macchina:
                     try:
-                        mn.segnala(request.user, macchina, f'{p.titolo}: {nota}', False, request.FILES['foto'])
+                        mn.segnala(request.user, macchina, f'{p.titolo}: {nota}', False,
+                                   next(f for f in request.FILES.getlist('foto') if not (f.content_type or '').startswith('video/')))
                     except Exception:
                         messages.error(request, 'La foto non si legge: riprova a scattarla.')
                         return redirect(torna)
-                    request.FILES['foto'].seek(0)
-                if not _foto_pulizia(request, p):
+                    for f in request.FILES.getlist('foto'):
+                        f.seek(0)
+                if not _foto_pulizia(request, p, motivo=True):
                     return redirect(torna)
                 p.nota, p.stato, p.fatta_il = f'Problema: {nota}'[:300], Pulizia.Stato.IMPEDITA, timezone.now()
                 p.save()
@@ -703,7 +715,9 @@ def pulizie(request, turno_id=None):
             'usa_telefono': __import__('turni.pulizie', fromlist=['usa_telefono']).usa_telefono(turno),
             'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
             'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user, 'pulizia'),
-            'e_capo': e_capoturno(request.user, timezone.localdate()), 'da_verificare': pulizie_da_verificare(request.user)})
+            'e_capo': e_capoturno(request.user, timezone.localdate()), 'da_verificare': pulizie_da_verificare(request.user),
+            'puo_notturne': bool(turno.capoturno and turno.fascia == Fascia.NOTTE and voce_notturne()
+                                 and not Pulizia.objects.filter(turno=turno, elemento=voce_notturne()).exists())})
 
     genera_pulizie(turno)
     voci = list(turno.pulizie.select_related('elemento', 'richiesta_da__dipendente'))
@@ -732,14 +746,22 @@ def pulizie(request, turno_id=None):
     return render(request, 'turni/pulizie.html', contesto)
 
 
-def _foto_pulizia(request, p):
-    """Salva la foto prima e quella dopo, se ci sono. False (con il messaggio) se una non si legge."""
-    for campo in ('foto_prima', 'foto'):
-        if request.FILES.get(campo):
+def _foto_pulizia(request, p, motivo=False):
+    """Salva le foto e i video prima e dopo (più di uno per volta, file del 21/11/2026).
+    motivo=True: i file del campo «foto» sono quelli del motivo (non si può fare, problema).
+    False (con il messaggio) se un file non si legge."""
+    from .pulizie import salva_file
+
+    for campo, momento in (('foto_prima', 'PRIMA'), ('foto', 'MOTIVO' if motivo else 'DOPO')):
+        files = request.FILES.getlist(campo)
+        if files:
             try:
-                salva_foto(p, request.FILES[campo], campo)
+                salva_file(p, files, momento)
+            except ValueError as e:
+                messages.error(request, f'{str(e)[:1].upper()}{str(e)[1:]}.' if 'troppo grande' in str(e) else 'Una foto non si legge: riprova a scattarla.')
+                return False
             except Exception:
-                messages.error(request, 'La foto non si legge: riprova a scattarla.')
+                messages.error(request, 'Una foto non si legge: riprova a scattarla.')
                 return False
     return True
 
@@ -784,6 +806,10 @@ def capoturno(request):
             p.verificata_il = timezone.now()
             p.nota_verifica = request.POST.get('nota', '')[:300]
             p.save()
+            if not ok:
+                from .pulizie import avvisa_da_rifare
+
+                avvisa_da_rifare(request.user, p)
         return redirect(f"{request.path}?giorno={giorno.isoformat()}#d{p.turno_id}")
 
     del_giorno = Turno.objects.filter(data=giorno, fascia__in=FASCE_LAVORATIVE if mie_fasce is None else mie_fasce)
@@ -941,9 +967,23 @@ def pulizie_piazzale(request):
 
     if not e_resp_piazzale(request.user):
         raise PermissionDenied
-    generale = pulizia_generale_in_attesa()
+    generale = None  # la pulizia generale dell'Impianto 2 non c'è più nel file delle regole (21/11/2026)
     if request.method == 'POST':
         azione = request.POST.get('azione')
+        if azione == 'notturne':
+            from .pulizie import assegna_notturne
+
+            capo = next((c for c in capi_della_notte() if str(c.pk) == request.POST.get('turno')), None)
+            if capo is None:
+                messages.error(request, 'Scegli il Capo Turno del Notturno.')
+            else:
+                try:
+                    assegna_notturne(request.user, capo, request.POST.get('nota', ''))
+                except ValueError as e:
+                    messages.error(request, str(e))
+                else:
+                    messages.success(request, f'Generiche Notturne assegnate a {capo.dipendente.nome_breve}.')
+            return redirect('turni:pulizie_piazzale')
         if azione in ('generale_si', 'generale_no') and generale:
             generale.esito = PuliziaGenerale.Esito.DA_FARE if azione == 'generale_si' else PuliziaGenerale.Esito.NON_NECESSARIA
             generale.deciso_da, generale.deciso_il = request.user, timezone.now()
@@ -958,12 +998,18 @@ def pulizie_piazzale(request):
             p.verificata_da, p.verificata_il = request.user, timezone.now()
             p.nota_verifica = request.POST.get('nota', '')[:300]
             p.save()
+            if azione == 'rifare':
+                from .pulizie import avvisa_da_rifare
+
+                avvisa_da_rifare(request.user, p)
             messages.success(request, f'{p.titolo}: {"convalidato" if azione == "convalida" else "da rifare"}.')
         return redirect('turni:pulizie_piazzale')
 
     capi = capi_della_notte()
+    notturne = voce_notturne()
     for c in capi:
         c.ricevute = list(c.pulizie.filter(richiesta_da__dipendente__resp_piazzale=True))
+        c.ha_notturne = bool(notturne and c.pulizie.filter(elemento=notturne).exists())
     adesso = timezone.localtime()
     return render(request, 'turni/pulizie_piazzale.html', {
         'generale': generale,
@@ -1036,6 +1082,20 @@ def foto(request, pulizia_id):
     if not f:
         raise Http404
     return FileResponse(f.open('rb'), content_type='image/jpeg')
+
+
+@login_required
+def allegato_pulizia(request, pk):
+    """Le foto e i video in più di una pulizia: li vede chi vede le foto della pulizia."""
+    from .models import AllegatoPulizia
+
+    a = get_object_or_404(AllegatoPulizia.objects.select_related('pulizia__turno__dipendente'), pk=pk)
+    p = a.pulizia
+    in_archivio = p.stato == Pulizia.Stato.VERIFICATA and (dipendente_di(request) or request.user.is_staff)
+    if not (p.turno.dipendente.utente_id == request.user.pk or in_archivio or e_capoturno(request.user, p.turno.data)
+            or p.richiesta_da_id == request.user.pk or e_resp_piazzale(request.user) or request.user.is_staff):
+        raise PermissionDenied
+    return FileResponse(a.file.open('rb'), content_type=a.tipo_file or ('video/mp4' if a.video else 'image/jpeg'))
 
 
 # ---------------------------------------------------------------- foto profilo

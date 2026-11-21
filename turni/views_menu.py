@@ -315,25 +315,19 @@ def in_attesa(request):
 
 
 def _tasto_avviso(n, utente):
-    """Avviso automatico delle pulizie (Giulia, 12/11/2026): il tasto giusto finché la pulizia non è fatta."""
+    """Avviso automatico delle pulizie: finché la pulizia non è fatta, «Rispondi» apre l'avviso con i 3 tasti
+    (file del 21/11/2026); chi lo riceve solo per sapere ha «Apri»."""
+    from django.urls import reverse
+
     from .models import Pulizia
-    from .piano_pulizie import nome_corto
+    from .pulizie import puo_rispondere_avviso
 
-    from .views_pulizie_piano import _e_capo
-
-    p = Pulizia.objects.filter(pk=n.oggetto_id).select_related('elemento', 'turno').first() if n.oggetto_id else None
-    if p is None or p.stato != Pulizia.Stato.DA_FARE:
+    p = Pulizia.objects.filter(pk=n.oggetto_id).select_related('elemento', 'turno__dipendente').first() if n.oggetto_id else None
+    if p is None or p.stato not in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA):
         return None
-    e = p.elemento
-    if e and e.con_avvio and not _e_capo(utente, p):
-        return {'testo': 'Apri', 'pk': p.pk}  # il manutentore riceve l'avviso, ma i tasti delle ottiche sono del Capo Turno
-    if e and e.con_avvio and not p.iniziata_il:
-        return {'testo': f'Pulizia {nome_corto(e)} iniziata', 'azione': 'iniziata', 'pk': p.pk}
-    if e and e.con_avvio:
-        return {'testo': f'Pulizia {nome_corto(e)} conclusa', 'pk': p.pk}
-    if e and e.avviso == 'ENTRO':
-        return {'testo': 'Rispondi', 'pk': p.pk}
-    return {'testo': 'Apri', 'pk': p.pk}
+    if puo_rispondere_avviso(utente, p):
+        return {'testo': 'Rispondi', 'url': reverse('turni:avviso_pulizia', args=[p.pk])}
+    return {'testo': 'Apri', 'url': reverse('turni:pulizia_voce', args=[p.pk])}
 
 
 def _righe_notifiche(request):

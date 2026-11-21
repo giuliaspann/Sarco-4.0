@@ -50,20 +50,24 @@ class PulizieTurnoTest(TestCase):
         self.client.login(username=turno.dipendente.nome.lower(), password='123456')
 
     def test_pulizie_standard_per_turno_postazione_e_ruolo(self):
-        """Il foglio "Regole Pulizie per Area e Ruolo"."""
-        # regole dell'11/11: le ottiche le fanno due operatori (qui da soli in turno, quindi tocca a loro)
-        self.assertEqual(self.voci(self.persona('A', '1T', 'IMP1', ruolo='OdL')), ['Macchine ottiche', 'Pozzetti'])
-        self.assertEqual(self.voci(self.persona('B', '2T', 'IMP1', ruolo='OdL')), ['Macchine ottiche'])
+        """Il file «Regole Pulizie - unico.xlsx» (21/11/2026)."""
+        mo = ['Macchine ottiche - fine turno', 'Macchine ottiche - metà turno']
+        # le ottiche (metà e fine turno) le fanno due operatori (qui da soli in turno, quindi tocca a loro)
+        self.assertEqual(self.voci(self.persona('A', '1T', 'IMP1', ruolo='OdL')), mo + ['Pozzetti'])
+        self.assertEqual(self.voci(self.persona('B', '2T', 'IMP1', ruolo='OdL')), mo)
         self.assertEqual(self.voci(self.persona('CT', '1T', 'IMP1', capoturno=True)), [])
-        self.assertEqual(self.voci(self.persona('MAN1', '2T', 'IMP1', ruolo='Man')), ['Generiche Manutenzione'])
-        self.assertEqual(self.voci(self.persona('C', 'N', 'IMP2', ruolo='OdL')), ['Incolore'])
-        self.assertEqual(self.voci(self.persona('D', '2T', 'BARROTTI', ruolo='OdL')), ['Barrotti'])
-        self.assertEqual(self.voci(self.persona('E', '1T', 'PALISTA', ruolo='Pal')), ['Pala', 'Piazzale + corridoio granella'])
-        self.assertEqual(self.voci(self.persona('E2', '1T', 'IMP1', ruolo='Pal')), ['Pala', 'Piazzale + corridoio granella'])
-        self.assertEqual(self.voci(self.persona('F', '2T', 'PALISTA', ruolo='Pal')), ['Pala'])
+        # carrelli: l'ultimo turno della settimana del manutentore (qui l'unico)
+        self.assertEqual(self.voci(self.persona('MAN1', '2T', 'IMP1', ruolo='Man')), ['Ingrassaggio e Pulizia Carrelli Elevatori'])
+        self.assertEqual(self.voci(self.persona('C', 'N', 'IMP2', ruolo='OdL')), ['Linea Incolore'])
+        self.assertEqual(self.voci(self.persona('D', '2T', 'BARROTTI', ruolo='OdL')), ['Linea Barrotti'])
+        # la pala una volta a settimana: all'ultimo turno del palista (finché non ne arriva uno più tardi)
+        self.assertEqual(self.voci(self.persona('E', '1T', 'PALISTA', ruolo='Pal')), ['Piazzale', 'Pulizia Settimanale Pala'])
+        self.assertEqual(self.voci(self.persona('E2', '1T', 'IMP1', ruolo='Pal')), ['Piazzale', 'Pulizia Settimanale Pala'])
+        self.assertEqual(self.voci(self.persona('F', '2T', 'PALISTA', ruolo='Pal')), ['Pulizia Settimanale Pala'])
         self.assertEqual(self.voci(self.persona('G', 'G', 'MULINO', ruolo='OdL')), ['Mulino e pressa'])
+        self.assertEqual(self.voci(self.persona('H', 'G', 'METALLI', ruolo='Pal')), ['Area Metalli', 'Pulizia Settimanale Area Metalli'])
         # di notte le generiche le assegna il responsabile; le ottiche le fanno due operatori di turno
-        self.assertEqual(self.voci(self.persona('I', 'N', 'IMP1', ruolo='OdL')), ['Macchine ottiche'])
+        self.assertEqual(self.voci(self.persona('I', 'N', 'IMP1', ruolo='OdL')), mo)
 
     def test_capo_turno_e_palista_ha_le_pulizie_di_tutti_e_due(self):
         crimi = self.persona('CRIMI', 'N', 'IMP1', capoturno=True)
@@ -74,15 +78,15 @@ class PulizieTurnoTest(TestCase):
         titone = self.persona('TITONE', '2T', 'IMP1', ruolo='Pal')
         titone.incarichi = 'IMP1/Pal SABBIA/OdL'
         titone.save()
-        self.assertEqual(self.voci(titone), ['Pala'])
+        self.assertEqual(self.voci(titone), ['Pulizia Settimanale Pala'])
 
     def test_prima_il_capo_turno_poi_il_responsabile_piazzale(self):
         op = self.persona('OP', '1T', 'IMP1', ruolo='OdL')
         capo = self.persona('CAPO', '1T', 'IMP1', capoturno=True)
         resp = self.persona('LOMBARDO GABRIELE', 'G', 'UFFICIO', resp_piazzale=True)
         genera_pulizie(op)
-        p = op.pulizie.get(elemento__nome='Macchine ottiche')
-        self.adesso = alle(13, 40)
+        p = op.pulizie.get(elemento__nome='Macchine ottiche - fine turno')
+        self.adesso = alle(13, 50)
         self.entra(op)
         self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {'azione': 'fatta', 'pulizia': p.pk})
         p.refresh_from_db()
@@ -111,7 +115,7 @@ class PulizieTurnoTest(TestCase):
         capo = self.persona('CAPO', '1T', 'IMP1', capoturno=True)
         for t in (mattina, sera):
             genera_pulizie(t)
-        p_sera = sera.pulizie.get(elemento__nome='Macchine ottiche')  # da solo in turno: le ottiche toccano a lui
+        p_sera = sera.pulizie.get(elemento__nome='Macchine ottiche - metà turno')  # da solo in turno: le ottiche toccano a lui
         p_sera.stato = Pulizia.Stato.FATTA
         p_sera.save()
         self.entra(capo)
@@ -135,7 +139,7 @@ class PulizieTurnoTest(TestCase):
     def test_linea_incolore_un_ora_e_un_quarto_prima_della_fine_con_foto(self):
         t = self.persona('A', '1T', 'IMP2')
         genera_pulizie(t)
-        p = t.pulizie.get(elemento__nome='Incolore')
+        p = t.pulizie.get(elemento__nome='Linea Incolore')
         self.entra(t)
         url = reverse('turni:pulizie_turno', args=[t.pk])
         self.assertContains(self.client.get(reverse('turni:pulizie')), 'Dalle 12:45')  # 1:15 prima della fine (Giulia, 12/11)
@@ -160,7 +164,7 @@ class PulizieTurnoTest(TestCase):
         p = barrotti.pulizie.get()
         r = self.client.get(reverse('turni:pulizie_turno', args=[barrotti.pk]) + f'?fai=assegnata&voce={p.pk}')
         self.assertContains(r, 'Foto dopo')
-        self.assertNotContains(r, 'Foto prima')
+        self.assertContains(r, 'Foto prima<small class="pl-facolt">facoltative</small>')  # più foto e video sempre possibili (21/11/2026)
         self.client.post(reverse('turni:pulizie_turno', args=[barrotti.pk]), {'azione': 'fatta', 'pulizia': p.pk})
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # serve la foto dopo
@@ -172,7 +176,7 @@ class PulizieTurnoTest(TestCase):
         self.entra(mulino)
         p = mulino.pulizie.get()
         r = self.client.get(reverse('turni:pulizie_turno', args=[mulino.pk]) + f'?fai=assegnata&voce={p.pk}')
-        self.assertNotContains(r, 'Foto dopo')  # solo tasto
+        self.assertContains(r, 'Foto dopo<small class="pl-facolt">facoltative</small>')  # solo tasto: le foto sono facoltative
         self.client.post(reverse('turni:pulizie_turno', args=[mulino.pk]), {'azione': 'fatta', 'pulizia': p.pk})
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.FATTA)
@@ -182,7 +186,7 @@ class PulizieTurnoTest(TestCase):
         capo = self.persona('CAPO', '1T', 'IMP1', capoturno=True)
         resp = self.persona('LOMBARDO GABRIELE', 'G', 'UFFICIO', resp_piazzale=True)
         genera_pulizie(palista)
-        p = palista.pulizie.get(elemento__nome='Piazzale + corridoio granella')
+        p = palista.pulizie.get(elemento__nome='Piazzale')
         self.entra(palista)
         r = self.client.get(reverse('turni:pulizie_turno', args=[palista.pk]) + f'?fai=assegnata&voce={p.pk}')
         self.assertContains(r, 'Piazzale pulito')
@@ -221,21 +225,16 @@ class PulizieTurnoTest(TestCase):
         self.assertEqual((p.turno, p.richiesta_da), (op, capo.dipendente.utente))
         self.assertIn('Lombardo', p.nota)
 
-    def test_pulizia_generale_impianto_2_ogni_due_settimane(self):
+    def test_pulizia_generale_impianto_2_non_si_chiede_piu(self):
+        """Non c'è più nel file delle regole (21/11/2026)."""
         resp = self.persona('LOMBARDO GABRIELE', 'G', 'UFFICIO', resp_piazzale=True)
         self.entra(resp)
-        self.assertContains(self.client.get(reverse('turni:pulizie_piazzale')), 'Pulizia generale Impianto 2')
-        self.client.post(reverse('turni:pulizie_piazzale'), {'azione': 'generale_no'})
-        self.assertEqual(PuliziaGenerale.objects.get().esito, PuliziaGenerale.Esito.NON_NECESSARIA)
-        self.assertIsNone(pulizia_generale_in_attesa())  # fino a tra 2 settimane non chiede più
-        self.adesso = alle(9, giorno=GIORNO + timedelta(days=14))
-        r = self.client.post(reverse('turni:pulizie_piazzale'), {'azione': 'generale_si'})
-        self.assertIn('area=IMP2', r['Location'])
-        self.assertEqual(PuliziaGenerale.objects.first().esito, PuliziaGenerale.Esito.DA_FARE)
-        self.assertEqual(PuliziaGenerale.objects.count(), 2)
+        self.assertNotContains(self.client.get(reverse('turni:pulizie_piazzale')), 'Pulizia generale Impianto 2')
+        self.assertIsNone(pulizia_generale_in_attesa())
+        self.assertFalse(PuliziaGenerale.objects.exists())
 
     def test_voci_create_dalla_migrazione(self):
-        e = ElementoPulizia.objects.get(nome='Piazzale + corridoio granella')  # era "Piazzale": rinominata
+        e = ElementoPulizia.objects.get(nome='Piazzale')  # nome del file del 21/11/2026
         self.assertEqual((e.modo, e.convalida, e.tasto), ('SOLO_TASTO', 'PIAZZALE', 'Piazzale pulito'))
         e = ElementoPulizia.objects.get(nome='Pavimentazione + altro')
         self.assertEqual((e.modo, e.convalida, e.minuti_prima_fine), ('SOLO_TASTO', 'CT_RP', 30))

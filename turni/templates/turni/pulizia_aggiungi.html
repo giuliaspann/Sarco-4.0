@@ -5,8 +5,8 @@
 <div class="intestazione"><h1>Aggiungi pulizia</h1></div>
 <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
   <div class="pl-due-foto">
-    <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Prima</span></label>
-    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Dopo</span></label>
+    <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*,video/*" multiple data-riduci><span>📷 Prima</span></label>
+    <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Dopo</span></label>
   </div>
   <label>Dove e cosa hai pulito?
     <textarea name="nota" rows="3" maxlength="300" required placeholder="Es. nastro di carico: tolto il vetro accumulato e lavato il rullo"></textarea>

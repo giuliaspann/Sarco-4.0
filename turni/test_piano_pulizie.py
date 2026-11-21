@@ -1,5 +1,6 @@
 """Pulizie per tutti (Giulia, 12/11/2026): programma per giorno e settimana, «In corso adesso», scheda della pulizia,
-avvisi automatici (ottiche, pozzetti, vagli, Incolore, carrelli) e straordinarie del responsabile impianto."""
+avvisi automatici e straordinarie del responsabile impianto. Dal 21/11/2026 le regole sono quelle del file
+«Regole Pulizie - unico.xlsx»: avvisi con 3 tasti, ripetuti ogni 15 minuti, Non eseguita a fine turno, più foto e video."""
 
 from datetime import date, datetime, timedelta
 from io import BytesIO
@@ -69,7 +70,7 @@ class PianoPulizieTest(TestCase):
         self.assertContains(r, 'Bianchi L')
         self.assertContains(r, 'Giornaliero · 8–17:30')
         self.assertContains(r, 'Mulino e pressa')
-        self.assertContains(r, 'a metà turno')
+        self.assertContains(r, 'dopo metà turno')
         self.assertContains(r, 'f-mattina')
         # i giorni futuri si calcolano dalle regole, senza scrivere le pulizie
         domani = self.persona('Rossi Mario', giorno=LUNEDI + timedelta(days=1))
@@ -93,57 +94,83 @@ class PianoPulizieTest(TestCase):
         self.assertContains(r, reverse('turni:pulizie_programma'))
         self.assertContains(r, reverse('turni:pulizie_adesso'))
 
+    def messaggi(self, turno):
+        return list(Notifica.objects.filter(utente=turno.dipendente.utente).values_list('testo', flat=True))
+
     # ---------------------------------------------------------------- macchine ottiche
 
-    def test_ottiche_avviso_a_meta_turno_poi_iniziata_spunta_e_conclusa(self):
+    def test_ottiche_avviso_dopo_meta_turno_poi_iniziata_e_conclusa_senza_manutentore(self):
         a = self.persona('Rossi Mario', livello_mo=1)
-        b = self.persona('Bianchi Luca', livello_mo=1)
+        self.persona('Bianchi Luca', livello_mo=1)
         ct = self.persona('Galli Rino', capoturno=True)
         man = self.persona('Neri Ugo', ruolo='Man', mansione=Mansione.MANUTENTORE)
-        self.adesso = alle(9, 59)
-        pp.controlla()  # parte solo quello dei pozzetti (entro le 7)
+        self.adesso = alle(10, 14)
+        pp.controlla()  # partono solo i pozzetti (60 minuti dopo l'inizio)
         self.assertFalse(any('ottiche' in t for t in self.notifiche(ct)))
-        self.adesso = alle(10)
+        self.adesso = alle(10, 15)  # 15 minuti dopo metà turno (file del 21/11/2026)
         self.assertEqual(pp.controlla(), 1)
-        self.assertEqual(pp.controlla(), 0)  # una volta sola
-        self.assertTrue(any('Macchine ottiche: è metà turno' in t for t in self.notifiche(ct)))
-        self.assertTrue(any('metà turno' in t for t in self.notifiche(man)))
+        self.assertEqual(pp.controlla(), 0)  # la ripetizione arriva solo dopo 15 minuti
+        self.assertIn('🔔 Macchine ottiche - metà turno', self.notifiche(ct))
+        self.assertIn('Sono passati 15 min da metà turno: completa la pulizia.', self.messaggi(ct))
+        self.assertFalse(any('ottiche' in t for t in self.notifiche(man)))  # avviso solo al Capo Turno
         self.assertFalse(self.notifiche(a))
-        # nel centro notifiche c'è il tasto «Pulizia ottiche iniziata»
+        p = Pulizia.objects.filter(elemento__nome='Macchine ottiche - metà turno', turno=a).get()
+        # nel centro notifiche «Rispondi» apre l'avviso con i 3 tasti
         self.entra(ct)
-        self.assertContains(self.client.get(reverse('turni:notifiche')), 'Pulizia ottiche iniziata')
-        p = Pulizia.objects.filter(elemento__nome='Macchine ottiche', turno=a).get()
+        self.assertContains(self.client.get(reverse('turni:notifiche')), '/turni/pulizie/avviso/')
+        r = self.client.get(reverse('turni:avviso_pulizia', args=[p.pk]))
+        self.assertContains(r, 'Effettuata')
+        self.assertContains(r, 'Non effettuata')
+        self.assertContains(r, 'Ricordamelo tra')
         url = reverse('turni:pulizia_voce', args=[p.pk])
+        self.assertContains(r, f'href="{url}"')  # Effettuata = la stessa scheda di «Conferma pulizia»
         self.client.post(url, {'azione': 'iniziata'})
-        self.assertEqual(Pulizia.objects.filter(elemento__nome='Macchine ottiche', iniziata_il__isnull=False).count(), 2)
+        self.assertEqual(Pulizia.objects.filter(elemento__nome='Macchine ottiche - metà turno', iniziata_il__isnull=False).count(), 2)
         self.assertContains(self.client.get(reverse('turni:pulizie_programma') + f'?giorno={LUNEDI.isoformat()}'), 'In corso')
-        # «Conclusa» solo dopo la spunta del manutentore
+        scheda = self.client.get(url).content.decode()
+        self.assertNotIn('Manutentore: completato', scheda)  # niente più check del manutentore
         self.client.post(url, {'azione': 'conclusa'})
-        self.assertEqual(Pulizia.objects.filter(elemento__nome='Macchine ottiche', stato=Pulizia.Stato.FATTA).count(), 0)
-        # la spunta «Manutentore completato» la mette il Capo Turno (Giulia, 13/11/2026)
-        self.client.post(url, {'azione': 'manutentore', 'fatto': '1'})
-        self.client.post(url, {'azione': 'conclusa'})
-        righe = Pulizia.objects.filter(elemento__nome='Macchine ottiche')
+        righe = Pulizia.objects.filter(elemento__nome='Macchine ottiche - metà turno')
         self.assertEqual({r.stato for r in righe}, {Pulizia.Stato.FATTA})
         self.assertTrue(all(pp.va_al_rp(r) for r in righe))
         self.assertEqual(pp.stato_di(righe[0]), 'rp')
-        del b
+
+    def test_ottiche_fine_turno_si_conclude_solo_negli_ultimi_15_minuti(self):
+        a = self.persona('Rossi Mario', livello_mo=1)
+        self.persona('Bianchi Luca', livello_mo=1)
+        ct = self.persona('Galli Rino', capoturno=True)
+        genera_pulizie(a)
+        p = a.pulizie.get(elemento__nome='Macchine ottiche - fine turno')
+        self.entra(ct)
+        url = reverse('turni:pulizia_voce', args=[p.pk])
+        self.adesso = alle(13, 30)
+        self.client.post(url, {'azione': 'iniziata'})
+        self.client.post(url, {'azione': 'conclusa'})
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # troppo presto: dalle 13:45
+        self.adesso = alle(13, 45)
+        pp.controlla()
+        self.assertIn('Mancano 15 min alla fine del turno: completa la pulizia.', self.messaggi(ct))
+        self.client.post(url, {'azione': 'conclusa'})
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.FATTA)
 
     # ---------------------------------------------------------------- pozzetti
 
-    def test_pozzetti_alle_7_chiede_al_capo_turno_che_puo_cambiare_nome(self):
+    def test_pozzetti_60_minuti_dopo_l_inizio_al_capo_turno_che_puo_cambiare_nome(self):
         a = self.persona('Rossi Mario')
         b = self.persona('Bianchi Luca')
         ct = self.persona('Galli Rino', capoturno=True)
         self.adesso = alle(7)
         pp.controlla()
-        self.assertTrue(any('Pozzetti: sono stati puliti?' in t for t in self.notifiche(ct)))
+        self.assertIn('🔔 Pozzetti', self.notifiche(ct))
+        self.assertIn("Sono passati 60 min dall'inizio del turno: completa la pulizia.", self.messaggi(ct))
         p = Pulizia.objects.get(elemento__nome='Pozzetti')
         altro = b if p.turno == a else a
         self.entra(ct)
         r = self.client.get(reverse('turni:pulizia_voce', args=[p.pk]))
         self.assertContains(r, 'Fatta da')
-        self.assertContains(r, 'Non ancora')
+        self.assertNotContains(r, 'Non ancora')  # sostituito da «Ricordamelo tra» nell'avviso
         self.client.post(reverse('turni:pulizia_voce', args=[p.pk]), {'azione': 'conferma', 'fatta_da': altro.dipendente_id})
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.FATTA)
@@ -164,7 +191,7 @@ class PianoPulizieTest(TestCase):
 
     # ---------------------------------------------------------------- vagli, Incolore, carrelli
 
-    def test_vagli_45_minuti_prima_della_fine(self):
+    def test_vagli_45_minuti_prima_della_fine_tasti_al_manutentore(self):
         ct = self.persona('Galli Rino', capoturno=True, giorno=MERCOLEDI)
         man = self.persona('Neri Ugo', ruolo='Man', mansione=Mansione.MANUTENTORE, giorno=MERCOLEDI)
         self.persona('Rossi Mario', giorno=MERCOLEDI)
@@ -173,35 +200,50 @@ class PianoPulizieTest(TestCase):
         self.assertFalse(any('vagli' in t.lower() for t in self.notifiche(ct)))
         self.adesso = alle(13, 15, MERCOLEDI)
         pp.controlla()
-        self.assertTrue(any('Controllo vagli zig-zag: mancano 45 minuti' in t for t in self.notifiche(ct)))
-        self.assertTrue(any('mancano 45 minuti' in t for t in self.notifiche(man)))
+        self.assertIn('🔔 Controllo vagli zig-zag', self.notifiche(ct))
+        self.assertIn('🔔 Controllo vagli zig-zag', self.notifiche(man))
+        self.assertIn('Mancano 45 min alla fine del turno: completa il controllo.', self.messaggi(man))
+        p = Pulizia.objects.get(elemento__nome='Controllo vagli zig-zag')
+        # i tasti li usa chi conferma (il Manutentore); il Capo Turno lo riceve solo per sapere
+        self.entra(man)
+        self.assertContains(self.client.get(reverse('turni:avviso_pulizia', args=[p.pk])), 'Effettuata')
+        self.entra(ct)
+        r = self.client.get(reverse('turni:avviso_pulizia', args=[p.pk]))
+        self.assertNotContains(r, 'Effettuata')
+        self.assertContains(r, 'solo per sapere')
 
-    def test_incolore_un_ora_e_un_quarto_prima_all_operatore_dell_impianto_2(self):
+    def test_linea_incolore_75_minuti_prima_all_operatore_dell_impianto_2(self):
         op = self.persona('Costa Dino', postazione='IMP2')
         ct = self.persona('Galli Rino', capoturno=True)
         self.adesso = alle(12, 45)
         pp.controlla()
-        self.assertTrue(any('Incolore: mancano 75 minuti' in t for t in self.notifiche(op)))
+        self.assertIn('🔔 Linea Incolore', self.notifiche(op))
         self.assertFalse(any('Incolore' in t for t in self.notifiche(ct)))
-        p = Pulizia.objects.get(elemento__nome='Incolore')
+        p = Pulizia.objects.get(elemento__nome='Linea Incolore')
         self.assertTrue(p.disponibile)
         self.assertEqual(pp.percorso(p), 'PIAZZALE')  # la manda lui al responsabile piazzale
 
-    def test_carrelli_sabato_alle_16_ai_manutentori(self):
+    def test_carrelli_nell_ultimo_turno_della_settimana_del_manutentore(self):
+        venerdi = self.persona('Neri Ugo', '2T', 'MANUT', ruolo='', mansione=Mansione.MANUTENTORE, giorno=SABATO - timedelta(days=1))
         man = self.persona('Neri Ugo', '2T', 'MANUT', ruolo='', mansione=Mansione.MANUTENTORE, giorno=SABATO)
-        self.adesso = alle(15, 59, SABATO)
+        genera_pulizie(venerdi)
+        self.assertFalse(venerdi.pulizie.exists())  # non è l'ultimo turno della settimana
+        self.adesso = alle(21, 29, SABATO)
         pp.controlla()
         self.assertFalse(self.notifiche(man))
-        self.adesso = alle(16, 0, SABATO)
+        self.adesso = alle(21, 30, SABATO)
         pp.controlla()
-        self.assertTrue(any('Carrelli elevatori' in t for t in self.notifiche(man)))
+        self.assertIn('🔔 Ingrassaggio e Pulizia Carrelli Elevatori', self.notifiche(man))
+        self.assertIn("Mancano 30 min alla fine del turno: completa l'ingrassaggio e la pulizia.", self.messaggi(man))
 
-    def test_avvisi_nell_amministrazione_dalla_migrazione(self):
-        e = ElementoPulizia.objects.get(nome='Macchine ottiche')
-        self.assertEqual((e.avviso, e.avviso_a, e.con_avvio), ('META', 'CT_MAN', True))
-        self.assertEqual(ElementoPulizia.objects.get(nome='Pozzetti').avviso_ora.hour, 7)
-        self.assertEqual(ElementoPulizia.objects.get(nome='Incolore').minuti_prima_fine, 75)
-        self.assertEqual(ElementoPulizia.objects.get(nome='Generiche Sabbia Superbi').convalida, 'PIAZZALE')
+    def test_voci_dal_file_delle_regole(self):
+        e = ElementoPulizia.objects.get(nome='Macchine ottiche - metà turno')
+        self.assertEqual((e.avviso, e.avviso_minuti, e.avviso_a, e.con_avvio, e.da_meta), ('DMETA', 15, 'CT', True, True))
+        self.assertEqual(ElementoPulizia.objects.get(nome='Pozzetti').avviso, 'INIZIO')
+        self.assertEqual(ElementoPulizia.objects.get(nome='Linea Incolore').minuti_prima_fine, 75)
+        self.assertEqual(ElementoPulizia.objects.get(nome='Generiche Superbi').convalida, 'PIAZZALE')
+        self.assertEqual(ElementoPulizia.objects.filter(attivo=True).count(), 16)
+        self.assertFalse(ElementoPulizia.objects.get(nome='Pulizia generale Impianto 2').attivo)
 
     # ---------------------------------------------------------------- straordinarie
 
@@ -252,3 +294,130 @@ class PianoPulizieTest(TestCase):
         self.client.post(reverse('turni:pulizia_voce', args=[p.pk]), {'azione': 'conferma'})
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)
+
+
+@override_settings(PUSH_SINCRONO=True)
+class FileRegolePulizieTest(TestCase):
+    """Le regole nuove del file «Regole Pulizie - unico.xlsx» (21/11/2026)."""
+
+    setUp = PianoPulizieTest.setUp
+    persona = PianoPulizieTest.persona
+    entra = PianoPulizieTest.entra
+    notifiche = PianoPulizieTest.notifiche
+
+    def rp(self):
+        rp = Dipendente.objects.create(nome='Lombardo Gabri', resp_piazzale=True)
+        rp.utente = get_user_model().objects.create_user('rp', password='123456')
+        rp.save()
+        return rp
+
+    def test_avviso_ripetuto_ogni_15_minuti_finche_nessuno_risponde(self):
+        op = self.persona('Costa Dino', postazione='IMP2')
+        self.adesso = alle(12, 45)
+        self.assertEqual(pp.controlla(), 1)
+        self.adesso = alle(12, 50)
+        self.assertEqual(pp.controlla(), 0)
+        self.adesso = alle(13, 0)
+        self.assertEqual(pp.controlla(), 1)  # 15 minuti dopo, ancora da fare: si ripete
+        self.assertEqual(Notifica.objects.filter(utente=op.dipendente.utente, titolo='🔔 Linea Incolore').count(), 2)
+        # fatta: niente più ripetizioni
+        Pulizia.objects.filter(elemento__nome='Linea Incolore').update(stato=Pulizia.Stato.FATTA)
+        self.adesso = alle(13, 15)
+        self.assertEqual(pp.controlla(), 0)
+
+    def test_ricordamelo_poi_torna_identico(self):
+        op = self.persona('Costa Dino', postazione='IMP2')
+        self.adesso = alle(12, 45)
+        pp.controlla()
+        p = Pulizia.objects.get(elemento__nome='Linea Incolore')
+        self.entra(op)
+        self.client.post(reverse('turni:avviso_pulizia', args=[p.pk]), {'minuti': '30'})
+        self.adesso = alle(13, 5)
+        self.assertEqual(pp.controlla(), 0)  # rimandato: niente ripetizione a 15 minuti
+        self.adesso = alle(12, 45) + timedelta(minutes=30, seconds=5)
+        self.assertEqual(pp.controlla(), 1)
+        self.assertEqual(Notifica.objects.filter(utente=op.dipendente.utente, titolo='🔔 Linea Incolore').count(), 2)
+
+    def test_fine_turno_non_eseguita_avvisa_capi_turno_e_rp(self):
+        rp = self.rp()
+        self.persona('Costa Dino', postazione='SUPERBI')
+        self.adesso = alle(13, 45)
+        pp.controlla()
+        p = Pulizia.objects.get(elemento__nome='Generiche Superbi')
+        self.adesso = alle(14, 1)
+        pp.controlla()
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.NON_ESEGUITA)
+        self.assertEqual(pp.stato_di(p), 'nonfatta')
+        self.assertTrue(Notifica.objects.filter(utente=rp.utente, titolo__contains='non eseguita').exists())
+        self.entra(rp)
+        self.assertContains(self.client.get(reverse('turni:pulizia_voce', args=[p.pk])), 'Non eseguita')
+
+    def test_pala_settimanale_solo_nell_ultimo_turno_del_palista(self):
+        lun = self.persona('Ferri Elio', '1T', 'PALISTA', ruolo='Pal')
+        gio = self.persona('Ferri Elio', '1T', 'PALISTA', ruolo='Pal', giorno=LUNEDI + timedelta(days=3))
+        genera_pulizie(lun)
+        genera_pulizie(gio)
+        self.assertNotIn('Pulizia Settimanale Pala', list(lun.pulizie.values_list('elemento__nome', flat=True)))
+        self.assertIn('Pulizia Settimanale Pala', list(gio.pulizie.values_list('elemento__nome', flat=True)))
+        self.assertIn('Piazzale', list(lun.pulizie.values_list('elemento__nome', flat=True)))
+
+    def test_piu_foto_e_video_con_la_nota(self):
+        op = self.persona('Costa Dino', postazione='SUPERBI')
+        genera_pulizie(op)
+        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        self.adesso = alle(13, 40)
+        self.entra(op)
+        video = SimpleUploadedFile('v.mp4', b'\x00\x00\x00\x18ftypmp42', content_type='video/mp4')
+        self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {
+            'azione': 'fatta', 'pulizia': p.pk, 'foto_prima': [foto(), foto()], 'foto': [foto(), video], 'nota': 'Tutto pulito'})
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.FATTA)
+        self.assertEqual(p.nota, 'Tutto pulito')
+        self.assertTrue(p.foto_prima and p.foto)
+        self.assertEqual(p.allegati.count(), 2)  # la seconda foto prima e il video
+        a = p.allegati.get(video=True)
+        r = self.client.get(reverse('turni:allegato_pulizia', args=[a.pk]))
+        self.assertEqual(r['Content-Type'], 'video/mp4')
+
+    def test_non_si_puo_fare_vuole_nota_e_foto_e_avvisa_capi_turno_e_rp(self):
+        rp = self.rp()
+        op = self.persona('Costa Dino', postazione='SUPERBI')
+        ct = self.persona('Galli Rino', capoturno=True)
+        genera_pulizie(op)
+        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        self.entra(op)
+        url = reverse('turni:pulizie_turno', args=[op.pk])
+        self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'motivo': 'Guasto', 'foto': foto()})
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # senza nota non passa
+        self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'motivo': 'Guasto', 'foto': foto(), 'nota': 'Nastro rotto'})
+        p.refresh_from_db()
+        self.assertEqual((p.stato, p.nota), (Pulizia.Stato.IMPEDITA, 'Guasto: Nastro rotto'))
+        self.assertTrue(Notifica.objects.filter(utente=rp.utente, titolo__contains='Non eseguibile').exists())
+        self.assertTrue(Notifica.objects.filter(utente=ct.dipendente.utente, titolo__contains='Non eseguibile').exists())
+
+    def test_capo_turno_registra_le_notturne_se_il_rp_e_assente(self):
+        ct = self.persona('Galli Rino', 'N', capoturno=True)
+        self.entra(ct)
+        r = self.client.get(reverse('turni:pulizie_turno', args=[ct.pk]))
+        self.assertContains(r, 'Registra le Generiche Notturne')
+        self.client.post(reverse('turni:pulizie_turno', args=[ct.pk]), {'azione': 'notturne'})
+        p = ct.pulizie.get(elemento__nome='Generiche Notturne')
+        self.assertEqual(p.richiesta_da, ct.dipendente.utente)
+        self.adesso = alle(5, 30, LUNEDI + timedelta(days=1))
+        pp.controlla()
+        self.assertIn('🔔 Generiche Notturne', self.notifiche(ct))
+
+    def test_rp_assegna_le_notturne_e_da_rifare_avvisa(self):
+        rp = self.rp()
+        ct = self.persona('Galli Rino', 'N', capoturno=True)
+        self.client.force_login(rp.utente)
+        self.client.post(reverse('turni:pulizie_piazzale'), {'azione': 'notturne', 'turno': ct.pk})
+        p = ct.pulizie.get(elemento__nome='Generiche Notturne')
+        self.assertTrue(Notifica.objects.filter(utente=ct.dipendente.utente, titolo='🧹 Generiche Notturne').exists())
+        Pulizia.objects.filter(pk=p.pk).update(stato=Pulizia.Stato.FATTA, fatta_il=timezone.now(), ok_capoturno_il=timezone.now())
+        self.client.post(reverse('turni:pulizie_piazzale'), {'azione': 'rifare', 'pulizia': p.pk, 'nota': 'Manca il pavimento'})
+        p.refresh_from_db()
+        self.assertEqual(p.stato, Pulizia.Stato.SEGNALATA)
+        self.assertTrue(Notifica.objects.filter(utente=ct.dipendente.utente, titolo__contains='Da rifare').exists())

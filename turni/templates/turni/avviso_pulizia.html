@@ -1,0 +1,34 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}{{ e.nome }}{% endblock %}
+{% block contenuto %}
+{# L'avviso con i 3 tasti (file «Regole Pulizie - unico.xlsx», 21/11/2026) #}
+<a class="tasto-indietro" href="{% url 'turni:notifiche' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Notifiche</a>
+<div class="intestazione"><h1>{{ e.nome }}</h1></div>
+
+<div class="pv-scheda av-scheda">
+  <p class="av-testo">{{ titolo }}: {{ testo|lower }}</p>
+  <p class="pv-riga"><b>Chi</b><span>{% if p.fatta_da_id %}{{ p.fatta_da.nome_breve }}{% else %}{{ p.turno.dipendente.nome_breve }}{% endif %}</span></p>
+  <p class="pv-riga"><b>Stato</b><span>{{ stato }}</span></p>
+</div>
+
+{% if fatta %}
+  <p class="st-esito ok">Questa pulizia non aspetta più una risposta: {{ stato|lower }}.</p>
+  <a class="bottone leggero piena-larghezza" href="{% url 'turni:pulizia_voce' p.pk %}">Apri la scheda</a>
+{% elif puo %}
+  <div class="av-tasti">
+    <a class="bottone pieno piena-larghezza av-tasto" href="{{ effettuata }}">✓ Effettuata</a>
+    <a class="bottone rifiuta piena-larghezza av-tasto" href="{{ non_effettuata }}">✕ Non effettuata</a>
+    <form method="post" class="av-rinvio">{% csrf_token %}
+      <p class="rq-sezione">Ricordamelo tra</p>
+      <div class="pv-due">
+        <button class="bottone leggero" name="minuti" value="15">15 minuti</button>
+        <button class="bottone leggero" name="minuti" value="30">30 minuti</button>
+      </div>
+    </form>
+  </div>
+  <p class="tenue piccolo pv-centro">«Effettuata» apre la stessa scheda di «Conferma pulizia»{% if controllo %}; «Non effettuata» è «Segnala un problema»{% else %}; «Non effettuata» chiede motivo, nota e foto{% endif %}.</p>
+{% else %}
+  <p class="tenue piccolo">Ti arriva solo per sapere: i tasti li usa chi conferma la pulizia.</p>
+  <a class="bottone leggero piena-larghezza" href="{% url 'turni:pulizia_voce' p.pk %}">Apri la scheda</a>
+{% endif %}
+{% endblock %}

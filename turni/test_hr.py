@@ -238,7 +238,7 @@ class MacchineOtticheTest(TestCase):
                                                incarichi='IMP1/CT' if capo else 'IMP1/OdL')
         for t in turni.values():
             genera_pulizie(t)
-        ottiche = set(Pulizia.objects.filter(elemento__nome='Macchine ottiche', turno__data=giorno).values_list('turno__dipendente__nome', flat=True))
+        ottiche = set(Pulizia.objects.filter(elemento__nome='Macchine ottiche - metà turno', turno__data=giorno).values_list('turno__dipendente__nome', flat=True))
         pavimento = set(Pulizia.objects.filter(elemento__nome='Pavimentazione + altro', turno__data=giorno).values_list('turno__dipendente__nome', flat=True))
         self.assertEqual(len(ottiche), 2)
         self.assertIn('ODL UNO', ottiche)  # chi ha 1 viene prima

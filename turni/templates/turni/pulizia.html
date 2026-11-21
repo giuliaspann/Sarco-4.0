@@ -37,6 +37,12 @@
   <a class="mn-capo-tasto" href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span><span><b>Da verificare</b></span>{% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% endif %}</a>
   <a class="mn-capo-tasto" href="{% url 'turni:richiedi_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></span><span><b>Richiedi pulizia</b></span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></span><span><b>Pulizia straordinaria</b></span></a>
+  {% if puo_notturne %}
+  {# Generiche Notturne: se il responsabile piazzale è assente le registra il Capo Turno (file del 21/11/2026) #}
+  <form method="post" action="{% url 'turni:pulizie_turno' turno.pk %}">{% csrf_token %}
+    <button class="mn-capo-tasto pl-notturne" name="azione" value="notturne" data-conferma="Registrare le Generiche Notturne a tuo nome? Fallo solo se il responsabile piazzale è assente."><span class="ig-ico">🌙</span><span><b>Registra le Generiche Notturne</b></span></button>
+  </form>
+  {% endif %}
 </div>
 {% else %}
 {# tutti i tasti della stessa grandezza, due per riga (Giulia, 12/11/2026) #}

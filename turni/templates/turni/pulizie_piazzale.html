@@ -35,6 +35,11 @@
   <span class="rq-testo"><b>{{ c.dipendente.nome_breve }}</b><small>Capo Turno {{ c.get_postazione_display|default:'notte' }}{% for p in c.ricevute %}{% if forloop.first %} · {% else %}, {% endif %}{{ p.titolo }}{% endfor %}</small></span>
   <span class="stato-chip {% if c.ricevute %}ok{% else %}attesa{% endif %}">{% if c.ricevute %}{{ c.ricevute|length }} assegnat{{ c.ricevute|length|pluralize:'a,e' }}{% else %}Assegna{% endif %}</span>
 </a>
+{% if not c.ha_notturne %}
+<form method="post" class="rp-notturne">{% csrf_token %}<input type="hidden" name="turno" value="{{ c.pk }}">
+  <button class="bottone leggero piena-larghezza" name="azione" value="notturne">🌙 Assegna le Generiche Notturne a {{ c.dipendente.nome_breve }}</button>
+</form>
+{% endif %}
 {% empty %}
 <p class="tenue piccolo">Stanotte non ci sono Capi Turno nel file dei turni.</p>
 {% endfor %}
@@ -45,7 +50,8 @@
   <b>{{ p.icona }} {{ p.titolo }}</b>
   <small class="tenue">{{ p.turno.dipendente.nome_breve }} · {{ p.fatta_il|date:'D j M H:i'|capfirst }}{% if p.ok_capoturno_il %} · ok di {{ p.ok_capoturno_da.dipendente.nome_breve|default:'Capo Turno' }}{% endif %}</small>
   {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
-  {% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Foto" loading="lazy"></a>{% endif %}
+  {% if p.foto_prima or p.foto %}<div class="vb-foto">{% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Dopo" loading="lazy"></a>{% endif %}</div>{% endif %}
+  {% include 'turni/_allegati.html' with allegati=p.allegati.all %}
   <form method="post" class="form-voce">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ p.pk }}">
     <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">

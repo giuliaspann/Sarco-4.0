@@ -41,7 +41,7 @@
   <b class="vb-titolo">{{ p.titolo }}</b>
   <span class="vb-chi">{{ p.turno.dipendente.nome_breve }}{% if p.fatta_il %} · alle {{ p.fatta_il|time:'H:i' }}{% endif %}{% if p.stato != 'FATTA' %} · {{ p.get_stato_display|lower }}{% endif %}</span>
   {% if p.nota %}<p class="istruzioni">“{{ p.nota }}”</p>{% endif %}
-  {% if p.foto_prima or p.foto %}<div class="vb-foto">{% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Dopo" loading="lazy"></a>{% endif %}</div>{% endif %}
+  {% if p.foto_prima or p.foto %}<div class="vb-foto">{% if p.foto_prima %}<a href="{% url 'turni:foto' p.pk %}?quale=prima" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}?quale=prima" alt="Prima" loading="lazy"></a>{% endif %}{% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="miniatura" src="{% url 'turni:foto' p.pk %}" alt="Dopo" loading="lazy"></a>{% endif %}</div>{% endif %}{% include 'turni/_allegati.html' with allegati=p.allegati.all %}
   <form method="post" class="vb-azioni">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ p.pk }}">
     <input type="text" name="nota" placeholder="Cosa va rifatto (se serve)" maxlength="300">

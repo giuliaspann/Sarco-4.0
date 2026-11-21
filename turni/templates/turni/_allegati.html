@@ -1,0 +1,2 @@
+{# Le foto e i video in più di una pulizia (file del 21/11/2026): miniature che si aprono a schermo intero #}
+{% if allegati %}<div class="vb-foto pv-allegati">{% for a in allegati %}<a href="{% url 'turni:allegato_pulizia' a.pk %}" target="_blank" title="{{ a.get_momento_display }}">{% if a.video %}<span class="pv-video">▶<small>{{ a.get_momento_display }}</small></span>{% else %}<img class="miniatura" src="{% url 'turni:allegato_pulizia' a.pk %}" alt="{{ a.get_momento_display }}" loading="lazy">{% endif %}</a>{% endfor %}</div>{% endif %}

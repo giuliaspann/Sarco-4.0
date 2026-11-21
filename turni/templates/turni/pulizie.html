@@ -26,31 +26,23 @@
     {% if voce.foto_richiesta %}<a href="{% url 'turni:foto' voce.pk %}?quale=richiesta" target="_blank" class="pl-foto-richiesta"><img src="{% url 'turni:foto' voce.pk %}?quale=richiesta" alt="Cosa va pulito"></a>{% endif %}
     {% if voce.stato == 'SEGNALATA' and voce.nota_verifica %}<p class="pl-segnalazione">Da rifare: {{ voce.nota_verifica }}</p>{% endif %}
     {% if not voce.disponibile %}
-    <p class="rp-avviso">Si fa dalle {{ voce.da_quando|time:'H:i' }}, un'ora prima della fine del turno.</p>
-    {% elif voce.elemento.modo == 'CONTROLLO' %}
-    <input type="text" name="nota" placeholder="Se c'è un problema, scrivilo qui" maxlength="250" class="pl-campo-nota">
-    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto{% if voce.elemento.macchina %} del problema{% else %} (facoltativa){% endif %}</span></label>
+    <p class="rp-avviso">Si conferma dalle {{ voce.da_quando|time:'H:i' }}.</p>
+    {% elif voce.elemento.controllo %}
+    {# controllo: «Controllo fatto» oppure «Segnala un problema» (nota obbligatoria, foto se riguarda una macchina) #}
+    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Foto o video{% if voce.elemento.macchina %} (obbligatori se c'è un problema){% elif voce.elemento.modo == 'CONTROLLO_FOTO' %} del controllo{% else %} (facoltativi){% endif %}</span></label>
+    <textarea name="nota" placeholder="Nota (facoltativa; se c'è un problema scrivilo qui)" maxlength="250" rows="2" class="pl-campo-nota"></textarea>
     <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta" formnovalidate>✓ {{ voce.elemento.tasto|default:'Controllo fatto' }}</button>
-    <button class="bottone avviso-btn piena-larghezza pl-invia" name="azione" value="problema">⚠️ Segnala un problema</button>
-    {% elif voce.elemento.modo == 'CONTROLLO_FOTO' %}
-    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto del controllo</span></label>
-    <input type="text" name="nota" placeholder="Nota (facoltativa; se c'è un problema scrivilo qui)" maxlength="250" class="pl-campo-nota">
-    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Controllo fatto' }}</button>
     <button class="bottone avviso-btn piena-larghezza pl-invia" name="azione" value="problema" formnovalidate>⚠️ Segnala un problema</button>
-    {% elif voce.elemento.modo == 'SOLO_TASTO' %}
-    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
-    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Segnala completata' }}</button>
-    {% elif voce.elemento.modo == 'FOTO_DOPO' %}
-    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto dopo</span></label>
-    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
-    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Segnala completata' }}</button>
     {% else %}
+    {# più foto e video per ogni pulizia, e la nota (file del 21/11/2026); il controllo delle foto previste è lato server #}
     <div class="pl-due-foto">
-      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci {% if voce.elemento.modo == 'PULIZIA_FOTO' %}required{% endif %}><span>📷 Foto prima</span></label>
-      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci {% if voce.elemento.modo == 'PULIZIA_FOTO' %}required{% endif %}><span>📷 Foto dopo</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*,video/*" multiple data-riduci><span>📷 Foto prima{% if voce.elemento.modo != 'PULIZIA_FOTO' %}<small class="pl-facolt">facoltative</small>{% endif %}</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Foto dopo{% if voce.elemento.modo != 'PULIZIA_FOTO' and voce.elemento.modo != 'FOTO_DOPO' %}<small class="pl-facolt">facoltative</small>{% endif %}</span></label>
     </div>
-    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
-    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Segnala completata' }}</button>
+    <p class="tenue piccolo">Puoi aggiungere più foto e anche video.</p>
+    <textarea name="nota" placeholder="Nota (facoltativa)" maxlength="300" rows="2" class="pl-campo-nota"></textarea>
+    <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="fatta">✓ {{ voce.elemento.tasto|default:'Conferma pulizia' }}</button>
+    <a class="bottone rifiuta piena-larghezza pl-invia" href="?fai=impedimento&voce={{ voce.pk }}">Non si può fare</a>
     {% endif %}
   </form>
   {% if squadra %}
@@ -84,8 +76,8 @@
     <div class="scegli">
       {% for m in motivi %}<label><input type="radio" name="motivo" value="{{ m }}" required><span>{{ m }}</span></label>{% endfor %}
     </div>
-    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci required><span>📷 Foto del motivo</span></label>
-    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="250" class="pl-campo-nota">
+    <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci required><span>📷 Foto o video del motivo (obbligatori)</span></label>
+    <textarea name="nota" placeholder="Nota (obbligatoria): cosa succede?" maxlength="250" rows="3" class="pl-campo-nota" required></textarea>
     <button class="bottone pieno piena-larghezza pl-invia pl-invia-impedimento" name="azione" value="impedita">⚠️ Segnala impedimento</button>
   </form>
   {% elif da_fare %}
@@ -104,10 +96,10 @@
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     {% include 'turni/_pl_cosa.html' with domanda='Cosa hai pulito?' %}
     <div class="pl-due-foto">
-      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*" capture="environment" data-riduci><span>📷 Foto prima</span></label>
-      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*" capture="environment" data-riduci><span>📷 Foto dopo</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto_prima" accept="image/*,video/*" multiple data-riduci><span>📷 Foto prima</span></label>
+      <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Foto dopo</span></label>
     </div>
-    <input type="text" name="nota" placeholder="Nota (facoltativa)" maxlength="300" class="pl-campo-nota">
+    <textarea name="nota" placeholder="Nota (facoltativa)" maxlength="300" rows="2" class="pl-campo-nota"></textarea>
     <button class="bottone pieno piena-larghezza pl-invia" name="azione" value="aggiuntiva">✓ Segnala completata</button>
   </form>
 

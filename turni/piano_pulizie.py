@@ -5,8 +5,10 @@
   si calcolano dalle regole (senza scriverle), così si vede in anticipo chi farà le macchine ottiche.
 - «In corso adesso» (timeline 4): i turni del giorno in ordine 1T, 2T, G, N; quello in corso è aperto.
 - Scheda della pulizia: i passaggi (avviso, iniziata, manutentore, conclusa, ok del Capo Turno, convalida).
-- Avvisi automatici: ottiche a metà turno, pozzetti entro le 7, vagli 45 minuti prima della fine,
-  Incolore 1:15 prima della fine, carrelli alle 16 (campi «avviso» delle voci di pulizia).
+- Avvisi automatici: come nel file «Regole Pulizie - unico.xlsx» (21/11/2026), colonne «Avviso - minuti»,
+  «Avviso - momento» e «Avviso - a chi». Il testo è sempre lo stesso schema; si ripete ogni 15 minuti finché
+  nessuno risponde; i 3 tasti (Effettuata, Non effettuata, Ricordamelo tra) li usa solo chi conferma la pulizia.
+  A fine turno, se la pulizia non è fatta, risulta Non eseguita (avvisati Capi Turno e responsabile piazzale).
 
 Chi conferma e chi convalida: convalida sempre il responsabile piazzale (RP). All'Impianto 1 gli operatori
 di linea non usano il telefono: conferma il Capo Turno (voci «CT_RP»). Negli altri reparti chi fa la pulizia
@@ -39,10 +41,11 @@ AREA_DI = {'IMP1': 'IMP1', 'IMP2': 'IMP2', 'BARROTTI': 'IMP2', 'SABBIA': 'SABBIA
 # stati come nelle proposte: colore e scritta
 STATI = {
     'fare': 'Da fare', 'corso': 'In corso', 'ct': 'Al Capo Turno', 'rp': 'Inviata al RP', 'ok': 'Convalidata',
-    'rifare': 'Da rifare', 'impedita': 'Non eseguibile',
+    'rifare': 'Da rifare', 'impedita': 'Non eseguibile', 'nonfatta': 'Non eseguita',
 }
 # nella riga di più persone vince lo stato che chiede ancora qualcosa
-PRIORITA = ['rifare', 'impedita', 'fare', 'corso', 'ct', 'rp', 'ok']
+PRIORITA = ['rifare', 'impedita', 'nonfatta', 'fare', 'corso', 'ct', 'rp', 'ok']
+RIPETI_OGNI = 15  # minuti tra un avviso e il successivo, finché nessuno risponde
 
 
 def sigla(fascia):
@@ -97,6 +100,8 @@ def stato_di(p):
         return 'rifare'
     if p.stato == S.IMPEDITA:
         return 'impedita'
+    if p.stato == S.NON_ESEGUITA:
+        return 'nonfatta'
     if p.stato == S.FATTA:
         return 'rp' if va_al_rp(p) or percorso(p) == 'NESSUNA' else 'ct'
     return 'corso' if p.iniziata_il else 'fare'
@@ -113,6 +118,10 @@ def quando_di(e, turno=None):
         return ''
     if e.avviso == A.META:
         return 'a metà turno'
+    if e.avviso == A.DOPO_INIZIO and e.avviso_minuti:
+        return f"avviso {e.avviso_minuti} min dopo l'inizio del turno"
+    if e.avviso == A.DOPO_META and e.avviso_minuti:
+        return f'avviso {e.avviso_minuti} min dopo metà turno'
     if e.avviso == A.ENTRO and e.avviso_ora:
         return f'entro le {e.avviso_ora:%H:%M}'
     if e.avviso == A.ORA and e.avviso_ora:
@@ -147,7 +156,8 @@ def piano_giorno(giorno, oggi=None):
         v = voci.setdefault((s, chiave), {
             'sigla': s, 'nome': nome, 'icona': icona, 'area': area, 'area_nome': dict(AREE).get(area, ''),
             'elemento': elemento, 'persone': [], 'stati': [], 'pk': pk, 'quando': quando_di(elemento),
-            'straordinaria': straordinaria, 'settimanale': bool(elemento and elemento.regole.filter(giorno__isnull=False).exists()),
+            'straordinaria': straordinaria,
+            'settimanale': bool(elemento and elemento.regole.filter(Q(giorno__isnull=False) | Q(ultimo_settimana=True)).exists()),
         })
         if persona and persona not in v['persone']:
             v['persone'].append(persona)
@@ -221,6 +231,10 @@ def momento(e, rif):
     inizio, fine = rif.inizio, rif.fine
     if e.avviso == A.META:
         return inizio + (fine - inizio) / 2
+    if e.avviso == A.DOPO_META:
+        return inizio + (fine - inizio) / 2 + timedelta(minutes=e.avviso_minuti or 0)
+    if e.avviso == A.DOPO_INIZIO:
+        return inizio + timedelta(minutes=e.avviso_minuti or 0)
     if e.avviso == A.PRIMA and e.avviso_minuti:
         return fine - timedelta(minutes=e.avviso_minuti)
     if e.avviso in (A.ORA, A.ENTRO) and e.avviso_ora:
@@ -238,53 +252,99 @@ def capi(turni, e):
 
 
 def destinatari(e, turni, righe):
+    """Chi riceve l'avviso, come nella colonna «Avviso - a chi»: [(utente_id, con_tasti)].
+    I 3 tasti li ha solo chi conferma la pulizia; gli altri lo ricevono solo per sapere (es. vagli: il Capo Turno)."""
     from .pulizie import manutentore_del_turno
 
     A = ElementoPulizia.AvvisoA
-    ids = []
+    chi = []
     if e.avviso_a in (A.CT, A.CT_MAN):
-        ids += [t.dipendente.utente_id for t in capi(turni, e)]
-    if e.avviso_a in (A.CT_MAN, A.MAN) and turni:
-        m = manutentore_del_turno(turni[0])
-        if m:
-            ids.append(m.dipendente.utente_id)
+        # il Capo Turno ha i tasti quando conferma lui (OdL dell'Impianto 1, ottiche, notturne)
+        tasti_ct = e.avviso_a == A.CT
+        chi += [(t.dipendente.utente_id, tasti_ct) for t in capi(turni, e)]
+    if e.avviso_a == A.CT_MAN:
+        con_pulizia = [p.turno.dipendente.utente_id for p in righe]
+        if con_pulizia:
+            chi += [(u, True) for u in con_pulizia]
+        elif turni:
+            m = manutentore_del_turno(turni[0])
+            if m:
+                chi.append((m.dipendente.utente_id, True))
     if e.avviso_a in (A.ADDETTI, A.MAN):
-        ids += [p.turno.dipendente.utente_id for p in righe]
-    return [i for i in dict.fromkeys(ids) if i]
+        chi += [(p.turno.dipendente.utente_id, True) for p in righe]
+    visti, out = set(), []
+    for u, tasti in sorted(chi, key=lambda x: not x[1]):  # se uno compare due volte vince «con i tasti»
+        if u and u not in visti:
+            visti.add(u)
+            out.append((u, tasti))
+    return out
 
 
 def nome_corto(e):
-    return e.nome.split()[-1].lower() if e.con_avvio else e.nome.lower()
+    return 'ottiche' if e and e.con_avvio else (e.nome.lower() if e else '')
 
 
-def testi(e, righe, per='ct'):
-    """`per` distingue chi riceve l'avviso: solo il Capo Turno ha il tasto «Pulizia ... iniziata»
-    (Giulia, 14/11/2026), il Manutentore riceve lo stesso avviso ma solo come informazione."""
+def cosa_completare(e):
+    """Come nella formula del file: dal tasto della pulizia."""
+    t = (e.tasto or '').lower()
+    if 'ingrassaggio' in t:
+        return "l'ingrassaggio e la pulizia"
+    if 'controllo' in t or e.controllo:
+        return 'il controllo'
+    return 'la pulizia'
+
+
+def quando_testo(e):
     A = ElementoPulizia.Avviso
-    if e.avviso == A.META:
-        testo = f'Quando cominciate tocca «Pulizia {nome_corto(e)} iniziata».' if per == 'ct' \
-            else f'Ti avvisiamo che state iniziando (o state per iniziare) «{e.nome.lower()}».'
-        return f'🔔 {e.nome}: è metà turno', testo
-    if e.avviso == A.ENTRO:
-        return f'🔔 {e.nome}: sono stati puliti?', f'Alle {e.avviso_ora:%H:%M} non risultano ancora fatti: rispondi e indica chi li ha puliti.'
+    m = e.avviso_minuti or 0
     if e.avviso == A.PRIMA:
-        cosa = 'il controllo' if e.controllo else 'la pulizia'
-        return f'🔔 {e.nome}: mancano {e.avviso_minuti} minuti alla fine del turno', f'È ora di fare {cosa} e mandare la conferma con la foto.'
-    return f'🔔 {e.nome}', f'Sono le {e.avviso_ora:%H:%M}: è ora di {e.nome.lower()}.'
+        return f'mancano {m} min alla fine del turno'
+    if e.avviso == A.DOPO_META:
+        return f'sono passati {m} min da metà turno'
+    if e.avviso == A.DOPO_INIZIO:
+        return f"sono passati {m} min dall'inizio del turno"
+    if e.avviso == A.META:
+        return 'è metà turno'
+    if e.avviso_ora:
+        return f'sono le {e.avviso_ora:%H:%M}'
+    return ''
+
+
+def testi(e, righe=None):
+    """Il testo dell'avviso, uguale per tutte le voci (colonna «Avviso - testo» del file):
+    «🔔 Linea Barrotti: mancano 15 min alla fine del turno: completa la pulizia.» → (titolo, testo)."""
+    q = quando_testo(e)
+    return f'🔔 {e.nome}', f'{q[:1].upper()}{q[1:]}: completa {cosa_completare(e)}.'
+
+
+def chiave_avviso(p):
+    return f'{p.elemento_id}-{p.turno.data.isoformat()}-{sigla(p.turno.fascia)}'
+
+
+def _manda(e, turni, righe, url_di):
+    from . import push
+
+    titolo, testo = testi(e, righe)
+    p0 = righe[0] if righe else None
+    url = url_di(p0)
+    for u, _tasti in destinatari(e, turni, righe):
+        push.invia([u], titolo, testo, url, tipo='avviso_pulizia', oggetto_id=p0.pk if p0 else None)
 
 
 def controlla(adesso=None):
-    """Manda gli avvisi delle pulizie arrivati all'ora giusta (una volta sola per voce, giorno e turno).
+    """Manda gli avvisi delle pulizie arrivati all'ora giusta, li ripete ogni 15 minuti finché la pulizia non è fatta
+    (o rimandata con «Ricordamelo tra») e a fine turno segna Non eseguite quelle rimaste da fare.
     Lo chiama ogni minuto il controllo in background (apps.py) o il comando «avvisi_pulizie»."""
-    from . import push
     from .pulizie import _al_manutentore, genera_pulizie
 
     adesso = adesso or timezone.now()
     oggi = timezone.localdate(adesso)
     mandati = 0
     voci = list(ElementoPulizia.objects.filter(attivo=True).exclude(avviso='').prefetch_related('regole'))
-    if not voci:
-        return 0
+
+    def url_di(p):
+        return reverse('turni:avviso_pulizia', args=[p.pk]) if p else reverse('turni:pulizie_adesso')
+
     for giorno in (oggi - timedelta(days=1), oggi):
         for s in ORDINE:
             turni = [t for t in Turno.objects.filter(data=giorno, fascia__in=fasce_di(s), settimana__pubblicata=True,
@@ -292,54 +352,76 @@ def controlla(adesso=None):
             if not turni:
                 continue
             rif = next((t for t in turni if t.fascia == FASCE[s]), turni[0])
-            if not (rif.inizio <= adesso < rif.fine):
+            if adesso >= rif.fine:
+                mandati += chiudi_turno(giorno, s, adesso)
+                continue
+            if adesso < rif.inizio:
                 continue
             for e in voci:
                 quando = momento(e, rif)
                 if quando is None or adesso < quando:
                     continue
-                chiave = f'{e.pk}-{giorno.isoformat()}-{s}'
-                if AvvisoPulizia.objects.filter(chiave=chiave).exists():
-                    continue
-                if not any(r.corrisponde(t) for r in e.regole.all() for t in turni):
+                regole = list(e.regole.all())
+                if regole and not any(r.corrisponde(t) for r in regole for t in turni):
                     continue
                 if e.promemoria:
                     _al_manutentore(e, rif)
-                else:
+                elif regole:
                     for t in turni:
                         genera_pulizie(t)
                 righe = list(Pulizia.objects.filter(elemento=e, turno__data=giorno, turno__fascia__in=fasce_di(s))
                              .select_related('turno__dipendente', 'elemento'))
-                fatte = righe and all(p.stato != Pulizia.Stato.DA_FARE for p in righe)
-                try:
-                    AvvisoPulizia.objects.create(chiave=chiave)
-                except IntegrityError:
-                    continue  # l'ha già mandato l'altro processo
-                if fatte:
-                    continue  # già fatta: niente da ricordare
-                titolo, _ = testi(e, righe)
-                url = reverse('turni:pulizia_voce', args=[righe[0].pk]) if righe else reverse('turni:pulizie_adesso')
-                oggetto_id = righe[0].pk if righe else None
-                A = ElementoPulizia.AvvisoA
-                if e.avviso == ElementoPulizia.Avviso.META and e.avviso_a == A.CT_MAN:
-                    # il Capo Turno ha il tasto per avviare, il Manutentore no (Giulia, 14/11/2026):
-                    # due testi diversi, non uno solo uguale per tutti
-                    from .pulizie import manutentore_del_turno
-
-                    ids_ct = [t.dipendente.utente_id for t in capi(turni, e)]
-                    m = manutentore_del_turno(turni[0]) if turni else None
-                    _, testo_ct = testi(e, righe, per='ct')
-                    _, testo_man = testi(e, righe, per='man')
-                    push.invia(ids_ct, titolo, testo_ct, url, tipo='avviso_pulizia', oggetto_id=oggetto_id)
-                    if m:
-                        push.invia([m.dipendente.utente_id], titolo, testo_man, url, tipo='avviso_pulizia',
-                                   oggetto_id=oggetto_id)
-                else:
-                    _, testo = testi(e, righe)
-                    push.invia(destinatari(e, turni, righe), titolo, testo, url, tipo='avviso_pulizia',
-                               oggetto_id=oggetto_id)
-                mandati += 1
+                if not regole and not righe:
+                    continue  # voce senza regole (Generiche Notturne): solo se qualcuno l'ha assegnata
+                da_fare = [p for p in righe if p.stato in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA)]
+                chiave = f'{e.pk}-{giorno.isoformat()}-{s}'
+                a = AvvisoPulizia.objects.filter(chiave=chiave).first()
+                if a is None:
+                    try:
+                        a = AvvisoPulizia.objects.create(chiave=chiave, ultimo_il=adesso)
+                    except IntegrityError:
+                        continue  # l'ha già mandato l'altro processo
+                    if righe and not da_fare:
+                        continue  # già fatta: niente da ricordare
+                    _manda(e, turni, da_fare or righe, url_di)
+                    mandati += 1
+                    continue
+                if not da_fare:
+                    continue
+                # ripetizione: alla fine del rinvio («Ricordamelo tra»), altrimenti ogni 15 minuti
+                if a.rimanda_al:
+                    if adesso < a.rimanda_al:
+                        continue
+                elif a.ultimo_il and adesso < a.ultimo_il + timedelta(minutes=RIPETI_OGNI):
+                    continue
+                n = AvvisoPulizia.objects.filter(pk=a.pk, ultimo_il=a.ultimo_il, rimanda_al=a.rimanda_al).update(
+                    ultimo_il=adesso, rimanda_al=None)
+                if n:  # un solo processo manda la ripetizione
+                    _manda(e, turni, da_fare, url_di)
+                    mandati += 1
     return mandati
+
+
+def chiudi_turno(giorno, s, adesso):
+    """Fine turno: le pulizie con avviso ancora da fare diventano Non eseguite; avvisati i Capi Turno in servizio e il RP.
+    Solo per i turni finiti da poco (6 ore), così le pulizie vecchie restano come sono."""
+    from . import manutenzione as mn
+    from .pulizie import resp_piazzale
+
+    righe = list(Pulizia.objects.filter(turno__data=giorno, turno__fascia__in=fasce_di(s), stato=Pulizia.Stato.DA_FARE,
+                                        elemento__isnull=False).exclude(elemento__avviso='')
+                 .select_related('turno__dipendente', 'elemento'))
+    chiuse = 0
+    for p in righe:
+        if not (p.turno.fine <= adesso < p.turno.fine + timedelta(hours=6)):
+            continue
+        if not Pulizia.objects.filter(pk=p.pk, stato=Pulizia.Stato.DA_FARE).update(stato=Pulizia.Stato.NON_ESEGUITA):
+            continue
+        chiuse += 1
+        mn.avvisa(mn.capiturno_oggi() + resp_piazzale(), None, f'⏱️ {p.titolo}: non eseguita',
+                  f'{p.turno.dipendente.nome_breve} · {NOMI.get(s, ("", ""))[0]} del {giorno:%d/%m}: a fine turno non risultava fatta.',
+                  reverse('turni:pulizia_voce', args=[p.pk]))
+    return chiuse
 
 
 def avvia_controllo():

@@ -260,8 +260,10 @@ def passa_pulizia(utente, p, turno):
 
 
 def pulizia_generale_in_attesa():
-    """La decisione sulla pulizia generale dell'Impianto 2, se è il momento (ogni 2 settimane). Avvisa il responsabile."""
-    from . import push
+    """La decisione sulla pulizia generale dell'Impianto 2, se è il momento (ogni 2 settimane). Avvisa il responsabile.
+    Spenta dal 21/11/2026: la pulizia generale Impianto 2 non è più nel file delle regole."""
+    return None
+    from . import push  # noqa: E402 (resta il codice di prima, se la si vuole riaccendere)
     from .models import PuliziaGenerale
 
     ultima = PuliziaGenerale.objects.first()
@@ -345,3 +347,135 @@ def usa_telefono(turno):
         return True
     return not any(p == 'IMP1' and (r or '').upper() == 'ODL' for p, r in turno.lista_incarichi) and not (
         turno.postazione == 'IMP1' and (turno.ruolo or '').upper() == 'ODL')
+
+
+# ---------------------------------------------------------------- file «Regole Pulizie - unico.xlsx» (Giulia, 21/11/2026)
+
+MAX_VIDEO = 100 * 1024 * 1024
+CAMPO_DI = {'PRIMA': 'foto_prima', 'DOPO': 'foto', 'MOTIVO': 'foto'}
+
+
+def _jpeg(file):
+    if file.size > MAX_FOTO:
+        raise ValueError('foto troppo grande')
+    img = ImageOps.exif_transpose(Image.open(file)).convert('RGB')
+    img.thumbnail((1600, 1600))
+    buf = BytesIO()
+    img.save(buf, 'JPEG', quality=75, optimize=True)
+    return ContentFile(buf.getvalue(), name='foto.jpg')
+
+
+def salva_file(p, files, momento):
+    """Più foto e più video per ogni pulizia o controllo. La prima foto va nel campo di sempre (foto prima / foto dopo),
+    le altre foto e tutti i video negli allegati. Chi rimanda i file di un momento sostituisce quelli di prima.
+    ValueError se un file non si legge o è troppo grande (niente viene salvato a metà per le foto principali)."""
+    from .models import AllegatoPulizia
+
+    files = [f for f in files if f]
+    if not files:
+        return
+    if p.pk is None:
+        p.save()
+    for a in p.allegati.filter(momento=momento):
+        a.file.delete(save=False)
+        a.delete()
+    prima_foto = True
+    for f in files:
+        tipo = (getattr(f, 'content_type', '') or '').lower()
+        if tipo.startswith('video/'):
+            if f.size > MAX_VIDEO:
+                raise ValueError('video troppo grande (massimo 100 MB)')
+            AllegatoPulizia.objects.create(pulizia=p, momento=momento, file=f, video=True, tipo_file=tipo[:60])
+        elif prima_foto:
+            salva_foto(p, f, CAMPO_DI[momento])
+            prima_foto = False
+        else:
+            AllegatoPulizia.objects.create(pulizia=p, momento=momento, file=_jpeg(f), tipo_file='image/jpeg')
+
+
+def ha_file(p, momento):
+    campo = getattr(p, CAMPO_DI[momento])
+    return bool(campo) or (p.pk is not None and p.allegati.filter(momento=momento).exists())
+
+
+def conferma_il_capo(p):
+    """Chi conferma la pulizia (colonna «Chi conferma sull'app»): il Capo Turno per gli OdL dell'Impianto 1, altrimenti chi la fa."""
+    return not usa_telefono(p.turno)
+
+
+def capi_del_turno(p):
+    from .piano_pulizie import fasce_di, sigla
+
+    return [t.dipendente.utente_id for t in Turno.objects.filter(
+        data=p.turno.data, fascia__in=fasce_di(sigla(p.turno.fascia)), capoturno=True, dipendente__attivo=True)
+        .select_related('dipendente') if t.dipendente.utente_id]
+
+
+def link_effettuata(p):
+    from django.urls import reverse
+
+    if conferma_il_capo(p):
+        return reverse('turni:pulizia_voce', args=[p.pk])
+    return reverse('turni:pulizie_turno', args=[p.turno_id]) + f'?fai=assegnata&voce={p.pk}'
+
+
+def link_non_effettuata(p):
+    from django.urls import reverse
+
+    if conferma_il_capo(p):
+        return reverse('turni:pulizia_voce', args=[p.pk]) + '?fai=impedita'
+    if p.elemento_id and p.elemento.controllo:
+        return link_effettuata(p)  # nei controlli «Non effettuata» = «Segnala un problema», nello stesso modulo
+    return reverse('turni:pulizie_turno', args=[p.turno_id]) + f'?fai=impedimento&voce={p.pk}'
+
+
+def puo_rispondere_avviso(utente, p):
+    """I 3 tasti dell'avviso li usa solo chi conferma la pulizia."""
+    if p.stato not in (Pulizia.Stato.DA_FARE, Pulizia.Stato.SEGNALATA):
+        return False
+    if conferma_il_capo(p):
+        return utente.pk in capi_del_turno(p)
+    return p.turno.dipendente.utente_id == utente.pk
+
+
+def avvisa_non_eseguibile(utente, p):
+    """«Non si può fare» / «Non effettuata»: avvisati i Capi Turno in servizio e il responsabile piazzale."""
+    from django.urls import reverse
+
+    from . import manutenzione as mn
+
+    chi = p.fatta_da.nome_breve if p.fatta_da_id else p.turno.dipendente.nome_breve
+    mn.avvisa(mn.capiturno_oggi() + resp_piazzale(), utente, f'🧹 Non eseguibile · {p.titolo}', f'{chi}: {p.nota}'[:300],
+              reverse('turni:pulizia_voce', args=[p.pk]))
+
+
+def avvisa_da_rifare(utente, p):
+    """«Da rifare»: la notifica a chi la deve confermare (chi la fa, o il Capo Turno per gli OdL dell'Impianto 1)."""
+    from . import manutenzione as mn
+
+    chi = capi_del_turno(p) if conferma_il_capo(p) else [p.turno.dipendente.utente_id]
+    mn.avvisa(chi, utente, f'🔁 Da rifare · {p.titolo}', p.nota_verifica or 'Va rifatta: guarda la nota nella scheda.',
+              link_effettuata(p))
+
+
+def voce_notturne():
+    from .regole_pulizie import NOTTURNE
+
+    return ElementoPulizia.objects.filter(nome=NOTTURNE, attivo=True).first()
+
+
+def assegna_notturne(utente, turno, nota=''):
+    """Le Generiche Notturne a un Capo Turno del Notturno: le assegna il RP entro le 17:00; se il RP è assente,
+    le registra il Capo Turno stesso (Giulia, 21/11/2026)."""
+    from . import push
+
+    e = voce_notturne()
+    if e is None:
+        raise ValueError('La voce «Generiche Notturne» non è attiva.')
+    if Pulizia.objects.filter(turno=turno, elemento=e).exists():
+        raise ValueError(f'Le Generiche Notturne sono già assegnate a {turno.dipendente.nome_breve}.')
+    p = Pulizia.objects.create(turno=turno, elemento=e, richiesta_da=utente, nota=(nota or '').strip()[:300])
+    if turno.dipendente.utente_id and turno.dipendente.utente_id != utente.pk:
+        push.invia([turno.dipendente.utente_id], '🧹 Generiche Notturne', 'Te le assegna il responsabile piazzale: affidale agli OdL e confermale.',
+                   f'/turni/pulizie/voce/{p.pk}/', mittente=utente, tipo='pulizia', oggetto_id=p.pk)
+    return p

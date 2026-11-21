@@ -37,6 +37,7 @@
       {% if p.foto %}<a href="{% url 'turni:foto' p.pk %}" target="_blank"><img class="ar-foto" src="{% url 'turni:foto' p.pk %}" alt="Dopo" loading="lazy"></a>{% endif %}
     </div>
     {% endif %}
+    {% include 'turni/_allegati.html' with allegati=p.allegati.all %}
     {% if p.nota %}<p class="ar-commento">“{{ p.nota }}”</p>{% endif %}
     <p class="ar-ok">✓ Approvata{% if p.verificata_da %} da {{ p.verificata_da.dipendente.nome_breve|default:p.verificata_da.username }}{% endif %}</p>
   </section>

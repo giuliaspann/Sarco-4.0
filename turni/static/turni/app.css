@@ -2667,6 +2667,7 @@ a.ga-aggiungi b { font-weight: 700; }
 .pp-ok { background: #e3f5e1; color: #2f7a2a; }
 .pp-rifare { background: #fcd9d9; color: #9b1c1c; }
 .pp-impedita { background: #fde8d7; color: #9a3412; }
+.pp-nonfatta { background: #fee2e2; color: #991b1b; }
 .pp-tabella { display: grid; grid-template-columns: 34px repeat(7, minmax(0, 1fr)); gap: 5px; align-items: center; padding: 10px 8px;
   background: var(--carta); border: 1px solid var(--bordo); border-radius: 16px; margin: 0 0 10px; }
 .pp-giorno { display: flex; flex-direction: column; align-items: center; font-size: .72rem; color: var(--tenue); text-decoration: none; text-transform: capitalize; }
@@ -2756,3 +2757,19 @@ body.scrive .scrivi, body.scrive .wa-scrivi, body.scrive .wa-solo-admin { bottom
 .vp-cambia { color: var(--primario); text-decoration: underline; font-weight: 700; }
 
 .vb-apri { color: var(--testo); text-decoration: none; }
+
+/* Avvisi con i 3 tasti, più foto e video (file Regole Pulizie, 21/11/2026) */
+.av-testo { margin: 0 0 10px; font-size: 1.08rem; font-weight: 700; line-height: 1.35; }
+.av-tasti { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 8px; }
+.av-tasto { min-height: 56px; font-size: 1.15rem; display: flex; align-items: center; justify-content: center; }
+.av-rinvio .rq-sezione { margin: 8px 0 6px; text-align: center; }
+.pl-foto-due { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pv-allegati { margin: 8px 0 12px; flex-wrap: wrap; }
+.pv-video { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 72px; height: 72px;
+  border-radius: 10px; background: #1f2937; color: #fff; font-size: 1.4rem; text-decoration: none; }
+.pv-video small { font-size: .6rem; margin-top: 2px; }
+.pv-non-si-puo { margin-top: 8px; }
+button.pl-notturne { width: 100%; font: inherit; cursor: pointer; text-align: left; }
+.rp-notturne { margin: -4px 0 10px; }
+.foto-btn span { white-space: normal; text-align: center; line-height: 1.15; }
+.pl-facolt { display: block; font-size: .72rem; font-weight: 600; opacity: .75; }

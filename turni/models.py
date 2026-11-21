@@ -407,6 +407,9 @@ class ElementoPulizia(models.Model):
         PRIMA = 'PRIMA', 'Minuti prima della fine del turno'
         ORA = 'ORA', "A un'ora precisa"
         ENTRO = 'ENTRO', "Se non è fatta entro un'ora precisa (chiede al Capo Turno)"
+        # file «Regole Pulizie - unico.xlsx» (Giulia, 21/11/2026): minuti dopo l'inizio o dopo metà turno
+        DOPO_INIZIO = 'INIZIO', "Minuti dopo l'inizio del turno"
+        DOPO_META = 'DMETA', 'Minuti dopo metà turno'
 
     class AvvisoA(models.TextChoices):
         CT_MAN = 'CT_MAN', 'Capo Turno e manutentore'
@@ -415,11 +418,13 @@ class ElementoPulizia(models.Model):
         MAN = 'MAN', 'Manutentori'
 
     avviso = models.CharField('avviso automatico', max_length=6, choices=Avviso.choices, blank=True, default='')
-    avviso_minuti = models.PositiveSmallIntegerField('minuti prima della fine', null=True, blank=True)
+    avviso_minuti = models.PositiveSmallIntegerField('minuti', null=True, blank=True)
     avviso_ora = models.TimeField("all'ora", null=True, blank=True)
     avviso_a = models.CharField('a chi', max_length=8, choices=AvvisoA.choices, blank=True, default='')
-    # macchine ottiche: «Pulizia iniziata», spunta del manutentore, poi «Pulizia conclusa»
-    con_avvio = models.BooleanField('tasti Iniziata / Conclusa con la spunta del manutentore', default=False)
+    # macchine ottiche: «Pulizia iniziata», poi «Pulizia conclusa» (senza check del manutentore dal 21/11/2026)
+    con_avvio = models.BooleanField('tasti Iniziata / Conclusa', default=False)
+    # «Orario: Metà turno»: la conferma si accetta da metà turno in poi
+    da_meta = models.BooleanField('si fa da metà turno', default=False)
 
     class Meta:
         verbose_name = 'mezzo / zona da pulire'
@@ -464,6 +469,8 @@ class RegolaPulizia(models.Model):
 
     # macchine ottiche e pavimentazione (Giulia, 11/11/2026)
     scelta = models.CharField('chi tra loro', max_length=6, choices=Scelta.choices, blank=True, default='')
+    # pulizie settimanali (Pala, Area Metalli, carrelli): solo l'ultimo turno della settimana previsto
+    ultimo_settimana = models.BooleanField("solo l'ultimo turno della settimana", default=False)
 
     class Meta:
         verbose_name = 'regola pulizia'
@@ -525,12 +532,34 @@ class RegolaPulizia(models.Model):
                                                      elemento__attivo=True).first()
             regola_mo = regola_mo or RegolaPulizia(postazione=self.postazione, ruolo=self.ruolo, fascia=self.fascia, scelta=self.Scelta.MO)
             return turno.pk not in regola_mo.scelti_mo(turno) and not turno.capoturno
+        if self.ultimo_settimana:
+            ultimi = ultimi_della_settimana(self.elemento, turno)
+            if turno.pk not in ultimi:
+                return False
+            if not self.a_rotazione:
+                return True
+            # tra chi fa l'ultimo turno, una persona sola (es. un solo manutentore per i carrelli)
+            return ultimi[turno.data.toordinal() % len(ultimi)] == turno.pk
         if not self.a_rotazione:
             return True
         # una persona al giorno: si gira tra chi corrisponde, in ordine di nome
         candidati = [t for t in Turno.objects.filter(data=turno.data, fascia=turno.fascia).order_by('dipendente__nome', 'pk')
                      if self.corrisponde(t)]
         return bool(candidati) and candidati[turno.data.toordinal() % len(candidati)].pk == turno.pk
+
+
+def ultimi_della_settimana(elemento, turno):
+    """I turni (pk, in ordine di nome) che fanno l'ultimo turno della settimana per la voce: tra tutti quelli della
+    settimana (lunedì-domenica) che corrispondono a una delle sue regole «ultimo turno», quelli che finiscono per ultimi."""
+    lunedi = turno.data - timedelta(days=turno.data.weekday())
+    regole = [r for r in elemento.regole.all() if r.ultimo_settimana]
+    turni = [t for t in Turno.objects.filter(data__range=(lunedi, lunedi + timedelta(days=6)), dipendente__attivo=True,
+                                             capoturno=False).select_related('dipendente').order_by('dipendente__nome', 'pk')
+             if t.lavora and any(r.corrisponde(t) for r in regole)]
+    if not turni:
+        return []
+    ultima = max(t.fine for t in turni)
+    return [t.pk for t in turni if t.fine == ultima]
 
 
 def percorso_foto(istanza, nome):
@@ -552,6 +581,8 @@ class Pulizia(models.Model):
         VERIFICATA = 'VERIFICATA', 'Verificata'
         SEGNALATA = 'SEGNALATA', 'Da rifare'
         IMPEDITA = 'IMPEDITA', 'Non eseguibile'
+        # a fine turno, se nessuno l'ha fatta né segnalata (Giulia, 21/11/2026)
+        NON_ESEGUITA = 'NON_ESEGUITA', 'Non eseguita'
 
     MOTIVI_IMPEDIMENTO = ['Mezzo in uso', 'Zona non accessibile', 'Mancano i prodotti', 'Guasto', 'Tempo insufficiente', 'Altro']
 
@@ -599,6 +630,8 @@ class Pulizia(models.Model):
     @property
     def da_quando(self):
         """Da che ora si può fare (es. Linea incolore: un'ora prima della fine del turno); None = subito."""
+        if self.elemento_id and self.elemento.da_meta:
+            return self.turno.inizio + (self.turno.fine - self.turno.inizio) / 2
         if self.elemento_id and self.elemento.minuti_prima_fine:
             return self.turno.fine - timedelta(minutes=self.elemento.minuti_prima_fine)
         return None
@@ -618,6 +651,36 @@ class Pulizia(models.Model):
             return self.elemento.nome
         testo = (self.nota or '').strip()
         return (testo[:40] + '…') if len(testo) > 40 else (testo or 'Pulizia')
+
+
+def percorso_allegato(istanza, nome):
+    import os
+
+    est = (os.path.splitext(nome)[1] or '.jpg').lower()[:6]
+    t = istanza.pulizia.turno
+    return f'pulizie/{t.data:%Y/%m}/{t.pk}-{istanza.pulizia_id}-{istanza.momento.lower()}-{timezone.now():%H%M%S%f}{est}'
+
+
+class AllegatoPulizia(models.Model):
+    """Le foto e i video in più di una pulizia o di un controllo (Giulia, 21/11/2026: più foto, più video e le note).
+    La prima foto «prima» e la prima «dopo» restano anche nei campi della pulizia, come prima."""
+
+    class Momento(models.TextChoices):
+        PRIMA = 'PRIMA', 'Prima'
+        DOPO = 'DOPO', 'Dopo'
+        MOTIVO = 'MOTIVO', 'Motivo (non si può fare / problema)'
+
+    pulizia = models.ForeignKey(Pulizia, on_delete=models.CASCADE, related_name='allegati')
+    momento = models.CharField(max_length=6, choices=Momento.choices, default=Momento.DOPO)
+    file = models.FileField(upload_to=percorso_allegato)
+    video = models.BooleanField(default=False)
+    tipo_file = models.CharField(max_length=60, blank=True)
+    creato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'foto o video della pulizia'
+        verbose_name_plural = 'foto e video delle pulizie'
+        ordering = ['momento', 'pk']
 
 
 class PuliziaGenerale(models.Model):
@@ -1922,6 +1985,9 @@ class AvvisoPulizia(models.Model):
 
     chiave = models.CharField(max_length=80, unique=True)
     inviato_il = models.DateTimeField(auto_now_add=True)
+    # ripetizioni ogni 15 minuti finché nessuno risponde, e «Ricordamelo tra» (Giulia, 21/11/2026)
+    ultimo_il = models.DateTimeField(null=True, blank=True)
+    rimanda_al = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'avviso pulizia inviato'
