@@ -708,7 +708,7 @@ document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.add
 // ---------------------------------------------------------------- PDF e foto con il tasto indietro (Giulia, 13/11/2026)
 // aperti da soli, sul telefono l'app a tutto schermo non ha modo di tornare indietro: li apro nella pagina «vedi»
 (function () {
-  const FOTO = /\/turni\/(foto\/\d+|messaggi\/foto\/\d+|statistiche\/analisi\/\d+\/foto|produzione\/\d+\/foto|manutenzione\/fermi\/\d+\/foto\/\w+|manutenzione\/foto\/\w+\/\d+)\/$/;
+  const FOTO = /\/turni\/(foto\/\d+|foto\/allegato\/\d+|messaggi\/foto\/\d+|statistiche\/analisi\/\d+\/foto|produzione\/\d+\/foto|manutenzione\/fermi\/\d+\/foto\/\w+|manutenzione\/foto\/\w+\/\d+)\/$/;
   const PDF = /\/pdf\/$/;
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href]');
@@ -721,6 +721,7 @@ document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.add
     e.preventDefault();
     const q = new URLSearchParams({ u: url.pathname + url.search });
     if (doc) { q.set('tipo', 'pdf'); q.set('nome', a.textContent.trim()); }
+    if (a.dataset.video) { q.set('tipo', 'video'); q.set('nome', a.title || 'Video'); }
     location.href = '/turni/vedi/?' + q.toString();
   });
   // «Indietro»: torna alla pagina di prima

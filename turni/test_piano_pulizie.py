@@ -379,6 +379,16 @@ class FileRegolePulizieTest(TestCase):
         a = p.allegati.get(video=True)
         r = self.client.get(reverse('turni:allegato_pulizia', args=[a.pk]))
         self.assertEqual(r['Content-Type'], 'video/mp4')
+        # a pezzi, come lo chiede l'iPhone
+        r = self.client.get(reverse('turni:allegato_pulizia', args=[a.pk]), HTTP_RANGE='bytes=0-3')
+        self.assertEqual(r.status_code, 206)
+        self.assertEqual(r.content, b'\x00\x00\x00\x18')
+        self.assertTrue(r['Content-Range'].startswith('bytes 0-3/'))
+        # dalla scheda il video si apre nella pagina con Indietro
+        self.assertContains(self.client.get(reverse('turni:pulizia_voce', args=[p.pk])), 'data-video="1"')
+        r = self.client.get(reverse('turni:vedi') + f'?u=/turni/foto/allegato/{a.pk}/&tipo=video', HTTP_REFERER='http://testserver/turni/pulizie/')
+        self.assertContains(r, '<video')
+        self.assertContains(r, 'Indietro')
 
     def test_non_si_puo_fare_vuole_nota_e_foto_e_avvisa_capi_turno_e_rp(self):
         rp = self.rp()

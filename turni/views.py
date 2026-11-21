@@ -1095,7 +1095,37 @@ def allegato_pulizia(request, pk):
     if not (p.turno.dipendente.utente_id == request.user.pk or in_archivio or e_capoturno(request.user, p.turno.data)
             or p.richiesta_da_id == request.user.pk or e_resp_piazzale(request.user) or request.user.is_staff):
         raise PermissionDenied
-    return FileResponse(a.file.open('rb'), content_type=a.tipo_file or ('video/mp4' if a.video else 'image/jpeg'))
+    tipo = a.tipo_file or ('video/mp4' if a.video else 'image/jpeg')
+    rng = request.META.get('HTTP_RANGE', '')
+    if a.video and rng.startswith('bytes='):
+        # i video su iPhone partono solo se il server risponde a pezzi (Range)
+        from django.http import HttpResponse
+
+        totale = a.file.size
+        inizio_s, _, fine_s = rng[6:].split(',')[0].partition('-')
+        try:
+            if inizio_s:
+                inizio = int(inizio_s)
+                fine = min(int(fine_s), totale - 1) if fine_s else totale - 1
+            else:
+                inizio, fine = max(totale - int(fine_s), 0), totale - 1
+        except ValueError:
+            inizio, fine = 0, totale - 1
+        if inizio >= totale or inizio > fine:
+            r = HttpResponse(status=416)
+            r['Content-Range'] = f'bytes */{totale}'
+            return r
+        with a.file.open('rb') as f:
+            f.seek(inizio)
+            dati = f.read(fine - inizio + 1)
+        r = HttpResponse(dati, status=206, content_type=tipo)
+        r['Content-Range'] = f'bytes {inizio}-{fine}/{totale}'
+        r['Accept-Ranges'] = 'bytes'
+        r['Content-Length'] = str(len(dati))
+        return r
+    r = FileResponse(a.file.open('rb'), content_type=tipo)
+    r['Accept-Ranges'] = 'bytes'
+    return r
 
 
 # ---------------------------------------------------------------- foto profilo
@@ -1557,5 +1587,5 @@ def vedi(request):
     rif = urlsplit(indietro)
     if rif.netloc != request.get_host() or not rif.path.startswith('/turni/') or rif.path == request.path:
         indietro = reverse('turni:home')
-    return render(request, 'turni/vedi.html', {'u': u, 'pdf': pdf, 'indietro': indietro,
+    return render(request, 'turni/vedi.html', {'u': u, 'pdf': pdf, 'indietro': indietro, 'video': request.GET.get('tipo') == 'video',
                                                'nome': request.GET.get('nome', '')[:120]})
