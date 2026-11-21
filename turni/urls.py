@@ -53,6 +53,7 @@ urlpatterns = [
     path('foto/<int:pulizia_id>/', views.foto, name='foto'),
     path('foto/allegato/<int:pk>/', views.allegato_pulizia, name='allegato_pulizia'),
     path('vedi/', views.vedi, name='vedi'),
+    path('vedi/chat/', views.vedi_in_chat, name='vedi_in_chat'),
     path('profilo/foto/', views.foto_profilo, name='foto_profilo'),
     path('profilo/foto/<int:dip_id>/', views.foto_profilo_img, name='foto_profilo_img'),
     path('profilo/foto/utente/<int:utente_id>/', views.foto_utente_img, name='foto_utente_img'),

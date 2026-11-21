@@ -431,3 +431,31 @@ class FileRegolePulizieTest(TestCase):
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.SEGNALATA)
         self.assertTrue(Notifica.objects.filter(utente=ct.dipendente.utente, titolo__contains='Da rifare').exists())
+
+    def test_foto_della_pulizia_inviata_nella_chat(self):
+        from .models import Chat, MessaggioChat
+
+        op = self.persona('Costa Dino', postazione='SUPERBI')
+        estraneo = self.persona('Bianchi Luca', postazione='IMP2')
+        genera_pulizie(op)
+        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        self.adesso = alle(13, 40)
+        self.entra(op)
+        self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {
+            'azione': 'fatta', 'pulizia': p.pk, 'foto_prima': foto(), 'foto': foto()})
+        chat = Chat.objects.create(nome='Superbi', tutti=True)
+        u = reverse('turni:foto', args=[p.pk])
+        r = self.client.get(reverse('turni:vedi') + f'?u={u}', HTTP_REFERER='http://testserver/turni/pulizie/')
+        self.assertContains(r, 'Invia nella chat')
+        r = self.client.get(reverse('turni:vedi_in_chat') + f'?u={u}')
+        self.assertContains(r, 'Superbi')
+        r = self.client.post(reverse('turni:vedi_in_chat'), {'u': u, 'chat': chat.pk, 'testo': 'Ecco la pulizia'})
+        m = MessaggioChat.objects.get(chat=chat)
+        self.assertTrue(m.foto)
+        self.assertEqual((m.testo, m.autore), ('Ecco la pulizia', op.dipendente.utente))
+        self.assertRedirects(r, f"{reverse('turni:messaggi')}?vista=chat&chat={chat.pk}#fondo", fetch_redirect_response=False)
+        # chi non può vedere la foto non la può nemmeno mandare
+        self.entra(estraneo)
+        r = self.client.post(reverse('turni:vedi_in_chat'), {'u': u, 'chat': chat.pk})
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(MessaggioChat.objects.count(), 1)

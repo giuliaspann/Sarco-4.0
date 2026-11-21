@@ -1589,3 +1589,72 @@ def vedi(request):
         indietro = reverse('turni:home')
     return render(request, 'turni/vedi.html', {'u': u, 'pdf': pdf, 'indietro': indietro, 'video': request.GET.get('tipo') == 'video',
                                                'nome': request.GET.get('nome', '')[:120]})
+
+
+@login_required
+def vedi_in_chat(request):
+    """«Invia in chat» dalla pagina della foto o del PDF (Giulia, 21/11/2026): si sceglie la chat, si scrive un messaggio
+    se si vuole, e il file arriva nella chat dell'app. Il file si legge con la stessa vista (e gli stessi permessi)
+    che lo mostra nella pagina «vedi»."""
+    import copy
+    import os
+    from urllib.parse import urlsplit
+
+    from django.core.files.base import ContentFile
+    from django.http import QueryDict
+    from django.urls import Resolver404, resolve
+
+    from . import push
+    from .models import MessaggioChat
+    from .views_messaggi import _url_chat, avvisa_menzioni, chat_visibili, destinatari, nome_di
+
+    dati = request.POST if request.method == 'POST' else request.GET
+    u = dati.get('u', '')
+    parti = urlsplit(u)
+    if parti.scheme or parti.netloc or not parti.path.startswith('/turni/') or '//' in parti.path:
+        raise Http404
+    pdf = parti.path.endswith('/pdf/') or dati.get('tipo') == 'pdf'
+    nome = (dati.get('nome') or '')[:120]
+    chats = list(chat_visibili(request.user).order_by('ordine', 'nome'))
+    torna = reverse('turni:vedi') + '?' + urlencode({k: v for k, v in (('u', u), ('tipo', 'pdf' if pdf else ''), ('nome', nome)) if v})
+    if request.method == 'POST':
+        chat = next((c for c in chats if str(c.pk) == request.POST.get('chat')), None)
+        if chat is None:
+            messages.error(request, 'Scegli la chat.')
+            return redirect(request.get_full_path())
+        try:
+            corrispondenza = resolve(parti.path)
+            r2 = copy.copy(request)
+            r2.method, r2.GET = 'GET', QueryDict(parti.query)
+            risposta = corrispondenza.func(r2, *corrispondenza.args, **corrispondenza.kwargs)
+        except (Resolver404, Http404, PermissionDenied):
+            raise Http404
+        if risposta.status_code != 200:
+            raise Http404
+        contenuto = b''.join(risposta.streaming_content) if risposta.streaming else risposta.content
+        tipo = risposta.get('Content-Type', '')
+        m = MessaggioChat(chat=chat, autore=request.user, testo=(request.POST.get('testo') or '').strip()[:1000])
+        try:
+            if tipo.startswith('image/'):
+                from .manutenzione import comprimi_foto
+
+                m.foto.save('chat.jpg', comprimi_foto(ContentFile(contenuto, name='foto.jpg')), save=False)
+            elif pdf or tipo == 'application/pdf':
+                file_nome = (os.path.basename(nome) or 'documento').replace('/', '-')
+                if not file_nome.lower().endswith('.pdf'):
+                    file_nome += '.pdf'
+                m.documento.save(file_nome, ContentFile(contenuto), save=False)
+                m.documento_nome = file_nome[:200]
+            else:
+                messages.error(request, 'Questo file non si può mandare in chat.')
+                return redirect(torna)
+        except (ValueError, OSError):
+            messages.error(request, 'Non riesco a leggere questo file.')
+            return redirect(torna)
+        m.save()
+        push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}',
+                   m.testo or ('Foto' if m.foto else f'Documento: {m.documento_nome}'), _url_chat(chat), notifica=False)
+        avvisa_menzioni(m, request.user)
+        messages.success(request, f'Inviata nella chat «{chat.nome}».')
+        return redirect(_url_chat(chat) + '#fondo')
+    return render(request, 'turni/vedi_chat.html', {'u': u, 'pdf': pdf, 'nome': nome, 'chats': chats, 'torna': torna})

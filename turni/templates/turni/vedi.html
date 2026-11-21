@@ -12,5 +12,6 @@
 {% else %}
 <img class="vd-foto" src="{{ u }}" alt="{{ nome|default:'Foto' }}">
 {% endif %}
-{% if not video %}<button type="button" class="bottone pieno piena-larghezza vd-condividi" data-condividi="{{ u }}" data-nome="{{ nome|default:'documento' }}" data-pdf="{% if pdf %}1{% endif %}">Salva, stampa o invia</button>{% endif %}
+{% if not video %}<button type="button" class="bottone pieno piena-larghezza vd-condividi" data-condividi="{{ u }}" data-nome="{{ nome|default:'documento' }}" data-pdf="{% if pdf %}1{% endif %}">Salva, stampa o invia</button>
+<a class="bottone leggero piena-larghezza vd-chat" href="{% url 'turni:vedi_in_chat' %}?u={{ u|urlencode }}{% if pdf %}&tipo=pdf{% endif %}{% if nome %}&nome={{ nome|urlencode }}{% endif %}">💬 Invia nella chat dell'app</a>{% endif %}
 {% endblock %}

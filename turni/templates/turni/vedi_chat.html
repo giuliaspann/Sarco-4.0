@@ -1,0 +1,24 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Invia in chat{% endblock %}
+{% block contenuto %}
+{# «Invia in chat» dalla pagina della foto o del PDF (Giulia, 21/11/2026) #}
+<a class="tasto-indietro" href="{{ torna }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Indietro</a>
+<div class="intestazione"><h1>Invia in chat</h1></div>
+
+<div class="vc-anteprima">
+  {% if pdf %}<span class="vc-pdf">📄 {{ nome|default:'Documento PDF' }}</span>
+  {% else %}<img src="{{ u }}" alt="{{ nome|default:'Foto' }}">{% endif %}
+</div>
+
+<form method="post">{% csrf_token %}
+  <input type="hidden" name="u" value="{{ u }}">
+  <input type="hidden" name="nome" value="{{ nome }}">
+  {% if pdf %}<input type="hidden" name="tipo" value="pdf">{% endif %}
+  <p class="mn-sottotitolo">In quale chat?</p>
+  <div class="scegli lista vc-chat">
+    {% for c in chats %}<label><input type="radio" name="chat" value="{{ c.pk }}" required><span>{% if c.emoji %}{{ c.emoji }} {% endif %}{{ c.nome }}</span></label>{% empty %}<p class="tenue piccolo">Non fai parte di nessuna chat.</p>{% endfor %}
+  </div>
+  <textarea name="testo" maxlength="1000" rows="2" class="pl-campo-nota" placeholder="Messaggio (facoltativo)"></textarea>
+  <button class="bottone pieno piena-larghezza">Invia</button>
+</form>
+{% endblock %}
