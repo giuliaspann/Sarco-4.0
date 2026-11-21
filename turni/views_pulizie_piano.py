@@ -323,6 +323,9 @@ def pulizia_voce(request, pk):
         'via_ct': pp.percorso(p) == 'CT_RP', 'serve_prima': serve_prima, 'serve_foto': serve_dopo,
         'nome_corto': pp.nome_corto(e) if e else '', 'fai': request.GET.get('fai', ''),
         'motivi': Pulizia.MOTIVI_IMPEDIMENTO, 'allegati': [a for r in righe for a in r.allegati.all()],
+        'principali': [(reverse('turni:foto', args=[r.pk]) + q, nome) for r in righe for campo, q, nome in (
+            ('foto_richiesta', '?quale=richiesta', 'Richiesta'), ('foto_prima', '?quale=prima', 'Prima'), ('foto', '', 'Dopo'))
+            if getattr(r, campo)],
         'tasto': (e.tasto if e and e.tasto else 'Conferma pulizia'),
     })
 
