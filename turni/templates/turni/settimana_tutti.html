@@ -40,13 +40,13 @@
 {% elif vista == 'area' %}
 <div class="vp-scorre">
 <table class="vp-tabella vp-aree">
-  <thead><tr><th class="vp-fissa">Area</th><th>Turno</th><th>Ruolo</th>{% for g in giorni %}<th class="{% if g == oggi %}vp-oggi{% endif %}">{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
+  <thead><tr><th class="vp-fissa vp-area-testa">Area</th><th>Turno</th><th>Ruolo</th>{% for g in giorni %}<th class="{% if g == oggi %}vp-oggi{% endif %}">{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
   {% for b in aree %}
   {% if not forloop.first %}<tbody class="vp-spazio" aria-hidden="true"><tr><td colspan="10"></td></tr></tbody>{% endif %}
   <tbody class="vp-blocco">
     {% for r in b.righe %}
     <tr class="{{ r.classe }}">
-      {% if forloop.first %}<th class="vp-fissa vp-area" rowspan="{{ b.quante_area }}">{{ b.area }}</th>{% endif %}
+      {% if forloop.first %}<th class="vp-fissa vp-area" rowspan="{{ b.quante_area }}" title="{{ b.area }}">{{ b.sigla }}</th>{% endif %}
       {% if r.prima %}<td class="vp-turno {{ r.classe_turno }}" rowspan="{{ r.quante }}">{{ r.turno }}</td>{% endif %}
       <td class="vp-ruolo">{{ r.ruolo|default:'–' }}</td>
       {% for n in r.nomi %}

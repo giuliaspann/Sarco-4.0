@@ -353,13 +353,13 @@ def incarichi_di(t):
 
 
 def casella_tutti(t):
-    """Come l'anteprima del caricamento: «1T | Impianto 1», «1T | Impianto 1 | Pal», il CT sempre in fondo."""
+    """Come l'anteprima del caricamento: «1T | Imp 1», «1T | Imp 1 | Pal», il CT sempre in fondo."""
     if t is None:
         return {'testo': '–', 'classe': 'vuota', 'titolo': ''}
     if not t.lavora:
         return {'testo': t.sigla_fascia or 'R', 'classe': t.classe_fascia, 'titolo': t.get_fascia_display()}
     inc = incarichi_di(t)
-    aree = list(dict.fromkeys(a for a, _ in inc))
+    aree = list(dict.fromkeys(importa.sigla_area(a) for a, _ in inc))  # aree abbreviate (Giulia, 22/11/2026)
     ruoli = [r for _, r in inc if r and r not in ('OdL', 'CT')]
     parti = [t.sigla_fascia or '1T', ' + '.join(aree)] + ruoli + (['CT'] if t.capoturno else [])
     return {'testo': ' | '.join(p for p in parti if p), 'classe': t.classe_fascia, 'titolo': t.posto or t.descrizione}
@@ -412,7 +412,7 @@ def settimana_tutti(request):
             ordine_area(x[0][0]), ORDINE_SIGLE.index(x[0][1]) if x[0][1] in ORDINE_SIGLE else 9,
             ORDINE_RUOLI.index(x[0][2]) if x[0][2] in ORDINE_RUOLI else 9, x[0][2])):
         if not aree or aree[-1]['area'] != area:
-            aree.append({'area': area, 'righe': []})
+            aree.append({'area': area, 'righe': [], 'sigla': importa.sigla_area(area)})
         blocco = aree[-1]
         classe = 'f-capo' if ruolo == 'CT' else Turno(fascia={'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE,
                                                              'G': Fascia.GIORNALIERO}.get(sigla, Fascia.MATTINA)).classe_fascia

@@ -195,6 +195,27 @@ FOGLIO_LAYOUT = 'Layout Turni'
 FOGLIO_NOMI = 'Collegamento Nomi'
 FOGLIO_VISTA = 'Vista Dipendenti'
 
+# le aree e le loro sigle, come nel foglio «Nomi e sigle» del file turni (22/11/2026)
+SIGLE_AREE = {'Piazzale': 'Piazz', 'Impianto 1': 'Imp 1', 'Impianto 2 - Incolore': 'Imp 2 - I', 'Impianto 2 - Barrotti': 'Imp 2 - B',
+              'Impianto 2': 'Imp 2', 'Rotovaglio': 'Rot', 'Laboratorio Analisi': 'Lab', 'Metalli': 'Met', 'Sabbia - Sarco': 'Sab - Sar',
+              'Sabbia - Superbi': 'Sab - Sup', 'Manutenzione': 'Manut', 'Trasporti': 'Trasp', 'Magazzino': 'Mag', 'Ufficio': 'Uff',
+              'Corso': 'Corso', 'Mezzi - Interni': 'Mezzi - I', 'Mezzi - Esterni': 'Mezzi - E'}
+
+PAROLE_AREE = [('Impianto', 'Imp'), ('Piazzale', 'Piazz'), ('Rotovaglio', 'Rot'), ('Laboratorio', 'Lab'), ('Analisi', ''),
+               ('Metalli', 'Met'), ('Sabbia', 'Sab'), ('Superbi', 'Sup'), ('Sarco', 'Sar'), ('Manutenzione', 'Manut'),
+               ('Trasporti', 'Trasp'), ('Magazzino', 'Mag'), ('Ufficio', 'Uff'), ('Incolore', 'I'), ('Barrotti', 'B')]
+
+
+def sigla_area(area):
+    """La sigla dell'area come in «Nomi e sigle»; per i nomi vecchi (es. «Piazzale - Rotovaglio») la si accorcia parola per parola."""
+    if area in SIGLE_AREE:
+        return SIGLE_AREE[area]
+    corta = area
+    for parola, sigla in PAROLE_AREE:
+        corta = re.sub(r'\b' + parola + r'\b', sigla, corta, flags=re.I)
+    return ' '.join(corta.split()).strip(' -') or area
+
+
 # i ruoli del foglio «Nomi e sigle» del file turni (22/11/2026)
 SIGLE_RUOLO = {'RESPONSABILE IMPIANTO': 'RI', 'RESPONSABILE PIAZZALE': 'RP', 'SUPPORTO PIAZZALE': 'SP', 'CAPO TURNO': 'CT',
                'OPERATORE DI LINEA': 'OdL', 'PALISTA': 'Pal', 'MANUTENTORE': 'Man', 'ANALISTA LABORATORIO': 'AL',

@@ -2780,3 +2780,7 @@ button.pl-notturne { width: 100%; font: inherit; cursor: pointer; text-align: le
 .vc-anteprima img { max-width: 100%; max-height: 220px; border-radius: 14px; }
 .vc-pdf { display: inline-block; padding: 12px 16px; border-radius: 12px; background: var(--carta); font-weight: 700; }
 .vc-chat { margin-bottom: 12px; }
+
+/* Per Area (Giulia, 22/11/2026): colonna dell'area stretta, tutte le aree con la sigla, in orizzontale e con lo stesso font */
+.vp-aree th.vp-area, .vp-aree th.vp-area-testa { width: 46px; min-width: 46px; max-width: 46px; padding: 4px 3px; text-align: center; }
+.vp-aree th.vp-area { font-size: .72rem; line-height: 1.15; white-space: normal; overflow-wrap: normal; word-break: keep-all; vertical-align: middle; }
