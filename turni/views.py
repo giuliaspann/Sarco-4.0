@@ -1231,7 +1231,9 @@ def importa_turni(request):
         form = ImportaForm(request.POST, request.FILES)
         if form.is_valid():
             f = form.cleaned_data['file']
-            lunedi = form.cleaned_data['lunedi'] or importa.lunedi_dal_file(f) or importa.lunedi_da_nome_file(f.name)
+            # prima la data nel nome del file («Turni 2026-11-23.xlsx»), poi quella scritta nel file (22/11/2026)
+            dal_nome, dal_file = importa.lunedi_da_nome_file(f.name), importa.lunedi_dal_file(f)
+            lunedi = form.cleaned_data['lunedi'] or dal_nome or dal_file
             if lunedi is None:
                 form.add_error('lunedi', 'Dal nome del file non capisco la settimana: indica il lunedì.')
             else:
@@ -1241,6 +1243,9 @@ def importa_turni(request):
                 except Exception as e:
                     form.add_error('file', f'Non riesco a leggere il file: {e}')
                 else:
+                    if dal_nome and dal_file and dal_file - timedelta(days=dal_file.weekday()) != lunedi:
+                        letta.avvisi.insert(0, f'Il nome del file dice la settimana del {lunedi:%d/%m/%Y}, ma nel file c\'è il lunedì '
+                                               f'{dal_file:%d/%m/%Y}: ho usato la data del nome. Correggi la cella gialla del «Layout Turni».')
                     request.session['import_turni'] = importa.in_sessione(letta)
                     request.session['import_nome_file'] = f.name
                     return redirect('turni:anteprima')

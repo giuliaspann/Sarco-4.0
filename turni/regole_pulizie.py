@@ -24,7 +24,8 @@ RINOMINA = {
     'Incolore': 'Linea Incolore',
     'Barrotti': 'Linea Barrotti',
     'Generiche Metalli': 'Area Metalli',
-    'Generiche Rotovaglio': 'Rotovaglio',
+    'Generiche Rotovaglio': 'Area Rotovaglio',
+    'Rotovaglio': 'Area Rotovaglio',  # nome del file del 22/11/2026
     'Piazzale + corridoio granella': 'Piazzale',
     'Generiche Sabbia Superbi': 'Generiche Superbi',
     'Carrelli elevatori': 'Ingrassaggio e Pulizia Carrelli Elevatori',
@@ -106,7 +107,7 @@ VOCI = [
      'istruzioni': "Una volta a settimana, nell'ultimo turno della settimana del Manutentore · fine turno, 60 minuti.",
      'avviso': avv(PRIMA, 30, 'ADDETTI'),
      'regole': [r('MANUT', a_rotazione=True, ultimo=True), r(ruolo='Man', a_rotazione=True, ultimo=True)]},
-    {'nome': 'Rotovaglio', 'luogo': 'PIAZZALE', 'modo': 'PULIZIA_FOTO', 'convalida': 'PIAZZALE', 'minuti': 30, 'tasto': 'Conferma pulizia',
+    {'nome': 'Area Rotovaglio', 'luogo': 'PIAZZALE', 'modo': 'PULIZIA_FOTO', 'convalida': 'PIAZZALE', 'minuti': 30, 'tasto': 'Conferma pulizia',
      'istruzioni': 'Fine turno · 30 minuti. Il Palista che lavora al Rotovaglio.',
      'avviso': avv(PRIMA, 15, 'ADDETTI'),
      'regole': [r('ROTOVAGLIO')]},

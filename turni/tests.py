@@ -86,6 +86,10 @@ class CodiciTest(TestCase):
         self.assertEqual(importa.lunedi_da_nome_file('DAL 12-10-2026 AL 18-10-2026.xlsx'), LUNEDI)
         self.assertEqual(importa.lunedi_da_nome_file('DAL 14-10-2026.xlsx'), LUNEDI)
         self.assertIsNone(importa.lunedi_da_nome_file('turni.xlsx'))
+        # il file settimanale del 22/11/2026: «Turni AAAA-MM-GG.xlsx»
+        self.assertEqual(importa.lunedi_da_nome_file('Turni 2026-10-12.xlsx'), LUNEDI)
+        self.assertEqual(importa.lunedi_da_nome_file('Turni 2026-10-14.xlsx'), LUNEDI)
+        self.assertIsNone(importa.lunedi_da_nome_file('Turni 2026-13-40.xlsx'))
 
 
 class ImportTest(TestCase):

@@ -419,3 +419,20 @@ class ProgrammaTest(TestCase):
                          ('FERMO', 'PULIZIA', '15:00', '17:30'))
         for d in self.persone.values():
             self.assertTrue(Notifica.objects.filter(utente=d.utente, titolo__startswith='Fermo programmato').exists())
+
+
+class FileTurniSnelloTest(TestCase):
+    """Il file turni del 22/11/2026: le sigle dei ruoli sono formule; se manca il valore l'app le ricava dal nome."""
+
+    def test_sigla_dal_nome_del_ruolo(self):
+        righe = [('Impianto 1', '1T', 'Capo Turno', None, 'Rossi', '-', '-', '-', '-', '-', '-'),
+                 ('Impianto 1', '1T', 'Palista', '', 'Bianchi', '-', '-', '-', '-', '-', '-'),
+                 ('Impianto 1', '1T', 'Manutentore', '?', 'Verdi', '-', '-', '-', '-', '-', '-'),
+                 ('Impianto 1', '1T', 'Operatore di Linea', None, 'Neri', '-', '-', '-', '-', '-', '-')]
+        nomi = [('Rossi', 'ROSSI MARIO'), ('Bianchi', 'BIANCHI LUCA'), ('Verdi', 'VERDI ANNA'), ('Neri', 'NERI UGO')]
+        letta = importa.leggi_file(file_layout(righe, nomi), LUNEDI)
+        turni = {r.nome: r.turni[0] for r in letta.righe}
+        self.assertTrue(turni['ROSSI MARIO'].capoturno)
+        self.assertEqual(turni['BIANCHI LUCA'].ruolo, 'Pal')
+        self.assertEqual(turni['VERDI ANNA'].ruolo, 'Man')
+        self.assertEqual(turni['NERI UGO'].ruolo, 'OdL')

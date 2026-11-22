@@ -108,11 +108,19 @@ class SettimanaLetta:
 
 
 def lunedi_da_nome_file(nome):
-    m = re.search(r'(\d{1,2})[-.](\d{1,2})[-.](\d{4})', nome or '')
-    if not m:
+    """«Turni 2026-11-23.xlsx» (file settimanale, Giulia 22/11/2026) oppure «DAL 12-10-2026 AL 18-10-2026.xlsx»."""
+    m = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})', nome or '')
+    if m:
+        a, me, g = map(int, m.groups())
+    else:
+        m = re.search(r'(\d{1,2})[-.](\d{1,2})[-.](\d{4})', nome or '')
+        if not m:
+            return None
+        g, me, a = map(int, m.groups())
+    try:
+        d = date(a, me, g)
+    except ValueError:
         return None
-    g, me, a = map(int, m.groups())
-    d = date(a, me, g)
     return d - timedelta(days=d.weekday())
 
 
@@ -186,6 +194,11 @@ def leggi_file(file, lunedi):
 FOGLIO_LAYOUT = 'Layout Turni'
 FOGLIO_NOMI = 'Collegamento Nomi'
 FOGLIO_VISTA = 'Vista Dipendenti'
+
+# i ruoli del foglio «Nomi e sigle» del file turni (22/11/2026)
+SIGLE_RUOLO = {'RESPONSABILE IMPIANTO': 'RI', 'RESPONSABILE PIAZZALE': 'RP', 'SUPPORTO PIAZZALE': 'SP', 'CAPO TURNO': 'CT',
+               'OPERATORE DI LINEA': 'OdL', 'PALISTA': 'Pal', 'MANUTENTORE': 'Man', 'ANALISTA LABORATORIO': 'AL',
+               'AUTISTA': 'Aut', 'DIPENDENTE': 'Dip', 'ODL': 'OdL'}
 
 FASCE_LAYOUT = {'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE, 'G': Fascia.GIORNALIERO}
 
@@ -299,6 +312,8 @@ def leggi_layout(wb, lunedi):
         area_prec = area
         ruolo = pulisci(ws.cell(r, c_ruolo).value) if c_ruolo else ''
         sigla = pulisci(ws.cell(r, c_sigla).value) if c_sigla else ''
+        if not sigla or sigla == '?':
+            sigla = SIGLE_RUOLO.get(ruolo.upper(), '')  # la colonna delle sigle è una formula: se manca il valore, dal nome
         abbr = (pulisci(ws.cell(r, c_abbr).value) if c_abbr else '') or area
         fascia = FASCE_LAYOUT.get(turno, Fascia.ALTRO)
         letta.layout.append({'area': abbr, 'turno': turno, 'ruolo': sigla or ruolo, 'fascia': fascia,
