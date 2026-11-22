@@ -281,13 +281,12 @@ def pulizia_voce(request, pk):
                 _avvisa_rp(request.user, da_fare[0])
             messages.success(request, f'{p.titolo}: confermata, inviata al responsabile piazzale.')
         elif azione == 'impedita' and capo and da_fare:
-            # «Non si può fare» / «Non effettuata» del Capo Turno: motivo, nota e foto obbligatori
+            # «Non si può fare» / «Non effettuata» del Capo Turno: nota e foto obbligatorie (il motivo si scrive nella nota, Giulia 22/11/2026)
             nota = (request.POST.get('nota') or '').strip()
             foto = request.FILES.getlist('foto')
             if not nota or not foto:
                 messages.error(request, 'Servono la nota e la foto che mostra il motivo.')
                 return redirect(torna + '?fai=impedita')
-            motivo = request.POST.get('motivo') if request.POST.get('motivo') in Pulizia.MOTIVI_IMPEDIMENTO else 'Altro'
             for r in da_fare:
                 try:
                     for f in foto:
@@ -296,7 +295,7 @@ def pulizia_voce(request, pk):
                 except Exception as ex:
                     messages.error(request, errore_file(ex))
                     return redirect(torna + '?fai=impedita')
-                r.nota = f'{motivo}: {nota}'[:300]
+                r.nota = nota[:300]
                 r.stato, r.fatta_il = Pulizia.Stato.IMPEDITA, adesso
                 r.save()
             avvisa_non_eseguibile(request.user, da_fare[0])
@@ -322,7 +321,7 @@ def pulizia_voce(request, pk):
         'colleghi': colleghi, 'assegnata_a': da_fare[0].turno.dipendente_id if len(da_fare) == 1 else None,
         'via_ct': pp.percorso(p) == 'CT_RP', 'serve_prima': serve_prima, 'serve_foto': serve_dopo,
         'nome_corto': pp.nome_corto(e) if e else '', 'fai': request.GET.get('fai', ''),
-        'motivi': Pulizia.MOTIVI_IMPEDIMENTO, 'allegati': [a for r in righe for a in r.allegati.all()],
+        'allegati': [a for r in righe for a in r.allegati.all()],
         'principali': [(reverse('turni:foto', args=[r.pk]) + q, nome) for r in righe for campo, q, nome in (
             ('foto_richiesta', '?quale=richiesta', 'Richiesta'), ('foto_prima', '?quale=prima', 'Prima'), ('foto', '', 'Dopo'))
             if getattr(r, campo)],

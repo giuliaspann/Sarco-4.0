@@ -23,13 +23,10 @@
 {% include 'turni/_allegati.html' %}
 
 {% if da_fare and fai == 'impedita' and capo %}
-  {# «Non si può fare» / «Non effettuata» del Capo Turno: motivo, nota e foto obbligatori #}
+  {# «Non si può fare» / «Non effettuata» del Capo Turno: nota e foto obbligatorie, niente più menu del motivo (Giulia, 22/11/2026) #}
   <form method="post" enctype="multipart/form-data" class="pv-azione pv-conferma">{% csrf_token %}
     <h2 class="rq-sezione">Non si può fare</h2>
-    <label>Motivo
-      <select name="motivo">{% for m in motivi %}<option>{{ m }}</option>{% endfor %}</select>
-    </label>
-    <label>Nota (obbligatoria)<textarea name="nota" maxlength="280" rows="3" required></textarea></label>
+    <label>Nota (obbligatoria): perché non si può fare?<textarea name="nota" maxlength="280" rows="3" required></textarea></label>
     <label class="bottone foto-btn"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci><span>📷 Foto o video del motivo (obbligatori)</span></label>
     <button class="bottone rifiuta piena-larghezza" name="azione" value="impedita">⚠️ Segnala: non si può fare</button>
   </form>

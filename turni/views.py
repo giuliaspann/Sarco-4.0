@@ -606,7 +606,7 @@ def pulizie(request, turno_id=None):
             elif azione == 'rimuovi' and p.aggiunta_da_operaio and p.stato == Pulizia.Stato.DA_FARE:
                 p.delete()
             elif azione == 'impedita':
-                # «Non si può fare» (e «Non effettuata» dall'avviso): motivo, nota e foto obbligatori (file del 21/11/2026)
+                # «Non si può fare» (e «Non effettuata» dall'avviso): nota e foto obbligatorie, il motivo si scrive nella nota (Giulia, 22/11/2026)
                 torna = reverse('turni:pulizie_turno', args=[turno.pk]) + f'?fai=impedimento&voce={p.pk}'
                 nota = request.POST.get('nota', '').strip()
                 if not request.FILES.getlist('foto') or not nota:
@@ -614,8 +614,7 @@ def pulizie(request, turno_id=None):
                     return redirect(torna)
                 if not _foto_pulizia(request, p, motivo=True):
                     return redirect(torna)
-                motivo = request.POST.get('motivo') if request.POST.get('motivo') in Pulizia.MOTIVI_IMPEDIMENTO else 'Altro'
-                p.nota = f'{motivo}: {nota}'[:300]
+                p.nota = nota[:300]
                 p.stato, p.fatta_il = Pulizia.Stato.IMPEDITA, timezone.now()
                 p.save()
                 from .pulizie import avvisa_non_eseguibile
@@ -728,7 +727,6 @@ def pulizie(request, turno_id=None):
         'da_fare': da_fare,
         'fatte': sum(v.stato in (Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA) for v in voci),
         'completate': [v for v in voci if v.stato in (Pulizia.Stato.FATTA, Pulizia.Stato.VERIFICATA, Pulizia.Stato.IMPEDITA)],
-        'motivi': Pulizia.MOTIVI_IMPEDIMENTO,
         'recenti': recenti,
         'fai': request.GET.get('fai'),
         'da': request.GET.get('da', ''),

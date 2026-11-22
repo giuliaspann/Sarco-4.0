@@ -398,12 +398,13 @@ class FileRegolePulizieTest(TestCase):
         p = op.pulizie.get(elemento__nome='Generiche Superbi')
         self.entra(op)
         url = reverse('turni:pulizie_turno', args=[op.pk])
-        self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'motivo': 'Guasto', 'foto': foto()})
+        self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'foto': foto()})
         p.refresh_from_db()
         self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # senza nota non passa
-        self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'motivo': 'Guasto', 'foto': foto(), 'nota': 'Nastro rotto'})
+        self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'foto': foto(), 'nota': 'Nastro rotto'})
         p.refresh_from_db()
-        self.assertEqual((p.stato, p.nota), (Pulizia.Stato.IMPEDITA, 'Guasto: Nastro rotto'))
+        self.assertEqual((p.stato, p.nota), (Pulizia.Stato.IMPEDITA, 'Nastro rotto'))  # niente più motivo dal menu (22/11)
+        self.assertNotIn('name="motivo"', self.client.get(url + f'?fai=impedimento&voce={p.pk}').content.decode())
         self.assertTrue(Notifica.objects.filter(utente=rp.utente, titolo__contains='Non eseguibile').exists())
         self.assertTrue(Notifica.objects.filter(utente=ct.dipendente.utente, titolo__contains='Non eseguibile').exists())
 

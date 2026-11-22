@@ -71,9 +71,8 @@ def strumenti(utente):
            {'cosa': {'type': 'string', 'description': 'nome del mezzo o della zona'}, 'nota': {'type': 'string'}}),
         _s('proponi_richiesta_pulizia', 'Prepara la richiesta di una pulizia a un collega in turno adesso.',
            {'collega': {'type': 'string'}, 'cosa': {'type': 'string'}, 'nota': {'type': 'string'}}),
-        _s('proponi_impedimento_pulizia', 'Prepara la segnalazione che una pulizia non si può fare. Serve una foto del motivo.',
-           {'pulizia_id': {'type': 'integer'}, 'motivo': {'type': 'string', 'enum': Pulizia.MOTIVI_IMPEDIMENTO},
-            'nota': {'type': 'string'}}),
+        _s('proponi_impedimento_pulizia', 'Prepara la segnalazione che una pulizia non si può fare: nella nota il perché. '
+           'Serve una foto del motivo.', {'pulizia_id': {'type': 'integer'}, 'nota': {'type': 'string'}}),
         _s('proponi_produzione', 'Prepara la produzione di fine turno letta sul display della pesa (tonnellate per codice).',
            {'giorno': DATA, 'fascia': {'type': 'string', 'enum': ['1T', '2T', 'N']},
             'righe': {'type': 'array', 'items': {'type': 'object', 'properties': {
@@ -392,9 +391,9 @@ def _e_richiesta(d, u, foto):
 
 def _p_impedimento(d, u):
     p = _pulizia(u, d['pulizia_id'])
-    if d.get('motivo') not in Pulizia.MOTIVI_IMPEDIMENTO:
-        raise Errore('Scegli il motivo.')
-    return f'Pulizia non eseguibile: {p.titolo} · {d["motivo"]}'
+    if not (d.get('nota') or '').strip():
+        raise Errore('Scrivi nella nota perché non si può fare.')
+    return f'Pulizia non eseguibile: {p.titolo} · {d["nota"].strip()}'
 
 
 def _e_impedimento(d, u, foto):
@@ -402,8 +401,7 @@ def _e_impedimento(d, u, foto):
 
     p = _pulizia(u, d['pulizia_id'])
     salva_foto(p, foto, 'foto')
-    nota = (d.get('nota') or '').strip()
-    p.nota = (d['motivo'] + (f': {nota}' if nota else ''))[:300]
+    p.nota = (d.get('nota') or '').strip()[:300]
     p.stato, p.fatta_il = Pulizia.Stato.IMPEDITA, timezone.now()
     p.save()
     mn.avvisa(mn.capiturno_oggi(), u, f'🧹 Pulizia non eseguibile · {p.turno.dipendente.nome_breve}',

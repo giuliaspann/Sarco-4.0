@@ -339,12 +339,12 @@ class PulizieTest(TestCase):
         with self.settings(MEDIA_ROOT=self._tmp()), mock.patch('pywebpush.webpush'):
             self.client.get(url)
             p = turno.pulizie.get()
-            self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita', 'motivo': 'Mezzo in uso'})
+            self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita'})
             p.refresh_from_db()
             self.assertEqual(p.stato, Pulizia.Stato.DA_FARE)  # senza foto non vale
-            self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita', 'motivo': 'Mezzo in uso', 'nota': 'lo usa la ditta', 'foto': b})
+            self.client.post(url, {'pulizia': p.pk, 'azione': 'impedita', 'nota': 'lo usa la ditta', 'foto': b})
             p.refresh_from_db()
-            self.assertEqual((p.stato, p.nota), (Pulizia.Stato.IMPEDITA, 'Mezzo in uso: lo usa la ditta'))
+            self.assertEqual((p.stato, p.nota), (Pulizia.Stato.IMPEDITA, 'lo usa la ditta'))
             self.assertTrue(p.foto)
 
     def _tmp(self):

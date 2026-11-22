@@ -72,12 +72,8 @@
   <form method="post" enctype="multipart/form-data" class="scheda pl-modulo">{% csrf_token %}
     <input type="hidden" name="pulizia" value="{{ voce.pk }}">
     <h2>{{ voce.icona }} {{ voce.titolo }}</h2>
-    <p class="mn-sottotitolo">Perché non si può fare?</p>
-    <div class="scegli">
-      {% for m in motivi %}<label><input type="radio" name="motivo" value="{{ m }}" required><span>{{ m }}</span></label>{% endfor %}
-    </div>
     <label class="bottone foto-btn pl-foto-motivo"><input type="file" name="foto" accept="image/*,video/*" multiple data-riduci required><span>📷 Foto o video del motivo (obbligatori)</span></label>
-    <textarea name="nota" placeholder="Nota (obbligatoria): cosa succede?" maxlength="250" rows="3" class="pl-campo-nota" required></textarea>
+    <textarea name="nota" placeholder="Nota (obbligatoria): perché non si può fare?" maxlength="250" rows="3" class="pl-campo-nota" required></textarea>
     <button class="bottone pieno piena-larghezza pl-invia pl-invia-impedimento" name="azione" value="impedita">⚠️ Segnala impedimento</button>
   </form>
   {% elif da_fare %}
