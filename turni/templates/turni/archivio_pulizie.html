@@ -15,6 +15,14 @@
 
 {% if not giorno %}
 {% include 'turni/_archivio_cerca_link.html' with sezione='pulizie' %}
+  {% if settimane %}
+  {# archivio settimanale (Giulia, 22/11/2026): Excel + foto e video della settimana in un file zip, per la cartella condivisa #}
+  <h2 class="rq-sezione">Archivio settimanale (Excel + foto e video)</h2>
+  {% for lun, fatto in settimane %}
+  <a class="sg-macchina" href="{% url 'turni:archivio_pulizie_settimana' %}?settimana={{ lun|date:'Y-m-d' }}" data-vedi-no><span class="rq-testo"><b>Settimana dal {{ lun|date:'j/m' }}</b><small>{% if fatto %}Archiviata il {{ fatto.scaricato_il|date:'j/m H:i' }} · {{ fatto.pulizie }} pulizie, {{ fatto.file }} foto e video{% else %}Non ancora archiviata{% endif %}</small></span><span class="stato-chip {% if fatto %}ok{% else %}attesa{% endif %}">⬇ Zip</span></a>
+  {% endfor %}
+  <h2 class="rq-sezione">Pulizie approvate</h2>
+  {% endif %}
   {% for g, n in giorni %}
   <a class="sg-macchina" href="?giorno={{ g|date:'Y-m-d' }}"><span class="rq-testo"><b>{{ g|date:'l j F'|capfirst }}</b><small>{{ n }} pulizi{{ n|pluralize:'a,e' }} approvat{{ n|pluralize:'a,e' }}</small></span><span class="sg-freccia">›</span></a>
   {% empty %}<p class="tenue piccolo">Nessuna pulizia approvata negli ultimi 30 giorni.</p>{% endfor %}

@@ -128,6 +128,8 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 15 * 1024 * 1024
 # Email all'ufficio turni con le credenziali dei dipendenti.
 # Su Railway Trial/Hobby l'SMTP è bloccato: usare RESEND_API_KEY (invio via HTTPS); in alternativa EMAIL_HOST & co.
 UFFICIO_TURNI_EMAIL = os.environ.get('UFFICIO_TURNI_EMAIL', '')
+# chiave dello script che ogni settimana scarica l'archivio delle pulizie sulla cartella condivisa
+ARCHIVIO_TOKEN = os.environ.get('ARCHIVIO_TOKEN', '')
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_MITTENTE', 'App Turni Sarco <turni@example.com>')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')

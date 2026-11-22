@@ -459,3 +459,50 @@ class FileRegolePulizieTest(TestCase):
         r = self.client.post(reverse('turni:vedi_in_chat'), {'u': u, 'chat': chat.pk})
         self.assertEqual(r.status_code, 404)
         self.assertEqual(MessaggioChat.objects.count(), 1)
+
+
+@override_settings(PUSH_SINCRONO=True, ARCHIVIO_TOKEN='chiave-di-prova')
+class ArchivioSettimanaleTest(TestCase):
+    """Lo zip settimanale delle pulizie (Excel + foto e video) per la cartella condivisa (22/11/2026)."""
+
+    setUp = PianoPulizieTest.setUp
+    persona = PianoPulizieTest.persona
+    entra = PianoPulizieTest.entra
+
+    def test_zip_della_settimana_con_excel_e_foto(self):
+        import io
+        import zipfile
+
+        import openpyxl
+
+        from .models import ArchivioPulizie
+
+        op = self.persona('Costa Dino', postazione='SUPERBI')
+        genera_pulizie(op)
+        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        self.adesso = alle(13, 40)
+        self.entra(op)
+        self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {
+            'azione': 'fatta', 'pulizia': p.pk, 'foto_prima': [foto(), foto()], 'foto': foto(), 'nota': 'Tutto pulito'})
+        url = reverse('turni:archivio_pulizie_settimana') + f'?settimana={LUNEDI.isoformat()}'
+        self.assertEqual(self.client.get(url).status_code, 403)  # un operaio no
+        self.client.logout()
+        self.assertEqual(self.client.get(url, HTTP_X_ARCHIVIO_TOKEN='sbagliata').status_code, 403)
+        r = self.client.get(url, HTTP_X_ARCHIVIO_TOKEN='chiave-di-prova')
+        self.assertEqual(r.status_code, 200)
+        z = zipfile.ZipFile(io.BytesIO(b''.join(r.streaming_content)))
+        nomi = z.namelist()
+        self.assertIn(f'Pulizie {LUNEDI.isoformat()}.xlsx', nomi)
+        foto_zip = [n for n in nomi if n.startswith('Foto e video/')]
+        self.assertEqual(len(foto_zip), 3)
+        self.assertTrue(any('Generiche Superbi - Costa D' in n and 'prima' in n for n in foto_zip))
+        ws = openpyxl.load_workbook(io.BytesIO(z.read(f'Pulizie {LUNEDI.isoformat()}.xlsx'))).active
+        righe = [[c.value for c in r] for r in ws.iter_rows(min_row=3)]
+        riga = next(r for r in righe if r[3] == 'Generiche Superbi')
+        self.assertEqual((riga[6], riga[10]), ('Fatta', 'Tutto pulito'))
+        a = ArchivioPulizie.objects.get(lunedi=LUNEDI)
+        self.assertEqual((a.file, a.da), (3, 'script settimanale'))
+        # l'ufficio lo trova in Archivio → Pulizie
+        u = get_user_model().objects.create_user('ufficio.arch', password='x', is_staff=True)
+        self.client.force_login(u)
+        self.assertContains(self.client.get(reverse('turni:archivio_pulizie')), 'Archivio settimanale')

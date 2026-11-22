@@ -42,6 +42,7 @@ urlpatterns = [
     path('archivio/inventario/', views_archivio.inventario, name='inventario'),
     path('archivio/analisi/', views.archivio_analisi, name='archivio_analisi'),
     path('archivio/pulizie/', views.archivio_pulizie, name='archivio_pulizie'),
+    path('archivio/pulizie/settimana/', views.archivio_pulizie_settimana, name='archivio_pulizie_settimana'),
     path('archivio/dipendenti/', views_archivio.dipendenti, name='archivio_dipendenti'),
     path('archivio/dipendenti/<int:dip_id>/', views_archivio.dipendente, name='archivio_dipendente'),
     path('archivio/dipendenti/<int:dip_id>/pdf/', views_archivio.dipendente_pdf, name='archivio_dipendente_pdf'),

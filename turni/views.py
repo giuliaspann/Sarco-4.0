@@ -1039,6 +1039,12 @@ def archivio_pulizie(request):
     fascia = request.GET.get('fascia', '')
     posto = request.GET.get('posto', '')
     contesto = {'giorno': giorno, 'fascia': fascia, 'posto': posto}
+    if not giorno and (request.user.is_staff or e_resp_piazzale(request.user)):
+        from .models import ArchivioPulizie
+
+        fatte = {a.lunedi: a for a in ArchivioPulizie.objects.all()[:20]}
+        questo = oggi - timedelta(days=oggi.weekday())
+        contesto['settimane'] = [(questo - timedelta(days=7 * k), fatte.get(questo - timedelta(days=7 * k))) for k in range(1, 7)]
     if not giorno:
         dal = oggi - timedelta(days=30)
         conta = approvate.filter(turno__data__gte=dal).values('turno__data').annotate(n=Count('id')).order_by('-turno__data')
@@ -1663,3 +1669,37 @@ def vedi_in_chat(request):
         messages.success(request, f'Inviata nella chat «{chat.nome}».')
         return redirect(_url_chat(chat) + '#fondo')
     return render(request, 'turni/vedi_chat.html', {'u': u, 'pdf': pdf, 'nome': nome, 'chats': chats, 'torna': torna})
+
+
+def archivio_pulizie_settimana(request):
+    """Lo zip della settimana delle pulizie (Excel + foto e video). Lo scarica l'ufficio dal tasto in Archivio → Pulizie,
+    oppure lo script settimanale del PC dell'ufficio con la chiave ARCHIVIO_TOKEN (intestazione «X-Archivio-Token»)."""
+    import hmac
+
+    from django.conf import settings
+    from django.http import HttpResponseForbidden
+
+    from .archivio_settimanale import crea_zip
+    from .models import ArchivioPulizie
+
+    token = request.headers.get('X-Archivio-Token', '')
+    con_chiave = bool(settings.ARCHIVIO_TOKEN) and hmac.compare_digest(token, settings.ARCHIVIO_TOKEN)
+    if not con_chiave and not (request.user.is_authenticated and (request.user.is_staff or e_resp_piazzale(request.user))):
+        if not request.user.is_authenticated and not token:
+            from django.contrib.auth.views import redirect_to_login
+
+            return redirect_to_login(request.get_full_path())
+        return HttpResponseForbidden('Archivio: accesso non consentito.')
+    oggi = timezone.localdate()
+    lunedi = leggi_data(request.GET.get('settimana'), None)
+    if lunedi is None:  # di solito la settimana appena finita
+        lunedi = oggi - timedelta(days=oggi.weekday() + 7)
+    lunedi -= timedelta(days=lunedi.weekday())
+    nome, f, n_pulizie, n_file = crea_zip(lunedi)
+    f.seek(0, 2)
+    peso = f.tell()
+    f.seek(0)
+    ArchivioPulizie.objects.update_or_create(lunedi=lunedi, defaults={
+        'pulizie': n_pulizie, 'file': n_file, 'byte': peso,
+        'da': 'script settimanale' if con_chiave else (getattr(getattr(request.user, 'dipendente', None), 'nome_breve', '') or request.user.get_username())[:60]})
+    return FileResponse(f, as_attachment=True, filename=nome, content_type='application/zip')

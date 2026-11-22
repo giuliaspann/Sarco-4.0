@@ -2031,3 +2031,23 @@ class Straordinaria(models.Model):
 
     def __str__(self):
         return f'{self.giorno:%d/%m} {self.turno} · {self.testo[:40]}'
+
+
+class ArchivioPulizie(models.Model):
+    """Le settimane delle pulizie già scaricate nell'archivio della cartella condivisa (Giulia, 22/11/2026):
+    servono per sapere quali foto e video sono al sicuro e si possono togliere dall'app."""
+
+    lunedi = models.DateField(unique=True)
+    scaricato_il = models.DateTimeField(auto_now=True)
+    pulizie = models.PositiveIntegerField(default=0)
+    file = models.PositiveIntegerField('foto e video', default=0)
+    byte = models.PositiveBigIntegerField(default=0)
+    da = models.CharField('scaricato da', max_length=60, blank=True)
+
+    class Meta:
+        verbose_name = 'settimana delle pulizie archiviata'
+        verbose_name_plural = 'settimane delle pulizie archiviate'
+        ordering = ['-lunedi']
+
+    def __str__(self):
+        return f'Pulizie dal {self.lunedi:%d/%m/%Y}'
