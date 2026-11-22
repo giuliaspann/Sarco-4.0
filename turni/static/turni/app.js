@@ -132,18 +132,32 @@ async function iscrivi(riquadro) {
   const fondo = () => bersaglio ? bersaglio.scrollIntoView({ block: 'center' }) : window.scrollTo(0, document.documentElement.scrollHeight);
   fondo();
   window.addEventListener('load', fondo);
-  // tocco sul fumetto (proprio, o qualsiasi per l'ufficio): compare "Elimina"
+  // le foto e i video si caricano dopo e allungano la pagina: finché non si tocca lo schermo la chat resta agganciata
+  // all'ultimo messaggio (bug 22/11: si apriva a metà)
+  const sfondo = document.querySelector('.wa-sfondo');
+  if (sfondo && window.ResizeObserver) {
+    let agganciata = true;
+    const stacca = () => { agganciata = false; };
+    ['touchstart', 'wheel', 'keydown', 'mousedown'].forEach(ev => window.addEventListener(ev, stacca, { once: true, passive: true }));
+    setTimeout(stacca, 6000);
+    new ResizeObserver(() => { if (agganciata) fondo(); }).observe(sfondo);
+  }
+  // bacheca: tocco sul fumetto (per l'ufficio) compare "Elimina"
   document.querySelector('.wa').addEventListener('click', e => {
-    const msg = e.target.closest('.wa-msg');
+    const msg = e.target.closest('.wa-msg.bacheca');
     if (msg && msg.querySelector('.wa-elimina') && !e.target.closest('button')) msg.classList.toggle('aperto');
   });
 })();
 
-// ---------------------------------------------------------------- chat (stile WhatsApp) che si aggiorna da sola
+// ---------------------------------------------------------------- chat (stile WhatsApp): aggiornamento, risposte, reazioni (Giulia, 22/11/2026)
 (function () {
   const chat = document.getElementById('chat');
   if (!chat) return;
+  const modulo = document.querySelector('.wa-scrivi');
+  const csrf = modulo ? modulo.querySelector('[name=csrfmiddlewaretoken]').value : '';
   const fondo = () => window.scrollTo(0, document.documentElement.scrollHeight);
+  const spunte = letto => ' <svg class="wa-spunte' + (letto ? ' lette' : '') + '" viewBox="0 0 18 12" role="img" aria-label="Inviato"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>';
+  const el = (tag, classe, testo) => { const e = document.createElement(tag); if (classe) e.className = classe; if (testo != null) e.textContent = testo; return e; };
 
   // il campo di scrittura si allarga mentre scrivi
   const campo = document.querySelector('.wa-scrivi textarea');
@@ -154,63 +168,84 @@ async function iscrivi(riquadro) {
     return tutti.length ? tutti[tutti.length - 1] : null;
   }
 
+  // le reazioni sotto il fumetto: 👍 2 ❤️
+  function mostraReazioni(b, reazioni) {
+    let box = b.querySelector('.wa-reazioni');
+    if (!box) { box = el('span', 'wa-reazioni'); b.insertBefore(box, b.querySelector('.wa-elimina')); }
+    box.textContent = '';
+    (reazioni || []).forEach(r => {
+      const s = el('span', 'wa-reazione' + (r.mia ? ' mia' : ''), r.emoji);
+      s.title = r.chi;
+      if (r.n > 1) s.appendChild(el('b', '', String(r.n)));
+      box.appendChild(s);
+    });
+    b.classList.toggle('con-reazioni', !!(reazioni && reazioni.length));
+  }
+
+  function citazione(r) {
+    const a = el('a', 'wa-citazione q' + r.colore);
+    a.href = '#m' + r.id; a.dataset.vai = 'm' + r.id;
+    const t = el('span', 'wa-citazione-testi');
+    t.appendChild(el('b', 'c' + r.colore, r.autore));
+    t.appendChild(el('span', '', r.testo));
+    a.appendChild(t);
+    if (r.foto) { const i = el('img'); i.src = r.foto; i.alt = ''; a.appendChild(i); }
+    return a;
+  }
+
   function aggiungi(m) {
     const prec = ultimo();
     const nuovoGiorno = !prec || prec.dataset.giorno !== m.giorno;
     if (nuovoGiorno) {
-      const d = document.createElement('div');
-      d.className = 'wa-data';
-      const s = document.createElement('span');
-      s.textContent = m.etichetta_giorno;
-      d.appendChild(s);
+      const d = el('div', 'wa-data');
+      d.appendChild(el('span', '', m.etichetta_giorno));
       chat.appendChild(d);
     }
     const primo = nuovoGiorno || prec.dataset.autore !== String(m.autore_id);
-    const riga = document.createElement('div');
-    riga.className = 'wa-riga' + (m.mio ? ' mia' : '');
+    const riga = el('div', 'wa-riga' + (m.mio ? ' mia' : '') + (primo ? ' primo' : ''));
     riga.id = 'm' + m.id;
     if (!m.mio) {
-      const tondo = document.createElement('span');
-      tondo.className = 'wa-tondo' + (primo ? '' : ' vuoto');
-      if (primo && m.tondo.foto) { const i = document.createElement('img'); i.src = m.tondo.foto; i.alt = ''; tondo.appendChild(i); }
+      const tondo = el('span', 'wa-tondo' + (primo ? '' : ' vuoto'));
+      if (primo && m.tondo.foto) { const i = el('img'); i.src = m.tondo.foto; i.alt = ''; tondo.appendChild(i); }
       else if (primo) tondo.textContent = m.tondo.iniziali;
       riga.appendChild(tondo);
     }
-    const b = document.createElement('div');
-    b.className = 'wa-msg' + (m.mio ? ' mio' : '') + (primo ? ' primo' : '') + (m.foto ? ' con-foto' : '');
-    b.dataset.id = m.id; b.dataset.autore = m.autore_id; b.dataset.giorno = m.giorno;
+    const b = el('div', 'wa-msg' + (m.mio ? ' mio' : '') + (primo ? ' primo' : '') + (m.foto || m.video ? ' con-foto' : ''));
+    Object.assign(b.dataset, { id: m.id, autore: m.autore_id, giorno: m.giorno, nome: m.mio ? 'Tu' : m.autore, colore: m.colore, breve: m.testo_breve });
     if (m.info) b.dataset.info = m.info;
-    if (!m.mio && primo) {
-      const a = document.createElement('span');
-      a.className = 'wa-autore c' + m.colore;
-      a.textContent = m.autore;
-      b.appendChild(a);
-    }
+    if (!m.eliminato && !m.sondaggio) b.dataset.rispondi = '1';
+    if (!m.mio && primo) b.appendChild(el('span', 'wa-autore c' + m.colore, m.autore));
+    if (m.risposta) b.appendChild(citazione(m.risposta));
     if (m.foto) {
-      const l = document.createElement('a'); l.className = 'wa-foto'; l.href = m.foto; l.target = '_blank';
-      const i = document.createElement('img'); i.src = m.foto; i.alt = 'Foto di ' + m.autore; l.appendChild(i); b.appendChild(l);
+      const l = el('a', 'wa-foto'); l.href = m.foto; l.target = '_blank';
+      const i = el('img'); i.src = m.foto; i.alt = 'Foto di ' + m.autore; l.appendChild(i); b.appendChild(l);
+    }
+    if (m.video) {
+      const v = el('video', 'wa-video'); v.src = m.video; v.controls = true; v.playsInline = true; v.preload = 'metadata'; b.appendChild(v);
     }
     if (m.documento) {
-      const d = document.createElement('a'); d.className = 'wa-doc'; d.href = m.documento; d.target = '_blank';
+      const d = el('a', 'wa-doc'); d.href = m.documento; d.target = '_blank';
       d.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/></svg>';
-      const n = document.createElement('span'); n.textContent = m.documento_nome; d.appendChild(n); b.appendChild(d);
+      d.appendChild(el('span', '', m.documento_nome)); b.appendChild(d);
     }
     if (m.sondaggio) {
-      const l = document.createElement('a'); l.className = 'wa-testo'; l.href = location.pathname + location.search + '#m' + m.id;
-      l.textContent = 'Sondaggio: ' + m.sondaggio.domanda + ' · tocca per votare';
+      const l = el('a', 'wa-testo', 'Sondaggio: ' + m.sondaggio.domanda + ' · tocca per votare');
+      l.href = location.pathname + location.search + '#m' + m.id;
       l.addEventListener('click', () => setTimeout(() => location.reload(), 0));
       b.appendChild(l);
     } else if (m.testo || m.eliminato) {
-      const t = document.createElement('span');
-      t.className = 'wa-testo' + (m.eliminato ? ' eliminato' : '');
-      t.textContent = m.eliminato ? (m.testo ? m.testo + ' · eliminato' : 'Messaggio eliminato') : m.testo;
-      b.appendChild(t);
+      b.appendChild(el('span', 'wa-testo' + (m.eliminato ? ' eliminato' : ''), m.eliminato ? (m.testo ? m.testo + ' · eliminato' : 'Messaggio eliminato') : m.testo));
     }
-    const o = document.createElement('span');
-    o.className = 'wa-ora';
-    o.textContent = m.ora;
-    if (m.mio) o.insertAdjacentHTML('beforeend', ' <svg class="wa-spunte' + (m.letto ? ' lette' : '') + '" viewBox="0 0 18 12" role="img" aria-label="Inviato"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>');
+    const o = el('span', 'wa-ora', m.ora);
+    if (m.mio) o.insertAdjacentHTML('beforeend', spunte(m.letto));
     b.appendChild(o);
+    mostraReazioni(b, m.reazioni);
+    if (m.eliminabile) {
+      const f = el('form', 'wa-elimina'); f.method = 'post'; f.hidden = true;
+      [['csrfmiddlewaretoken', csrf], ['vista', 'chat'], ['chat', new URLSearchParams(location.search).get('chat')], ['messaggio', m.id], ['azione', 'elimina_chat']]
+        .forEach(([n, v]) => { const i = el('input'); i.type = 'hidden'; i.name = n; i.value = v; f.appendChild(i); });
+      b.appendChild(f);
+    }
     riga.appendChild(b);
     chat.appendChild(riga);
   }
@@ -219,10 +254,15 @@ async function iscrivi(riquadro) {
     if (document.hidden) return;
     try {
       const r = await fetch(chat.dataset.url + '&dopo=' + chat.dataset.ultimo);
-      const { messaggi, letto_fino } = await r.json();
+      const { messaggi, letto_fino, reazioni } = await r.json();
       // spunte blu: i miei messaggi letti da tutti
       chat.querySelectorAll('.wa-msg.mio').forEach(b => {
         if (Number(b.dataset.id) <= letto_fino) { const sp = b.querySelector('.wa-spunte'); if (sp) sp.classList.add('lette'); }
+      });
+      // le reazioni degli altri
+      Object.entries(reazioni || {}).forEach(([id, rr]) => {
+        const b = chat.querySelector('.wa-msg[data-id="' + id + '"]');
+        if (b && JSON.stringify(rr.map(x => [x.emoji, x.n, x.mia])) !== b.dataset.firma) { mostraReazioni(b, rr); b.dataset.firma = JSON.stringify(rr.map(x => [x.emoji, x.n, x.mia])); }
       });
       if (!messaggi.length) return;
       const vuota = document.getElementById('chat-vuota');
@@ -235,6 +275,118 @@ async function iscrivi(riquadro) {
   }
   setInterval(aggiorna, 8000);
   document.addEventListener('visibilitychange', aggiorna);
+
+  // ---- rispondi a un messaggio: la citazione sopra il campo di scrittura
+  const barra = document.getElementById('wa-rispondi');
+  const campoRisposta = document.getElementById('risposta-a');
+  function rispondi(b) {
+    if (!barra || !b.dataset.rispondi) return;
+    campoRisposta.value = b.dataset.id;
+    const q = barra.querySelector('.wa-citazione');
+    q.className = 'wa-citazione q' + b.dataset.colore;
+    q.querySelector('b').className = 'c' + b.dataset.colore;
+    q.querySelector('b').textContent = b.dataset.nome;
+    q.querySelector('.wa-citazione-testi > span').textContent = b.dataset.breve;
+    barra.hidden = false;
+    if (campo) campo.focus();
+  }
+  const annulla = document.getElementById('rispondi-togli');
+  if (annulla) annulla.addEventListener('click', () => { campoRisposta.value = ''; barra.hidden = true; });
+
+  // tocco sulla citazione: va al messaggio originale e lo illumina un attimo
+  chat.addEventListener('click', e => {
+    const q = e.target.closest('[data-vai]');
+    if (!q) return;
+    e.preventDefault();
+    const riga = document.getElementById(q.dataset.vai);
+    if (!riga) return;
+    riga.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    riga.classList.remove('illumina'); void riga.offsetWidth; riga.classList.add('illumina');
+  });
+
+  // ---- tocco su un fumetto: il foglio con le reazioni e le azioni
+  const foglio = document.getElementById('wa-azioni');
+  let scelto = null;
+  function chiudi() { if (foglio) foglio.hidden = true; if (scelto) scelto.classList.remove('scelto'); scelto = null; document.body.classList.remove('foglio-aperto'); }
+  function apri(b) {
+    if (!foglio) return;
+    scelto = b;
+    b.classList.add('scelto');
+    const eliminato = !b.dataset.rispondi && !b.querySelector('.wa-sondaggio');
+    foglio.querySelector('.wa-emoji').hidden = eliminato;
+    foglio.querySelector('[data-azione=rispondi]').hidden = !b.dataset.rispondi;
+    const info = foglio.querySelector('[data-azione=info]');
+    info.hidden = !b.dataset.info; info.href = b.dataset.info || '#';
+    foglio.querySelector('[data-azione=elimina]').hidden = !b.querySelector('.wa-elimina');
+    const mie = [...b.querySelectorAll('.wa-reazione.mia')].map(s => s.firstChild.textContent);
+    foglio.querySelectorAll('[data-emoji]').forEach(x => x.classList.toggle('mia', mie.includes(x.dataset.emoji)));
+    if (eliminato && info.hidden && !b.querySelector('.wa-elimina')) { scelto = null; b.classList.remove('scelto'); return; }
+    foglio.hidden = false;
+    document.body.classList.add('foglio-aperto');
+  }
+  chat.addEventListener('click', e => {
+    if (e.target.closest('a, button, video, form, input, [data-vai]')) return;
+    const b = e.target.closest('.wa-msg');
+    if (b && !b.classList.contains('bacheca')) apri(b);
+  });
+  if (foglio) {
+    foglio.addEventListener('click', async e => {
+      if (e.target.closest('[data-chiudi]')) { chiudi(); return; }
+      const b = scelto;
+      if (!b) return;
+      const emoji = e.target.closest('[data-emoji]');
+      if (emoji) {
+        chiudi();
+        const dati = new FormData(); dati.append('emoji', emoji.dataset.emoji); dati.append('csrfmiddlewaretoken', csrf);
+        try {
+          const r = await fetch(chat.dataset.reazione.replace('/0/', '/' + b.dataset.id + '/'), { method: 'POST', body: dati, headers: { 'X-Requested-With': 'fetch' } });
+          if (r.ok) { const j = await r.json(); mostraReazioni(b, j.reazioni); }
+        } catch (err) { /* rete assente */ }
+        return;
+      }
+      const azione = e.target.closest('[data-azione]');
+      if (!azione) return;
+      if (azione.dataset.azione === 'rispondi') { e.preventDefault(); chiudi(); rispondi(b); }
+      else if (azione.dataset.azione === 'elimina') {
+        e.preventDefault(); chiudi();
+        if (confirm('Eliminare questo messaggio per tutti?')) b.querySelector('.wa-elimina').submit();
+      }
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') chiudi(); });
+  }
+
+  // ---- scorri come WhatsApp: verso destra = rispondi; verso sinistra un tuo messaggio = chi l'ha letto
+  let fumetto = null, x0 = 0, y0 = 0, dx = 0, deciso = false;
+  chat.addEventListener('touchstart', e => {
+    fumetto = e.target.closest('.wa-msg');
+    if (!fumetto || e.target.closest('video, .wa-sondaggio')) { fumetto = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; deciso = false;
+  }, { passive: true });
+  chat.addEventListener('touchmove', e => {
+    if (!fumetto) return;
+    dx = e.touches[0].clientX - x0;
+    const dy = e.touches[0].clientY - y0;
+    if (!deciso) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx)) { fumetto = null; return; }
+      deciso = true;
+    }
+    const ok = dx > 0 ? fumetto.dataset.rispondi : fumetto.dataset.info;
+    if (!ok) return;
+    const corsa = Math.max(-90, Math.min(dx, 90));
+    fumetto.style.transform = 'translateX(' + corsa + 'px)';
+    fumetto.classList.toggle('pronto-rispondi', dx > 60);
+    fumetto.classList.toggle('pronto-info', dx < -60);
+  }, { passive: true });
+  chat.addEventListener('touchend', () => {
+    if (!fumetto) return;
+    const b = fumetto;
+    b.style.transform = '';
+    b.classList.remove('pronto-rispondi', 'pronto-info');
+    fumetto = null;
+    if (dx > 60 && b.dataset.rispondi) { if (navigator.vibrate) navigator.vibrate(15); rispondi(b); }
+    else if (dx < -60 && b.dataset.info) location.href = b.dataset.info;
+  });
 })();
 
 // ---------------------------------------------------------------- tastierino PIN (pagina di accesso)
@@ -632,37 +784,17 @@ document.querySelectorAll('input[type=file][data-invia-subito]').forEach(input =
 document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.addEventListener('change', () => s.form.submit()));
 
 
-// Chat · scorri un tuo messaggio verso destra per vedere chi l'ha letto (come WhatsApp, Giulia 11/11)
-(function () {
-  const chat = document.getElementById('chat');
-  if (!chat) return;
-  let fumetto = null, x0 = 0, y0 = 0, dx = 0;
-  chat.addEventListener('touchstart', e => {
-    fumetto = e.target.closest('.wa-msg[data-info]');
-    if (!fumetto) return;
-    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0;
-  }, { passive: true });
-  chat.addEventListener('touchmove', e => {
-    if (!fumetto) return;
-    dx = e.touches[0].clientX - x0;
-    if (Math.abs(e.touches[0].clientY - y0) > Math.abs(dx)) { fumetto.style.transform = ''; fumetto = null; return; }
-    if (dx > 0) fumetto.style.transform = 'translateX(' + Math.min(dx, 110) + 'px)';
-  }, { passive: true });
-  chat.addEventListener('touchend', () => {
-    if (!fumetto) return;
-    const vai = dx > 80 ? fumetto.dataset.info : null;
-    fumetto.style.transform = '';
-    fumetto = null;
-    if (vai) location.href = vai;
-  });
-})();
-
 // Chat · foto scattata o scelta: la riduco in JPEG (anche le HEIC dell'iPhone) e la mostro prima di inviarla
 (function () {
   const inputs = document.querySelectorAll('input[data-foto-chat]');
   const pronta = document.getElementById('foto-pronta');
   if (!inputs.length || !pronta) return;
   const togli = () => { inputs.forEach(i => { i.value = ''; }); pronta.hidden = true; };
+  // il video ci mette un po' a partire: lo dico, così non si tocca Invia due volte
+  const modulo = inputs[0].form;
+  modulo.addEventListener('submit', () => {
+    if ([...inputs].some(i => i.files.length && (i.files[0].type || '').startsWith('video/'))) pronta.querySelector('span').textContent = 'Invio del video in corso…';
+  });
   inputs.forEach(input => input.addEventListener('change', async () => {
     if (!input.files.length) return;
     inputs.forEach(altro => { if (altro !== input) altro.value = ''; });
@@ -670,7 +802,14 @@ document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.add
     if (window.DataTransfer && window.createImageBitmap) {
       try { const dt = new DataTransfer(); dt.items.add(await riduci(input.files[0])); input.files = dt.files; } catch (e) { /* la riduce il server */ }
     }
-    pronta.querySelector('img').src = URL.createObjectURL(input.files[0]);
+    // video (Giulia, 22/11/2026): l'anteprima è il video stesso, fermo sul primo fotogramma
+    const f = input.files[0], video = (f.type || '').startsWith('video/');
+    const img = pronta.querySelector('img'), vid = pronta.querySelector('video'), testo = pronta.querySelector('span');
+    img.hidden = video; if (vid) vid.hidden = !video;
+    if (video && vid) vid.src = URL.createObjectURL(f) + '#t=0.1'; else img.src = URL.createObjectURL(f);
+    testo.textContent = video
+      ? (f.size > 100 * 1048576 ? '⚠️ Video troppo grande (massimo 100 MB)' : 'Video pronto: scrivi un commento o tocca Invia')
+      : 'Foto pronta: scrivi un commento o tocca Invia';
     pronta.hidden = false;
   }));
   const x = document.getElementById('foto-togli');
@@ -708,7 +847,7 @@ document.querySelectorAll('select[data-invia-subito-select]').forEach(s => s.add
 // ---------------------------------------------------------------- PDF e foto con il tasto indietro (Giulia, 13/11/2026)
 // aperti da soli, sul telefono l'app a tutto schermo non ha modo di tornare indietro: li apro nella pagina «vedi»
 (function () {
-  const FOTO = /\/turni\/(foto\/\d+|foto\/allegato\/\d+|messaggi\/foto\/\d+|statistiche\/analisi\/\d+\/foto|produzione\/\d+\/foto|manutenzione\/fermi\/\d+\/foto\/\w+|manutenzione\/foto\/\w+\/\d+)\/$/;
+  const FOTO = /\/turni\/(foto\/\d+|foto\/allegato\/\d+|messaggi\/foto\/\d+|messaggi\/video\/\d+|statistiche\/analisi\/\d+\/foto|produzione\/\d+\/foto|manutenzione\/fermi\/\d+\/foto\/\w+|manutenzione\/foto\/\w+\/\d+)\/$/;
   const PDF = /\/pdf\/$/;
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href]');

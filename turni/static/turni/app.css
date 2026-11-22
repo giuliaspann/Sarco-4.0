@@ -2571,7 +2571,7 @@ a.wa-titolo { color: inherit; text-decoration: none; min-width: 0; }
 .ci-persona .ci-nome small { display: block; color: var(--tenue); font-size: .8rem; }
 
 /* Gruppi chat: Info gruppo, Aggiungi membri, Cerca, Media e link (Giulia, 12/11/2026) */
-.wa-menu-voci a.wa-voce { display: flex; align-items: center; gap: 12px; }
+.wa-menu-voci a.wa-voce, .wa-menu-voci button.wa-voce { display: flex; align-items: center; gap: 12px; }
 .wa-voce svg { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .wa-voce span { flex: 1; }
 .wa-voce i { font-style: normal; color: var(--tenue); }
@@ -2784,3 +2784,87 @@ button.pl-notturne { width: 100%; font: inherit; cursor: pointer; text-align: le
 /* Per Area (Giulia, 22/11/2026): colonna dell'area stretta, tutte le aree con la sigla, in orizzontale e con lo stesso font */
 .vp-aree th.vp-area, .vp-aree th.vp-area-testa { width: 46px; min-width: 46px; max-width: 46px; padding: 4px 3px; text-align: center; }
 .vp-aree th.vp-area { font-size: .72rem; line-height: 1.15; white-space: normal; overflow-wrap: normal; word-break: keep-all; vertical-align: middle; }
+
+/* ---------------------------------------------------------------- Chat come WhatsApp (Giulia, 22/11/2026): video, risposte, reazioni, layout */
+/* dentro una chat il menu in basso sparisce (come WhatsApp): il campo di scrittura sta in fondo e l'ultimo messaggio non finisce sotto */
+body.in-chat { padding-bottom: 0; }
+body.in-chat .ig-menu { display: none; }
+body.in-chat .wa { min-height: calc(100vh - var(--alto-barra, 64px) - 16px); min-height: calc(100dvh - var(--alto-barra, 64px) - 16px); }
+body.in-chat .wa-sfondo { padding-bottom: 14px; }
+body.in-chat .wa-scrivi { bottom: 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+body.in-chat .wa-solo-admin { position: sticky; bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+.wa-riga { scroll-margin-bottom: 90px; }
+/* il posto del tondino nei messaggi di seguito della stessa persona: vuoto, senza bordino */
+.wa-tondo.vuoto { visibility: hidden; height: 1px; margin-top: 0; }
+.wa-riga + .wa-riga:not(.primo) .wa-msg { margin-top: 1px; }
+/* foto e video nel fumetto: come WhatsApp, non a tutta pagina */
+.wa-foto img { width: 240px; max-height: 280px; }
+.wa-video { display: block; width: 240px; max-width: 100%; max-height: 320px; margin: 2px -4px 4px; border-radius: 6px; background: #000; }
+.wa-pronta video { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #000; }
+.wa-pronta [hidden] { display: none; }
+/* la citazione del messaggio a cui si risponde */
+.wa-citazione { display: flex; align-items: stretch; gap: 8px; margin: 2px -3px 5px; padding: 5px 8px; border-radius: 6px; border-left: 4px solid #1f7aec;
+  background: rgba(0, 0, 0, .05); color: inherit; text-decoration: none; cursor: pointer; }
+.wa-citazione-testi { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; line-height: 1.25; }
+.wa-citazione-testi b { font-size: .8rem; }
+.wa-citazione-testi span { font-size: .85rem; color: #54656f; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.wa-citazione img { flex: none; width: 44px; height: 44px; border-radius: 4px; object-fit: cover; }
+.wa-citazione.q0 { border-left-color: #1f7aec; } .wa-citazione.q1 { border-left-color: #e542a3; } .wa-citazione.q2 { border-left-color: #00a884; } .wa-citazione.q3 { border-left-color: #c4532d; }
+.wa-citazione.q4 { border-left-color: #7f66ff; } .wa-citazione.q5 { border-left-color: #d88f00; } .wa-citazione.q6 { border-left-color: #027eb5; } .wa-citazione.q7 { border-left-color: #b4527a; }
+.wa-citazione b.c0 { color: #1f7aec; } .wa-citazione b.c1 { color: #e542a3; } .wa-citazione b.c2 { color: #00a884; } .wa-citazione b.c3 { color: #c4532d; }
+.wa-citazione b.c4 { color: #7f66ff; } .wa-citazione b.c5 { color: #d88f00; } .wa-citazione b.c6 { color: #027eb5; } .wa-citazione b.c7 { color: #b4527a; }
+.wa-msg.mio .wa-citazione { background: rgba(0, 0, 0, .06); }
+.wa-msg.mio .wa-citazione b { color: #00795c; }
+/* barra «stai rispondendo a…» sopra il campo di scrittura */
+.wa-rispondi { flex-basis: 100%; display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 12px; background: #ffffff; }
+.wa-rispondi[hidden] { display: none; }
+.wa-rispondi .wa-citazione { flex: 1; min-width: 0; margin: 0; }
+.wa-rispondi button { flex: none; width: 36px; height: 36px; border-radius: 999px; border: 1px solid #f5b5b5; background: #fcd9d9; color: #9b1c1c; font-weight: 800; cursor: pointer; }
+/* scorrendo il fumetto compare la freccia di risposta (a sinistra) o la «i» di chi l'ha letto (a destra) */
+.wa-msg.pronto-rispondi::after, .wa-msg.pronto-info::after { position: absolute; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border-radius: 999px;
+  display: grid; place-items: center; background: rgba(0, 0, 0, .12); color: #ffffff; font-size: .95rem; font-weight: 800; }
+.wa-msg.pronto-rispondi::after { content: "↩"; left: -40px; }
+.wa-msg.pronto-info::after { content: "i"; right: -40px; }
+.wa-riga.illumina .wa-msg { animation: wa-luce 1.6s ease-out; }
+@keyframes wa-luce { 0%, 30% { box-shadow: 0 0 0 3px rgba(0, 168, 132, .55); } 100% { box-shadow: 0 1px .5px rgba(11, 20, 26, .13); } }
+.wa-msg.scelto { filter: brightness(.92); }
+/* reazioni: la pillola sotto il fumetto */
+.wa-reazioni { position: absolute; bottom: -15px; left: 8px; display: flex; gap: 3px; z-index: 1; }
+.wa-msg.mio .wa-reazioni { left: auto; right: 8px; }
+.wa-reazioni:empty { display: none; }
+.wa-reazione { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 999px; background: #ffffff; border: 1px solid #e9edef;
+  box-shadow: 0 1px 2px rgba(11, 20, 26, .15); font-size: .82rem; line-height: 1.35; }
+.wa-reazione b { font-size: .72rem; color: #54656f; }
+.wa-reazione.mia { background: #e7f8e4; border-color: #b9e4b2; }
+.wa-msg.con-reazioni { margin-bottom: 18px; }
+/* il foglio che si apre toccando un fumetto */
+.wa-azioni { position: fixed; inset: 0; z-index: 60; }
+.wa-azioni[hidden] { display: none; }
+.wa-azioni-velo { position: absolute; inset: 0; background: rgba(0, 0, 0, .35); }
+.wa-azioni-box { position: absolute; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--carta); box-shadow: 0 -6px 24px rgba(0, 0, 0, .18); }
+.wa-emoji { display: flex; justify-content: space-between; gap: 4px; padding: 6px 8px; margin-bottom: 4px; border-radius: 999px; background: #f0f2f5; }
+.wa-emoji[hidden] { display: none; }
+.wa-emoji button { width: 46px; height: 46px; border: 0; border-radius: 999px; background: transparent; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.wa-emoji button.mia { background: #d9f2d4; }
+.wa-azione { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; border-radius: 14px; border: 1px solid #d5dbe0;
+  background: #eef2f5; color: #00384f; font: inherit; font-size: 1rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+.wa-azione[hidden] { display: none; }
+.wa-azione svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wa-azione.rossa { background: #fcd9d9; border-color: #f5b5b5; color: #9b1c1c; }
+body.foglio-aperto { overflow: hidden; }
+/* Media: le anteprime dei video */
+.cg-foto a.cg-video { position: relative; }
+.cg-foto .cg-video video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; pointer-events: none; }
+.cg-foto .cg-video i { position: absolute; inset: 0; display: grid; place-items: center; color: #ffffff; font-style: normal; font-size: 1.6rem; text-shadow: 0 1px 6px rgba(0, 0, 0, .6); }
+@media (prefers-color-scheme: dark) {
+  .wa-citazione { background: rgba(255, 255, 255, .07); }
+  .wa-citazione-testi span { color: #aebac1; }
+  .wa-rispondi { background: #2a3942; }
+  .wa-reazione { background: #202c33; border-color: #2a3942; }
+  .wa-reazione b { color: #aebac1; }
+  .wa-reazione.mia { background: #0a3d33; border-color: #11624f; }
+  .wa-emoji { background: #2a3942; }
+  .wa-emoji button.mia { background: #11624f; }
+  .wa-azione { background: #2a3942; border-color: #3b4a54; color: #e9edef; }
+}

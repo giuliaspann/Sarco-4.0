@@ -20,8 +20,8 @@ from django.utils.formats import date_format
 from django.views.decorators.http import require_POST
 
 from . import push
-from .models import (Annuncio, Chat, IscrizionePush, LetturaChat, MessaggioChat, OpzioneSondaggio, RuoloApp, Sondaggio,
-                     StatoMessaggi, VotoSondaggio)
+from .models import (Annuncio, Chat, IscrizionePush, LetturaChat, MessaggioChat, OpzioneSondaggio, ReazioneChat, RuoloApp,
+                     Sondaggio, StatoMessaggi, VotoSondaggio)
 from .richieste import e_responsabile
 
 MESSAGGI_MOSTRATI = 100
@@ -135,10 +135,63 @@ def _sondaggio_json(m, utente):
     }
 
 
+# reazioni come WhatsApp (Giulia, 22/11/2026)
+EMOJI_REAZIONI = ('👍', '❤️', '😂', '😮', '😢', '🙏')
+MAX_VIDEO = 100 * 1024 * 1024
+
+
+def anteprima(m, direzione=False):
+    """Una riga che dice cosa c'è nel messaggio: per l'elenco delle chat e per la risposta citata."""
+    if m.eliminato and not direzione:
+        return 'Messaggio eliminato'
+    if m.testo:
+        return m.testo
+    if m.foto:
+        return '📷 Foto'
+    if m.video:
+        return '🎥 Video'
+    if m.documento:
+        return '📄 ' + m.documento_nome
+    return ''
+
+
+def reazioni_json(m, utente):
+    """[{emoji, n, mia, chi}] delle reazioni di un messaggio, le più usate prima."""
+    gruppi = {}
+    for r in m.reazioni.all():
+        g = gruppi.setdefault(r.emoji, {'emoji': r.emoji, 'n': 0, 'mia': False, 'chi': []})
+        g['n'] += 1
+        g['mia'] = g['mia'] or r.utente_id == utente.pk
+        g['chi'].append('Tu' if r.utente_id == utente.pk else nome_di(r.utente))
+    ordine = {e: i for i, e in enumerate(EMOJI_REAZIONI)}
+    out = sorted(gruppi.values(), key=lambda g: (-g['n'], ordine.get(g['emoji'], 9)))
+    for g in out:
+        g['chi'] = ', '.join(g['chi'])
+    return out
+
+
+def _risposta_json(m, utente, direzione):
+    o = m.risposta_a
+    if o is None:
+        return None
+    return {'id': o.pk, 'autore': 'Tu' if o.autore_id == utente.pk else nome_di(o.autore), 'colore': o.autore_id % 8, 'testo': anteprima(o, direzione)[:160],
+            'foto': reverse('turni:foto_chat', args=[o.pk]) if o.foto and (not o.eliminato or direzione) else ''}
+
+
+def con_dettagli(qs):
+    """Le query della chat con tutto quello che serve a _messaggio_json, senza una query per messaggio."""
+    return qs.select_related('autore', 'autore__dipendente', 'risposta_a__autore__dipendente').prefetch_related(
+        'reazioni__utente__dipendente')
+
+
 def _messaggio_json(m, utente, responsabile, direzione=False, letto_fino=None):
     quando = timezone.localtime(m.creato_il)
     mio = m.autore_id == utente.pk
     return {
+        'video': reverse('turni:video_chat', args=[m.pk]) if m.video and (not m.eliminato or direzione) else '',
+        'risposta': _risposta_json(m, utente, direzione) if not m.eliminato or direzione else None,
+        'reazioni': reazioni_json(m, utente) if not m.eliminato else [],
+        'testo_breve': anteprima(m, direzione)[:160],
         'tondo': tondo_di(m.autore),
         'foto': reverse('turni:foto_chat', args=[m.pk]) if m.foto and (not m.eliminato or direzione) else '',
         'documento': reverse('turni:documento_chat', args=[m.pk]) if m.documento and (not m.eliminato or direzione) else '',
@@ -236,13 +289,26 @@ def messaggi(request):
             messages.success(request, 'Avviso pubblicato in bacheca.')
         elif azione == 'elimina_annuncio' and responsabile:
             get_object_or_404(Annuncio, pk=request.POST.get('annuncio')).delete()
-        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto')) or request.FILES.get('documento')) and MessaggioChat.objects.filter(
+        elif azione == 'chat' and chat and (testo or _allegati(request)) and MessaggioChat.objects.filter(
             autore=request.user, creato_il__gte=timezone.now() - timedelta(minutes=1)
         ).count() >= 10:
             messages.error(request, 'Stai scrivendo troppi messaggi di seguito: aspetta un minuto.')
-        elif azione == 'chat' and chat and (testo or any(request.FILES.getlist('foto')) or request.FILES.get('documento')):
-            foto = next((f for f in request.FILES.getlist('foto') if f), None)
+        elif azione == 'chat' and chat and (testo or _allegati(request)):
+            file_scelti = [f for f in request.FILES.getlist('foto') + request.FILES.getlist('video') if f]
+            # foto e video arrivano dagli stessi tasti (fotocamera, galleria): li distingue il tipo del file
+            video = next((f for f in file_scelti if (getattr(f, 'content_type', '') or '').lower().startswith('video/')), None)
+            foto = None if video else next(iter(file_scelti), None)
             m = MessaggioChat(chat=chat, autore=request.user, testo=testo[:1000])
+            try:
+                m.risposta_a = chat.messaggi.get(pk=int(request.POST.get('risposta_a') or 0))
+            except (MessaggioChat.DoesNotExist, ValueError):
+                pass
+            if video:
+                if video.size > MAX_VIDEO:
+                    messages.error(request, 'Il video è troppo grande: massimo 100 MB.')
+                    return redirect(_url_chat(chat) + '#fondo')
+                m.video.save(video.name or 'video.mp4', video, save=False)
+                m.video_tipo = (video.content_type or 'video/mp4')[:60]
             if foto:
                 from .manutenzione import comprimi_foto
                 try:
@@ -260,7 +326,7 @@ def messaggi(request):
                 m.documento_nome = os.path.basename(documento.name)[:200]
             m.save()
             push.invia(destinatari(request.user, chat), f'{chat.nome} · {nome_di(request.user)}',
-                       m.testo or ('Foto' if m.foto else f'Documento: {m.documento_nome}'), _url_chat(chat), notifica=False)
+                       anteprima(m), _url_chat(chat), notifica=False)
             avvisa_menzioni(m, request.user)
         elif azione == 'elimina_chat' and chat:
             m = get_object_or_404(MessaggioChat, pk=request.POST.get('messaggio'), chat=chat)
@@ -291,9 +357,7 @@ def messaggi(request):
         stato.bacheca_letta_il = timezone.now()
         stato.save(update_fields=['bacheca_letta_il'])
     elif chat:
-        ultimi = list(
-            chat.messaggi.select_related('autore', 'autore__dipendente').order_by('-pk')[:MESSAGGI_MOSTRATI]
-        )[::-1]
+        ultimi = list(con_dettagli(chat.messaggi.all()).order_by('-pk')[:MESSAGGI_MOSTRATI])[::-1]
         if ultimi:
             _segna_letta(request.user, chat, ultimi[-1].pk)
         letto_fino = letto_da_tutti_fino(chat)
@@ -303,6 +367,7 @@ def messaggi(request):
         contesto['membri_tondi'] = [tondo_di(u) for u in membri_di(chat).select_related('dipendente')[:3]]
         contesto['puo_aggiungere'] = puo_gestire_chat(request.user) and not chat.tutti
         contesto['ultimo_id'] = ultimi[-1].pk if ultimi else 0
+        contesto['emoji_reazioni'] = EMOJI_REAZIONI
         if ultimi:
             _segna_letta(request.user, chat, ultimi[-1].pk)
     else:
@@ -317,6 +382,10 @@ def messaggi(request):
     return render(request, 'turni/messaggi.html', contesto)
 
 
+def _allegati(request):
+    return any(f for campo in ('foto', 'video', 'documento') for f in request.FILES.getlist(campo))
+
+
 def elenco_chat(utente):
     """Per la lista stile WhatsApp: ultimo messaggio e non letti di ogni chat."""
     elenco = []
@@ -327,6 +396,7 @@ def elenco_chat(utente):
             'chat': c,
             'ultimo': ultimo,
             'autore': nome_di(ultimo.autore) if ultimo else '',
+            'anteprima': anteprima(ultimo) if ultimo else '',
             'quando': timezone.localtime(ultimo.creato_il) if ultimo else None,
             'nuovi': nuovi,
         })
@@ -342,13 +412,38 @@ def chat_nuovi(request):
     except (ValueError, Chat.DoesNotExist):
         raise Http404
     responsabile, direzione = e_responsabile(request.user), e_direzione(request.user)
-    nuovi = list(chat.messaggi.filter(pk__gt=dopo).select_related('autore', 'autore__dipendente').order_by('pk')[:50])
+    nuovi = list(con_dettagli(chat.messaggi.filter(pk__gt=dopo)).order_by('pk')[:50])
     if nuovi:
         _segna_letta(request.user, chat, nuovi[-1].pk)
     letto_fino = letto_da_tutti_fino(chat)
+    # le reazioni messe o tolte dagli altri sui messaggi già sullo schermo
+    recenti = con_dettagli(chat.messaggi.filter(pk__lte=dopo, eliminato=False)).order_by('-pk')[:MESSAGGI_MOSTRATI]
+    reazioni = {m.pk: reazioni_json(m, request.user) for m in recenti}
     # letto_fino: i miei messaggi fino a lì passano alle spunte blu anche senza ricaricare
     return JsonResponse({'messaggi': [_messaggio_json(m, request.user, responsabile, direzione, letto_fino) for m in nuovi],
-                         'letto_fino': letto_fino})
+                         'letto_fino': letto_fino, 'reazioni': reazioni})
+
+
+@login_required
+@require_POST
+def reazione(request, pk):
+    """Mette, cambia o toglie (se è la stessa) la propria reazione a un messaggio."""
+    m = _messaggio_visibile(request, pk)
+    emoji = request.POST.get('emoji', '')
+    if emoji not in EMOJI_REAZIONI or m.eliminato:
+        return HttpResponseBadRequest()
+    gia = ReazioneChat.objects.filter(messaggio=m, utente=request.user).first()
+    if gia and gia.emoji == emoji:
+        gia.delete()
+    else:
+        ReazioneChat.objects.update_or_create(messaggio=m, utente=request.user, defaults={'emoji': emoji})
+        if m.autore_id != request.user.pk and m.autore_id in set(destinatari(request.user, m.chat)):
+            push.invia([m.autore_id], f'{m.chat.nome} · {nome_di(request.user)}', f'Ha reagito con {emoji} a: {anteprima(m)[:80]}',
+                       _url_chat(m.chat) + f'#m{m.pk}', notifica=False)
+    m = con_dettagli(MessaggioChat.objects.filter(pk=m.pk)).get()
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return JsonResponse({'id': m.pk, 'reazioni': reazioni_json(m, request.user)})
+    return redirect(_url_chat(m.chat) + f'#m{m.pk}')
 
 
 @login_required
@@ -408,6 +503,47 @@ def documento_chat(request, pk):
     tipo = mimetypes.guess_type(m.documento_nome)[0] or 'application/octet-stream'
     return FileResponse(m.documento.open('rb'), content_type=tipo, filename=m.documento_nome,
                         as_attachment=not tipo.startswith(('application/pdf', 'text/')))
+
+
+def file_a_pezzi(request, f, tipo):
+    """Un file (video) con le risposte a pezzi (Range): i video su iPhone partono solo così."""
+    from django.http import FileResponse, HttpResponse
+
+    rng = request.META.get('HTTP_RANGE', '')
+    if not rng.startswith('bytes='):
+        r = FileResponse(f.open('rb'), content_type=tipo)
+        r['Accept-Ranges'] = 'bytes'
+        return r
+    totale = f.size
+    inizio_s, _, fine_s = rng[6:].split(',')[0].partition('-')
+    try:
+        if inizio_s:
+            inizio = int(inizio_s)
+            fine = min(int(fine_s), totale - 1) if fine_s else totale - 1
+        else:
+            inizio, fine = max(totale - int(fine_s), 0), totale - 1
+    except ValueError:
+        inizio, fine = 0, totale - 1
+    if inizio >= totale or inizio > fine:
+        r = HttpResponse(status=416)
+        r['Content-Range'] = f'bytes */{totale}'
+        return r
+    with f.open('rb') as fh:
+        fh.seek(inizio)
+        dati = fh.read(fine - inizio + 1)
+    r = HttpResponse(dati, status=206, content_type=tipo)
+    r['Content-Range'] = f'bytes {inizio}-{fine}/{totale}'
+    r['Accept-Ranges'] = 'bytes'
+    r['Content-Length'] = str(len(dati))
+    return r
+
+
+@login_required
+def video_chat(request, pk):
+    m = _messaggio_visibile(request, pk)
+    if not m.video or (m.eliminato and not e_direzione(request.user)):
+        raise Http404
+    return file_a_pezzi(request, m.video, m.video_tipo or 'video/mp4')
 
 
 @login_required
@@ -549,7 +685,8 @@ def media_chat(request, chat_id):
     quale = request.GET.get('quale') if request.GET.get('quale') in ('link', 'documenti') else 'foto'
     foto, link, documenti = [], [], []
     if quale == 'foto':
-        foto = [reverse('turni:foto_chat', args=[m.pk]) for m in visibili.exclude(foto='')[:120]]
+        foto = [{'url': reverse('turni:video_chat', args=[m.pk]) if m.video else reverse('turni:foto_chat', args=[m.pk]),
+                 'video': bool(m.video)} for m in visibili.filter(Q(foto__gt='') | Q(video__gt=''))[:120]]
     elif quale == 'documenti':
         documenti = [{'url': reverse('turni:documento_chat', args=[m.pk]), 'nome': m.documento_nome, 'autore': nome_di(m.autore),
                       'quando': timezone.localtime(m.creato_il)} for m in visibili.exclude(documento='')[:100]]

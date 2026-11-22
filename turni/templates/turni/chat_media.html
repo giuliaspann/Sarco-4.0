@@ -4,14 +4,14 @@
 <a class="tasto-indietro" href="{% url 'turni:messaggi' %}?vista=chat&chat={{ chat.pk }}#fondo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{{ chat.nome }}</a>
 <div class="intestazione"><h1>Media</h1></div>
 <div class="ig-schede">
-  {% if quale == 'foto' %}<span class="attiva">Foto</span>{% else %}<a href="?quale=foto">Foto</a>{% endif %}
+  {% if quale == 'foto' %}<span class="attiva">Foto e video</span>{% else %}<a href="?quale=foto">Foto e video</a>{% endif %}
   {% if quale == 'link' %}<span class="attiva">Link</span>{% else %}<a href="?quale=link">Link</a>{% endif %}
   {% if quale == 'documenti' %}<span class="attiva">Documenti</span>{% else %}<a href="?quale=documenti">Documenti</a>{% endif %}
 </div>
 {% if quale == 'foto' %}
 <div class="cg-foto">
-  {% for f in foto %}<a href="{{ f }}" target="_blank"><img src="{{ f }}" alt="Foto della chat" loading="lazy"></a>
-  {% empty %}<p class="tenue piccolo ci-vuoto">Nessuna foto in questo gruppo.</p>{% endfor %}
+  {% for f in foto %}{% if f.video %}<a href="{{ f.url }}" class="cg-video" data-video="1" title="Video della chat"><video src="{{ f.url }}#t=0.1" muted playsinline preload="metadata"></video><i aria-hidden="true">▶</i></a>{% else %}<a href="{{ f.url }}" target="_blank"><img src="{{ f.url }}" alt="Foto della chat" loading="lazy"></a>{% endif %}
+  {% empty %}<p class="tenue piccolo ci-vuoto">Nessuna foto o video in questo gruppo.</p>{% endfor %}
 </div>
 {% elif quale == 'documenti' %}
 <section class="ci-gruppo">

@@ -1024,6 +1024,13 @@ def percorso_documento_chat(istanza, nome):
     return f'chat/documenti/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{os.path.splitext(nome)[1].lower()}'
 
 
+def percorso_video_chat(istanza, nome):
+    import os
+    import uuid
+
+    return f'chat/video/{timezone.now():%Y/%m}/{uuid.uuid4().hex}{os.path.splitext(nome)[1].lower() or ".mp4"}'
+
+
 class MessaggioChat(models.Model):
     """Messaggio in una chat di gruppo."""
 
@@ -1035,6 +1042,11 @@ class MessaggioChat(models.Model):
     # documento allegato: PDF, Word, Excel... (Giulia, 12/11/2026)
     documento = models.FileField(upload_to=percorso_documento_chat, blank=True)
     documento_nome = models.CharField(max_length=200, blank=True)
+    # video registrato o caricato dal telefono (Giulia, 22/11/2026)
+    video = models.FileField(upload_to=percorso_video_chat, blank=True)
+    video_tipo = models.CharField(max_length=60, blank=True)
+    # risposta a un messaggio, come WhatsApp: si scorre il fumetto verso destra (Giulia, 22/11/2026)
+    risposta_a = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='risposte')
     creato_il = models.DateTimeField(auto_now_add=True)
     eliminato = models.BooleanField(default=False)
 
@@ -1042,6 +1054,20 @@ class MessaggioChat(models.Model):
         verbose_name = 'messaggio chat'
         verbose_name_plural = 'messaggi chat'
         ordering = ['creato_il']
+
+
+class ReazioneChat(models.Model):
+    """Reazione a un messaggio (👍 ❤️ 😂 …), una per persona: toccarla di nuovo la toglie (Giulia, 22/11/2026)."""
+
+    messaggio = models.ForeignKey(MessaggioChat, on_delete=models.CASCADE, related_name='reazioni')
+    utente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    emoji = models.CharField(max_length=16)
+    creato_il = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'reazione chat'
+        verbose_name_plural = 'reazioni chat'
+        constraints = [models.UniqueConstraint(fields=['messaggio', 'utente'], name='una_reazione_a_testa')]
 
 
 class FotoUtente(models.Model):
