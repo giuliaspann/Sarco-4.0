@@ -297,7 +297,7 @@ class ManutenzioneTest(TestCase):
 
     def test_pagine_e_permessi(self):
         self.entra('operaio')
-        for nome in ('manutenzione', 'interventi', 'macchine', 'ricambi', 'ordini', 'programmate', 'segnala'):
+        for nome in ('mn_scelta', 'interventi', 'macchine', 'ricambi', 'ordini', 'programmate', 'segnala'):
             self.assertEqual(self.client.get(reverse(f'turni:{nome}')).status_code, 200, nome)
         self.assertEqual(self.client.get(reverse('turni:macchina', args=[self.pala.pk])).status_code, 200)
         self.assertEqual(self.client.get(reverse('turni:etichette')).status_code, 403)
@@ -386,7 +386,8 @@ class ManutenzioneTest(TestCase):
         })
         i = Intervento.objects.get(macchina=lab)
         self.assertEqual((i.titolo_lavoro, i.descrizione), ('Pezzo sistemato · Rete vaglio', 'Pezzo sistemato · Rete vaglio'))
-        self.assertContains(self.client.get(reverse('turni:manutenzione')), 'Segnala risoluzione guasto o completamento manutenzione')
+        # la vecchia pagina Manutenzione non c'è più: porta alla pagina Manutenzione di oggi (23/11/2026)
+        self.assertRedirects(self.client.get(reverse('turni:manutenzione')), reverse('turni:mn_scelta'), fetch_redirect_response=False)
         self.entra('marchese')
         self.webpush.reset_mock()
         for _ in range(2):  # un solo 👍 a testa
@@ -454,14 +455,14 @@ class FermoImpiantoTest(TestCase):
         self.assertEqual((f.intervento.macchina, f.intervento.priorita, f.intervento.macchina_ferma), (nastro, 4, True))
         self.assertTrue(f.intervento.foto_guasto)
         self.assertEqual(self.webpush.call_count, 1)  # il responsabile manutenzione
-        self.assertContains(self.client.get(reverse('turni:manutenzione')), 'Impianto 1 fermo da')
+        self.assertContains(self.client.get(reverse('turni:home')), 'Impianto 1 fermo dalle')
 
         # chi ha segnalato può segnare la ripartenza
         self.client.post(reverse('turni:fermo', args=[f.pk]), {'sistemazione': 'giuntato il nastro'})
         f.refresh_from_db()
         self.assertFalse(f.in_corso)
         self.assertEqual((f.sistemazione, f.chi_ha_fatto_ripartire), ('giuntato il nastro', 'Rossi Marco'))
-        self.assertNotContains(self.client.get(reverse('turni:manutenzione')), 'fermo da')
+        self.assertNotContains(self.client.get(reverse('turni:home')), 'Impianto 1 fermo dalle')
         self.assertContains(self.client.get(reverse('turni:fermi')), 'Rottura nastro')
 
     def test_senza_causa_non_si_segnala_e_ora_non_nel_futuro(self):
@@ -560,3 +561,24 @@ class ComunicazioniTest(TestCase):
         self.assertEqual(self.avvisati(), ['operaio', 'palista', 'vito'])
         self.client.login(username='operaio', password='123456')
         self.assertContains(self.client.get(reverse('turni:home')), 'Impianto 2 fermo')
+
+
+class VecchiaPaginaManutenzioneTest(TestCase):
+    """Nessun «Indietro» porta più alla vecchia pagina Manutenzione; Interventi e Ordini stanno nella pagina di oggi (23/11/2026)."""
+
+    def test_indietro_e_gestione(self):
+        from pathlib import Path
+
+        cartella = Path(__file__).parent / 'templates' / 'turni'
+        for t in cartella.glob('*.html'):
+            self.assertNotIn("turni:manutenzione'", t.read_text(encoding='utf-8'), t.name)
+        U = get_user_model()
+        ufficio = U.objects.create_user('uff', is_staff=True)
+        self.client.force_login(ufficio)
+        pagina = self.client.get(reverse('turni:mn_scelta')).content.decode()
+        self.assertIn('Gestione manutenzione', pagina)
+        self.assertIn(reverse('turni:ordini'), pagina)
+        self.assertIn(reverse('turni:interventi'), pagina)
+        operaio = Dipendente.objects.create(nome='BIANCHI LUCA', utente=U.objects.create_user('bianchi'))
+        self.client.force_login(operaio.utente)
+        self.assertNotIn('Gestione manutenzione', self.client.get(reverse('turni:mn_scelta')).content.decode())

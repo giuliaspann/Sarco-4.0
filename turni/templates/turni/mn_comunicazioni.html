@@ -2,7 +2,7 @@
 {% load icone %}
 {% block titolo %}Comunicazioni{% endblock %}
 {% block contenuto %}
-<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>
+<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>
 <div class="intestazione"><h1>Comunicazioni</h1></div>
 {% if puo_scrivere %}<a class="bottone pieno piena-larghezza cb-invia" href="{% url 'turni:nuova_comunicazione' %}">{% icona 'modifica' %} Nuova comunicazione</a>{% endif %}
 <h2 class="rq-sezione">Da seguire <span class="mn-conta">{{ aperte|length }}</span></h2>

@@ -2,7 +2,7 @@
 {% load icone %}
 {% block titolo %}Ripartenza impianto{% endblock %}
 {% block contenuto %}
-{% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
+{% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
 <div class="intestazione"><h1>Segnala ripartenza impianto</h1></div>
 {% if in_corso %}
 <h2 class="rq-sezione">Quale impianto è ripartito?</h2>

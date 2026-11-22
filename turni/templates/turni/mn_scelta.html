@@ -19,6 +19,14 @@
 {% if puo_programmare and not capo_in_servizio %}
 <a class="home-tasto tasto-programma" href="{% url 'turni:segnala' %}?programma=1"><span class="home-icona">🗓️</span><b>Programma una manutenzione</b></a>
 {% endif %}
+{% if gestione %}
+{# Interventi e Ordini erano solo nella vecchia pagina Manutenzione, raggiungibile solo con «Indietro» (Giulia, 23/11/2026) #}
+<h2 class="rq-sezione">Gestione manutenzione</h2>
+<div class="mn-capo">
+  <a class="mn-capo-tasto" href="{% url 'turni:interventi' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11M9 12h11M9 19h11M4 5h.01M4 12h.01M4 19h.01"/></svg></span><span><b>Interventi</b>{% if gestione.aperti %}<small>{{ gestione.aperti }} apert{{ gestione.aperti|pluralize:'o,i' }}{% if gestione.badge_interventi %} · {{ gestione.badge_interventi }} da guardare{% endif %}</small>{% endif %}</span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:ordini' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg></span><span><b>Ordini ricambi</b>{% if gestione.ordini_aperti %}<small>{{ gestione.ordini_aperti }} in corso{% if gestione.badge_ordini %} · {{ gestione.badge_ordini }} da guardare{% endif %}</small>{% endif %}</span></a>
+</div>
+{% endif %}
 <h2 class="rq-sezione">Manutenzioni in arrivo</h2>
 {% for p in prossime %}
 <a class="mn-riga" href="{% if p.intervento %}{% url 'turni:intervento' p.intervento.pk %}{% else %}{% url 'turni:macchina' p.macchina.pk %}{% endif %}">

@@ -1,4 +1,4 @@
-{% if nav_dipendente %}<a class="tasto-indietro" href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Archivio</a>{% else %}<a class="tasto-indietro" href="{% url 'turni:manutenzione' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
+{% if nav_dipendente %}<a class="tasto-indietro" data-indietro href="{% url 'turni:archivio' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Archivio</a>{% else %}<a class="tasto-indietro" data-indietro href="{% url 'turni:mn_scelta' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Manutenzione</a>{% endif %}
 <div class="intestazione">
   <h1>{{ titolo_pagina }}</h1>
 </div>

@@ -94,10 +94,18 @@ def _filtro(request):
 
 @login_required
 def manutenzione(request):
-    """Pagina iniziale: un pulsante per riga, con i numeri che contano."""
-    mn.genera_programmate()
-    permessi = _permessi(request.user)
-    dip = mn.dipendente_di(request.user)
+    """La vecchia pagina Manutenzione (Segnala fermo / ripartenza, Interventi, Ordini…) non c'è più (Giulia, 23/11/2026):
+    nessuna home ci portava, ci si arrivava solo con «Indietro». Si va alla pagina Manutenzione di oggi, dove chi
+    gestisce la manutenzione trova anche Interventi e Ordini."""
+    return redirect('turni:mn_scelta')
+
+
+def gestione_manutenzione(utente):
+    """Interventi e Ordini, con i numeri da guardare: per responsabile, manutentori, acquisti e ufficio."""
+    permessi = _permessi(utente)
+    if not (permessi['resp'] or permessi['manutentore'] or permessi['ordina']):
+        return None
+    dip = mn.dipendente_di(utente)
     aperti = Intervento.objects.filter(stato__in=Intervento.APERTI)
     badge_interventi = aperti.filter(assegnata_a=dip, stato=Intervento.Stato.ASSEGNATA).count() if dip else 0
     if permessi['approvatore']:
@@ -106,19 +114,10 @@ def manutenzione(request):
     badge_ordini = OrdineRicambio.objects.filter(stato=S.RICHIESTO).count() if permessi['resp'] else 0
     if dip and dip.acquisti:
         badge_ordini += OrdineRicambio.objects.filter(stato=S.APPROVATO).count()
-    entro = timezone.localdate() + timedelta(days=3)
-    return render(request, 'turni/mn_home.html', {
-        'registra_lavoro': mn.puo_registrare_lavoro(request.user),
-        'comunicazioni_aperte': Comunicazione.objects.exclude(stato=Comunicazione.Stato.RISOLTA).count(),
-        'puo_comunicare': mn.puo_comunicare(request.user),
-        'fermi_in_corso': FermoImpianto.objects.filter(ripartito_il__isnull=True).order_by('fermo_dal'),
-        'aperti': aperti.count(),
-        'ferme': aperti.filter(macchina_ferma=True, tipo=Intervento.Tipo.GUASTO).count(),
-        'badge_interventi': badge_interventi, 'badge_ordini': badge_ordini,
-        'sotto_scorta': sum(1 for r in Ricambio.objects.all() if r.sotto_scorta),
+    return {
+        'aperti': aperti.count(), 'badge_interventi': badge_interventi, 'badge_ordini': badge_ordini,
         'ordini_aperti': OrdineRicambio.objects.filter(stato__in=[S.RICHIESTO, S.APPROVATO, S.ORDINATO]).count(),
-        'in_scadenza': sum(1 for p in ManutenzioneProgrammata.objects.filter(attiva=True) if p.prossima <= entro),
-    })
+    }
 
 
 @login_required
@@ -277,7 +276,8 @@ def scelta(request):
     return render(request, 'turni/mn_scelta.html', {
         **mn.calendario_manutenzioni(), 'puo_programmare': mn.puo_chiedere_pezzi(request.user),
         # il Capo Turno in servizio ha tre tasti: in corso (fermo), conclusa (ripartenza), richiedi (fermo programmato)
-        'capo_in_servizio': bool(turno and turno.lavora and turno.capoturno)})
+        'capo_in_servizio': bool(turno and turno.lavora and turno.capoturno),
+        'gestione': gestione_manutenzione(request.user)})
 
 
 @login_required
