@@ -129,18 +129,36 @@ async function iscrivi(riquadro) {
   if (!document.querySelector('.wa')) return;
   // come WhatsApp: si parte dagli ultimi messaggi; dopo un voto si torna al sondaggio (#m…), sotto il titolo della chat
   const bersaglio = /^#m\d+$/.test(location.hash) ? document.querySelector(location.hash) : null;
-  const fondo = () => bersaglio ? bersaglio.scrollIntoView({ block: 'center' }) : window.scrollTo(0, document.documentElement.scrollHeight);
+  // a tutto schermo (Giulia, 23/11/2026) scorrono solo i messaggi, dentro il loro riquadro
+  const sfondo = document.querySelector('.wa-sfondo');
+  const dentro = document.body.classList.contains('in-chat') && sfondo;
+  const fondo = () => bersaglio ? bersaglio.scrollIntoView({ block: 'center' })
+    : dentro ? (sfondo.scrollTop = sfondo.scrollHeight) : window.scrollTo(0, document.documentElement.scrollHeight);
   fondo();
   window.addEventListener('load', fondo);
-  // le foto e i video si caricano dopo e allungano la pagina: finché non si tocca lo schermo la chat resta agganciata
+  // le foto e i video si caricano dopo e allungano la chat: finché non si tocca lo schermo la chat resta agganciata
   // all'ultimo messaggio (bug 22/11: si apriva a metà)
-  const sfondo = document.querySelector('.wa-sfondo');
-  if (sfondo && window.ResizeObserver) {
+  if (sfondo) {
     let agganciata = true;
     const stacca = () => { agganciata = false; };
     ['touchstart', 'wheel', 'keydown', 'mousedown'].forEach(ev => window.addEventListener(ev, stacca, { once: true, passive: true }));
     setTimeout(stacca, 6000);
-    new ResizeObserver(() => { if (agganciata) fondo(); }).observe(sfondo);
+    ['load', 'loadedmetadata'].forEach(ev => sfondo.addEventListener(ev, () => { if (agganciata) fondo(); }, true));
+    if (window.ResizeObserver) new ResizeObserver(() => { if (agganciata) fondo(); }).observe(sfondo);
+  }
+  // la tastiera dell'iPhone: la chat si restringe sopra la tastiera e resta sull'ultimo messaggio, come WhatsApp
+  if (dentro && window.visualViewport) {
+    const vv = window.visualViewport, radice = document.documentElement.style;
+    const adatta = () => {
+      const inFondo = sfondo.scrollTop + sfondo.clientHeight >= sfondo.scrollHeight - 60;
+      radice.setProperty('--vv-h', vv.height + 'px');
+      radice.setProperty('--vv-top', vv.offsetTop + 'px');
+      document.body.classList.toggle('tastiera', window.innerHeight - vv.height > 120);
+      if (inFondo) sfondo.scrollTop = sfondo.scrollHeight;
+    };
+    vv.addEventListener('resize', adatta);
+    vv.addEventListener('scroll', adatta);
+    adatta();
   }
   // bacheca: tocco sul fumetto (per l'ufficio) compare "Elimina"
   document.querySelector('.wa').addEventListener('click', e => {
@@ -155,7 +173,8 @@ async function iscrivi(riquadro) {
   if (!chat) return;
   const modulo = document.querySelector('.wa-scrivi');
   const csrf = modulo ? modulo.querySelector('[name=csrfmiddlewaretoken]').value : '';
-  const fondo = () => window.scrollTo(0, document.documentElement.scrollHeight);
+  const dentro = document.body.classList.contains('in-chat');
+  const fondo = () => dentro ? (chat.scrollTop = chat.scrollHeight) : window.scrollTo(0, document.documentElement.scrollHeight);
   const spunte = letto => ' <svg class="wa-spunte' + (letto ? ' lette' : '') + '" viewBox="0 0 18 12" role="img" aria-label="Inviato"><path d="M1 6l3.5 3.5L11 3M7 9.5L8 10.5 15 3"/></svg>';
   const el = (tag, classe, testo) => { const e = document.createElement(tag); if (classe) e.className = classe; if (testo != null) e.textContent = testo; return e; };
 
@@ -267,7 +286,8 @@ async function iscrivi(riquadro) {
       if (!messaggi.length) return;
       const vuota = document.getElementById('chat-vuota');
       if (vuota) vuota.remove();
-      const inFondo = window.innerHeight + window.scrollY >= document.body.scrollHeight - 150;
+      const inFondo = dentro ? chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 150
+        : window.innerHeight + window.scrollY >= document.body.scrollHeight - 150;
       messaggi.forEach(aggiungi);
       chat.dataset.ultimo = messaggi[messaggi.length - 1].id;
       if (inFondo) fondo();

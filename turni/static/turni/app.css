@@ -2868,3 +2868,35 @@ body.foglio-aperto { overflow: hidden; }
   .wa-emoji button.mia { background: #11624f; }
   .wa-azione { background: #2a3942; border-color: #3b4a54; color: #e9edef; }
 }
+
+/* ---------------------------------------------------------------- Chat come WhatsApp (Giulia, 23/11/2026)
+   dentro una chat: in alto la barra Sarco Workspace (resta sempre, Giulia 23/11) e sotto la barra con il nome del gruppo,
+   in fondo solo la barra per scrivere; in mezzo scorrono i messaggi. Quando si apre la tastiera dell'iPhone tutto si
+   restringe sopra la tastiera (altezza dal visualViewport). */
+body.in-chat #attiva-notifiche, body.in-chat #notifiche-iphone { display: none !important; }
+body.in-chat .ig-barra { position: fixed; left: 0; right: 0; top: var(--vv-top, 0px); }
+body.in-chat .pagina { padding: 0; max-width: none; }
+body.in-chat { overflow: hidden; overscroll-behavior: none; }
+body.in-chat .wa { position: fixed; left: 0; right: 0; top: calc(var(--vv-top, 0px) + var(--alto-barra, 64px));
+  height: calc(var(--vv-h, 100dvh) - var(--alto-barra, 64px)); min-height: 0;
+  max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; background: #efeae2; z-index: 5; }
+body.in-chat .wa-testa { position: relative; top: auto; flex: none; border-top: 0; padding: 6px 10px 6px 6px; }
+body.in-chat .wa-sfondo { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 10px 12px 12px; }
+body.in-chat .wa-scrivi, body.in-chat .wa-solo-admin { position: relative; bottom: auto; flex: none; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+/* con la tastiera aperta il margine dello «scalino» dell'iPhone non serve: la barra sta attaccata alla tastiera */
+body.in-chat.tastiera .wa-scrivi, body.in-chat.tastiera .wa-solo-admin { padding-bottom: 8px; }
+/* barra per scrivere semplice: + e fotocamera senza cerchio, come WhatsApp */
+body.in-chat .wa-scrivi { background: var(--carta); border-top: 1px solid var(--bordo); align-items: center; padding-top: 7px; }
+body.in-chat .wa-piu summary { background: transparent; box-shadow: none; width: 40px; }
+body.in-chat .wa-piu summary svg { width: 26px; height: 26px; }
+body.in-chat .wa-campo { box-shadow: none; border: 1px solid var(--bordo); background: #ffffff; }
+body.in-chat .wa-scrivi textarea { min-height: 40px; padding: 9px 14px; }
+body.in-chat .wa-scrivi .wa-campo .wa-camera { height: 40px; }
+body.in-chat .wa-invia { width: 42px; height: 42px; }
+/* gli avvisi (es. «video troppo grande») sotto la barra del gruppo */
+body.in-chat .avviso { position: fixed; z-index: 30; left: 12px; right: 12px; top: calc(var(--alto-barra, 64px) + 64px); max-width: 616px; margin: 0 auto;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .15); }
+@media (prefers-color-scheme: dark) {
+  body.in-chat .wa { background: #0b141a; }
+  body.in-chat .wa-campo { background: #2a3942; border-color: #2a3942; }
+}
