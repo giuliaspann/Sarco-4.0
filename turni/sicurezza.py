@@ -9,12 +9,15 @@ from django.utils import timezone
 
 log = logging.getLogger('turni.sicurezza')
 
-# Per nome utente: 5 errori -> 15 minuti di blocco. Per indirizzo di rete: 20 errori -> 30 minuti.
-LIMITI = {'u': (5, timedelta(minutes=15)), 'ip': (20, timedelta(minutes=30))}
+# Per nome utente: 5 errori -> 15 minuti di blocco. Per indirizzo di rete: 100 errori -> 15 minuti.
+# In impianto tutti i telefoni sul Wi-Fi aziendale escono con lo stesso indirizzo: con 20 errori a cambio turno
+# restavano fuori tutti, anche chi scriveva il PIN giusto (prova operaio, errore 3). Il limite per nome utente resta
+# la difesa vera (PIN di 8 cifre: 5 tentativi ogni 15 minuti); quello per rete ferma solo i tentativi a tappeto.
+LIMITI = {'u': (5, timedelta(minutes=15)), 'ip': (100, timedelta(minutes=15))}
 # Dopo questo tempo senza errori il conteggio riparte da zero
 FINESTRA = timedelta(minutes=15)
 
-MESSAGGIO_BLOCCO = 'Troppi tentativi sbagliati: riprova tra qualche minuto o chiedi in ufficio.'
+MESSAGGIO_BLOCCO = "Troppi tentativi sbagliati: riprova tra 15 minuti o chiedi all'ufficio di sbloccarti."
 
 
 def ip_client(request):
@@ -55,6 +58,19 @@ def registra_errore(request, username):
             b.tentativi = 0
             log.warning('Accesso bloccato per %s fino a %s', chiave, b.bloccato_fino)
         b.save()
+
+
+def sblocca_tutti():
+    """Il tasto dell'ufficio «Sblocca gli accessi»: toglie tutti i blocchi in corso."""
+    from .models import BloccoAccesso
+
+    return BloccoAccesso.objects.filter(bloccato_fino__gt=timezone.now()).delete()[0]
+
+
+def bloccati_ora():
+    from .models import BloccoAccesso
+
+    return BloccoAccesso.objects.filter(bloccato_fino__gt=timezone.now()).count()
 
 
 def azzera(username):

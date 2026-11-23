@@ -132,7 +132,7 @@ def istruzioni(utente):
     ruolo = ', '.join(n for n, si in (('dipendente', r['dipendente']), ('responsabile turni', r['responsabile']),
                                       ('ufficio', r['ufficio'])) if si) or 'utente'
     return (
-        f"Sei l'assistente dell'app Sarco 4.0 di Sarco srl (impianto di recupero del vetro). Parli con {chi} ({ruolo}). "
+        f"Sei l'assistente dell'app Sarco WS di Sarco srl (impianto di recupero del vetro). Parli con {chi} ({ruolo}). "
         f"Oggi è {GIORNI[oggi.weekday()]} {oggi:%d/%m/%Y} ({oggi.isoformat()}). Orari: 1T 06-14, 2T 14-22, N 22-06, G giornaliero 8-13 e 14:30-17:30.\n"
         "Chi scrive spesso è un operaio con poco tempo, a volte detta a voce: rispondi in italiano semplice, "
         "frasi brevi, niente elenchi lunghi, niente markdown, non spiegare come funziona l'app. Trasforma \"domani\", \"sabato\", \"la settimana prossima\" "

@@ -111,7 +111,7 @@ def email_configurata():
 
 def testo_email(credenziali, indirizzo_app):
     righe = [
-        "Credenziali per l'app Sarco 4.0.",
+        "Credenziali per l'app Sarco WS.",
         "Consegna a ciascuno solo le sue e cancella questa email dopo la consegna.",
         '',
         f'App: {indirizzo_app}',
@@ -135,9 +135,9 @@ def invia_all_ufficio(credenziali, indirizzo_app):
     if not credenziali or not email_configurata():
         return False
     oggetto = (
-        f"Sarco 4.0: credenziali di {credenziali[0]['nome']}"
+        f"Sarco WS: credenziali di {credenziali[0]['nome']}"
         if len(credenziali) == 1
-        else f'Sarco 4.0: credenziali di {len(credenziali)} dipendenti'
+        else f'Sarco WS: credenziali di {len(credenziali)} dipendenti'
     )
     corpo = testo_email(credenziali, indirizzo_app)
     try:

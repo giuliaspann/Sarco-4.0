@@ -23,6 +23,12 @@
             data-conferma="Creare l'accesso per {{ senza_accesso }} dipendenti?">Crea l'accesso per tutti ({{ senza_accesso }})</button>
   </form>
   {% else %}<p class="piccolo">✓ Tutti i dipendenti attivi hanno l'accesso.</p>{% endif %}
+  {# chi sbaglia troppe volte il PIN resta fuori 15 minuti: da qui l'ufficio lo fa rientrare subito #}
+  {% if bloccati %}
+  <form method="post">{% csrf_token %}
+    <button class="bottone piena-larghezza" name="azione" value="sblocca">Sblocca gli accessi ({{ bloccati }} bloccat{{ bloccati|pluralize:'o,i' }})</button>
+  </form>
+  {% endif %}
 </section>
 
 <section class="scheda">

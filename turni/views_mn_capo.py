@@ -43,6 +43,11 @@ def in_corso(request):
             messages.error(request, 'Scrivi che manutenzione si sta facendo.')
         elif fermo and impianto not in dict(FermoImpianto.IMPIANTI):
             messages.error(request, 'Scegli quale impianto si è fermato.')
+        elif fermo and FermoImpianto.objects.filter(impianto=impianto, ripartito_il__isnull=True).exists():
+            # lo stesso impianto fermo due volte raddoppiava le ore perse (prova operaio, errore 5)
+            f0 = FermoImpianto.objects.filter(impianto=impianto, ripartito_il__isnull=True).first()
+            messages.error(request, f'{f0.get_impianto_display()} risulta già fermo dalle {timezone.localtime(f0.fermo_dal):%H:%M}: '
+                                    'togli la spunta «si è fermato» e salva la manutenzione.')
         else:
             dal = _quando(request.POST.get('dal')) if fermo else timezone.now()
             i = Intervento.objects.create(

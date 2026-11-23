@@ -11,7 +11,7 @@ class AdminAccessoForm(ProtezioneAccesso, AdminAuthenticationForm):
     pass
 
 
-admin.site.site_header = 'Sarco 4.0'
+admin.site.site_header = 'Sarco WS'
 admin.site.login_form = AdminAccessoForm
 
 

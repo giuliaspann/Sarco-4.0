@@ -274,7 +274,7 @@ def ufficio_richieste(request):
             else:
                 f = get_object_or_404(RichiestaFerie, pk=request.POST.get('ferie'))
                 svc.decisione_ufficio_ferie(f, request.user, approva, nota)
-                messages.success(request, f'{f.get_tipo_display()} di {f.dipendente.nome_breve} {"approvate" if approva else "rifiutate"}.')
+                messages.success(request, f'{f.get_tipo_display()} di {f.dipendente.nome_breve} ' + ({True: 'approvate', False: 'rifiutate'} if f.tipo == f.Tipo.FERIE else {True: 'approvato', False: 'rifiutato'})[approva] + '.')
         except svc.RichiestaNonValida as e:
             messages.error(request, str(e))
         return redirect('turni:ufficio_richieste')

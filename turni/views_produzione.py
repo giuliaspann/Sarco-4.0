@@ -114,6 +114,7 @@ def produzione_turno(request, produzione_id=None):
     prodotti = list(ProdottoProduzione.objects.filter(attivo=True))
     if impianto in nomi:
         prodotti = [p for p in prodotti if p.impianto == impianto]
+    scritti = None  # dopo un errore si rimostra quello che l'operaio aveva scritto (prova operaio, errore 1)
     if request.method == 'POST':
         from datetime import date
 
@@ -135,8 +136,19 @@ def produzione_turno(request, produzione_id=None):
                 valori[p] = v
             except InvalidOperation:
                 errore = f'Valore non valido per {p.nome}.'
-        if errore or not giorno or fascia not in dict(ProduzioneTurno.FASCE) or not valori:
+        gia = None
+        if not errore and giorno and not esistente:
+            # un secondo inserimento dello stesso turno e impianto non cancella il primo (prova operaio, errore 2)
+            gia = (ProduzioneTurno.objects.filter(data=giorno, fascia=fascia, righe__prodotto__in=prodotti)
+                   .select_related('inserita_da__dipendente').distinct().first())
+        if errore or not giorno or fascia not in dict(ProduzioneTurno.FASCE) or not valori or gia:
+            if gia:
+                chi = getattr(getattr(gia.inserita_da, 'dipendente', None), 'nome_breve', '') or 'un collega'
+                messages.error(request, f'La produzione di questo turno è già stata inserita da {chi}: apri «Modifica» '
+                                        f'su quella per correggerla, così non si perdono i suoi numeri.')
+                return redirect('turni:produzione_turno', gia.pk)
             messages.error(request, errore or 'Indica giorno, turno e almeno un valore.')
+            scritti = {p.pk: (request.POST.get(f'p{p.pk}') or '').strip() for p in prodotti}
         else:
             t, _ = ProduzioneTurno.objects.get_or_create(data=giorno, fascia=fascia, defaults={'inserita_da': request.user})
             t.inserita_da, t.inserita_il = request.user, timezone.now()
@@ -163,6 +175,14 @@ def produzione_turno(request, produzione_id=None):
         })
     giorno, fascia = (esistente.data, esistente.fascia) if esistente else turno_corrente()
     valori = {r.prodotto_id: r.tonnellate for r in esistente.righe.all()} if esistente else {}
+    if scritti is not None:
+        valori = scritti
+        from datetime import date
+        try:
+            giorno = date.fromisoformat(request.POST.get('data') or '')
+        except ValueError:
+            pass
+        fascia = request.POST.get('fascia') if request.POST.get('fascia') in dict(ProduzioneTurno.FASCE) else fascia
     for p in prodotti:
         p.valore = valori.get(p.pk, '')
     return render(request, 'turni/produzione_nuova.html', {

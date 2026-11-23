@@ -1278,7 +1278,7 @@ def anteprima(request):
         modifiche = ModificaTurno.objects.filter(pk__gt=ultima).select_related('dipendente')
         if modifiche:
             avvisa_modifiche(settimana, modifiche)
-            messages.info(request, f'Turni cambiati a {len({m.dipendente_id for m in modifiche})} persone: devono dare la presa visione.')
+            messages.info(request, (lambda n: f'Turni cambiati a {n} persona: deve dare la presa visione.' if n == 1 else f'Turni cambiati a {n} persone: devono dare la presa visione.')(len({m.dipendente_id for m in modifiche})))
         del request.session['import_turni']
         messages.success(request, f'Turni caricati: {settimana}.')
         if nuovi:
@@ -1404,6 +1404,13 @@ def dipendenti(request):
                 messages.info(request, 'Tutti i dipendenti attivi hanno già un accesso.')
                 return redirect('turni:dipendenti')
             return _consegna_credenziali(request, senza)
+        if azione == 'sblocca':
+            # chi ha sbagliato troppe volte il PIN rientra subito (prova operaio, errore 3)
+            from .sicurezza import sblocca_tutti
+
+            n = sblocca_tutti()
+            messages.success(request, 'Accessi sbloccati: ora si può rientrare.' if n else "Non c'era nessun accesso bloccato.")
+            return redirect('turni:dipendenti')
         if azione == 'aggiungi':
             nome = ' '.join((request.POST.get('nome') or '').split()).upper()
             if len(nome) < 3:
@@ -1464,6 +1471,7 @@ def dipendenti(request):
             'mansioni': Mansione.choices,
             'senza_accesso': Dipendente.objects.filter(attivo=True, utente__isnull=True).count(),
             'email_ok': accessi.email_configurata(),
+            'bloccati': __import__('turni.sicurezza', fromlist=['bloccati_ora']).bloccati_ora(),
         },
     )
 
@@ -1513,8 +1521,8 @@ def manifest(request):
 
     return JsonResponse(
         {
-            'name': 'Sarco 4.0',
-            'short_name': 'Sarco 4.0',
+            'name': 'Sarco WS',
+            'short_name': 'Sarco WS',
             'start_url': '/turni/',
             'scope': '/',
             'display': 'standalone',
@@ -1538,8 +1546,8 @@ self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => self.clients.claim());
 self.addEventListener('push', e => {
   let d = {};
-  try { d = e.data.json(); } catch (err) { d = { titolo: 'Sarco 4.0', testo: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.titolo || 'Sarco 4.0', {
+  try { d = e.data.json(); } catch (err) { d = { titolo: 'Sarco WS', testo: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.titolo || 'Sarco WS', {
     body: d.testo || '', icon: '/static/turni/app-192.png', badge: '/static/turni/app-192.png',
     data: { url: d.url || '/turni/' },
   }));

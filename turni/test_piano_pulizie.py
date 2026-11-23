@@ -507,3 +507,31 @@ class ArchivioSettimanaleTest(TestCase):
         u = get_user_model().objects.create_user('ufficio.arch', password='x', is_staff=True)
         self.client.force_login(u)
         self.assertContains(self.client.get(reverse('turni:archivio_pulizie')), 'Archivio settimanale')
+
+
+class CopiaDatabaseTest(TestCase):
+    """Copia di sicurezza del database ogni giorno (Giulia, 23/11/2026)."""
+
+    def test_solo_con_la_chiave_e_si_rimette(self):
+        import io
+        import json
+        import zipfile
+
+        from django.test import override_settings
+
+        url = reverse('turni:copia_database')
+        Dipendente.objects.create(nome='PROVA COPIA')
+        with override_settings(ARCHIVIO_TOKEN='chiave-di-prova'):
+            self.assertEqual(self.client.get(url).status_code, 403)
+            self.assertEqual(self.client.get(url, HTTP_X_ARCHIVIO_TOKEN='sbagliata').status_code, 403)
+            utente = get_user_model().objects.create_user('ufficio.staff', is_staff=True)
+            self.client.force_login(utente)
+            self.assertEqual(self.client.get(url).status_code, 403)  # i dati di tutti: solo chiave o superuser
+            self.client.logout()
+            r = self.client.get(url, HTTP_X_ARCHIVIO_TOKEN='chiave-di-prova')
+        self.assertEqual(r.status_code, 200)
+        z = zipfile.ZipFile(io.BytesIO(b''.join(r.streaming_content)))
+        self.assertEqual(sorted(z.namelist()), ['LEGGIMI.txt', 'dati.json'])
+        dati = json.loads(z.read('dati.json'))
+        self.assertTrue(any(o['model'] == 'turni.dipendente' and o['fields']['nome'] == 'PROVA COPIA' for o in dati))
+        self.assertFalse(any(o['model'] in ('sessions.session', 'contenttypes.contenttype') for o in dati))

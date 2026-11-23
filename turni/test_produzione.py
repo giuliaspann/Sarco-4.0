@@ -109,3 +109,45 @@ class RipartenzaTest(TestCase):
         r = self.client.get(reverse('turni:ripartenza'))
         self.assertContains(r, 'Quale impianto è ripartito?')
         self.assertContains(r, 'Sabbia')
+
+
+class ProvaOperaioTest(TestCase):
+    """Errori del giro di prova da operaio (ottobre 2026), corretti il 23/11/2026."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.operaio = User.objects.create_user('operaio', password='123456')
+        Dipendente.objects.create(nome='ROSSI MARCO', utente=self.operaio)
+        self.p = list(ProdottoProduzione.objects.filter(impianto='IMP1', attivo=True))
+        self.client.force_login(self.operaio)
+
+    def test_dopo_un_errore_i_numeri_scritti_restano(self):
+        oggi = timezone.localdate()
+        dati = {'impianto': 'IMP1', 'data': oggi.isoformat(), 'fascia': '1T', f'p{self.p[0].pk}': '12,5', f'p{self.p[1].pk}': 'dodici'}
+        r = self.client.post(reverse('turni:produzione_nuova'), dati)
+        self.assertContains(r, 'Valore non valido')
+        self.assertContains(r, 'value="12,5"')
+        self.assertFalse(ProduzioneTurno.objects.exists())
+
+    def test_secondo_inserimento_non_cancella_il_primo(self):
+        oggi = timezone.localdate()
+        url = reverse('turni:produzione_nuova')
+        self.client.post(url, {'impianto': 'IMP1', 'data': oggi.isoformat(), 'fascia': '1T', f'p{self.p[1].pk}': '2'})
+        r = self.client.post(url, {'impianto': 'IMP1', 'data': oggi.isoformat(), 'fascia': '1T', f'p{self.p[0].pk}': '5'})
+        t = ProduzioneTurno.objects.get()
+        self.assertRedirects(r, reverse('turni:produzione_turno', args=[t.pk]), fetch_redirect_response=False)
+        self.assertEqual(list(t.righe.values_list('prodotto_id', flat=True)), [self.p[1].pk])
+        # dalla «Modifica» di quella produzione invece si corregge
+        self.client.post(reverse('turni:produzione_turno', args=[t.pk]),
+                         {'impianto': 'IMP1', 'data': oggi.isoformat(), 'fascia': '1T', f'p{self.p[1].pk}': '2', f'p{self.p[0].pk}': '5'})
+        self.assertEqual(t.righe.count(), 2)
+
+    def test_fermo_doppio_dal_capo_turno(self):
+        from .models import Macchina, Turno, Settimana
+
+        FermoImpianto.objects.create(impianto='IMP2', causa='NASTRO')
+        m = Macchina.objects.filter(luogo='IMP2', attiva=True).exclude(tipo='SEGNALETICA').first()
+        r = self.client.post(reverse('turni:mn_in_corso'), {'luogo': 'IMP2', 'macchina': m.pk, 'descrizione': 'cambio rullo',
+                                                            'fermo': '1', 'dal': timezone.localtime().strftime('%Y-%m-%dT%H:%M')}, follow=True)
+        self.assertContains(r, 'risulta già fermo')
+        self.assertEqual(FermoImpianto.objects.filter(impianto='IMP2', ripartito_il__isnull=True).count(), 1)

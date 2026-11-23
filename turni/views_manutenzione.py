@@ -780,6 +780,8 @@ def nuovo_fermo(request):
                     fine = _quando(request.POST.get('ripartito'))
                     if fine > f.fermo_dal:
                         mn.fai_ripartire(request.user, f, fine, '')
+                    else:
+                        messages.warning(request, "L'ora di ripartenza era prima dell'inizio del fermo: il fermo resta aperto, segna la ripartenza giusta.")
                 messages.success(request, 'Fermo registrato: responsabile, Capo Turno e manutentori sono avvisati.')
                 return redirect('turni:fermo', f.pk)
     return render(request, 'turni/mn_fermo_nuovo.html', {

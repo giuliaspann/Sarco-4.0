@@ -33,8 +33,14 @@ class AccessiTest(TestCase):
 
     def test_blocco_per_indirizzo_di_rete(self):
         url = reverse('turni:login')
-        for i in range(20):  # nomi diversi dallo stesso indirizzo
+        # 20 errori sullo stesso Wi-Fi a cambio turno non bloccano più tutti (prova operaio, errore 3)
+        for i in range(20):
             self.client.post(url, {'username': f'prova{i}', 'password': 'x'}, REMOTE_ADDR='10.0.0.9')
+        r = self.client.post(url, {'username': 'rossi', 'password': '12345678'}, REMOTE_ADDR='10.0.0.9')
+        self.assertEqual(r.status_code, 302)
+        self.client.logout()
+        for i in range(100):  # i tentativi a tappeto sì
+            self.client.post(url, {'username': f'altro{i}', 'password': 'x'}, REMOTE_ADDR='10.0.0.9')
         r = self.client.post(url, {'username': 'rossi', 'password': '12345678'}, REMOTE_ADDR='10.0.0.9')
         self.assertContains(r, 'Troppi tentativi')
         # da un altro indirizzo si entra
