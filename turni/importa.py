@@ -39,6 +39,11 @@ ASSENZE = {
     'C.P.': Fascia.PERMESSO,
     'NOTTURNO': Fascia.NOTTE,
     'CP': Fascia.PERMESSO,
+    'PER': Fascia.PERMESSO,
+    'PERM': Fascia.PERMESSO,
+    'FER': Fascia.FERIE,
+    'FEST': Fascia.FESTA,
+    'PERMESSO': Fascia.PERMESSO,
 }
 
 
@@ -195,15 +200,39 @@ FOGLIO_LAYOUT = 'Layout Turni'
 FOGLIO_NOMI = 'Collegamento Nomi'
 FOGLIO_VISTA = 'Vista Dipendenti'
 
+# aree del Layout che non sono lavoro: chi c'è quel giorno è in ferie o in permesso (Giulia, 23/11/2026)
+AREE_ASSENZA = {'FERIE': (Fascia.FERIE, 'FER'), 'PERMESSO': (Fascia.PERMESSO, 'PERM')}
+
 # le aree e le loro sigle, come nel foglio «Nomi e sigle» del file turni (22/11/2026)
-SIGLE_AREE = {'Piazzale': 'Piazz', 'Impianto 1': 'Imp 1', 'Impianto 2 - Incolore': 'Imp 2 - I', 'Impianto 2 - Barrotti': 'Imp 2 - B',
+# i nomi del 23/11/2026 (Impianto 2 - Scarto, Granella, Sabbia, Officina) e, per i file vecchi, quelli di prima
+SIGLE_AREE = {'Ferie': 'FER', 'Permesso': 'PERM', 'Impianto 2 - Scarto': 'Imp 2 - S', 'Granella': 'Gran', 'Sabbia': 'Sabb', 'Officina': 'Off', 'Piazzale': 'Piazz', 'Impianto 1': 'Imp 1', 'Impianto 2 - Incolore': 'Imp 2 - I', 'Impianto 2 - Barrotti': 'Imp 2 - B',
               'Impianto 2': 'Imp 2', 'Rotovaglio': 'Rot', 'Laboratorio Analisi': 'Lab', 'Metalli': 'Met', 'Sabbia - Sarco': 'Sab - Sar',
               'Sabbia - Superbi': 'Sab - Sup', 'Manutenzione': 'Manut', 'Trasporti': 'Trasp', 'Magazzino': 'Mag', 'Ufficio': 'Uff',
               'Corso': 'Corso', 'Mezzi - Interni': 'Mezzi - I', 'Mezzi - Esterni': 'Mezzi - E'}
 
 PAROLE_AREE = [('Impianto', 'Imp'), ('Piazzale', 'Piazz'), ('Rotovaglio', 'Rot'), ('Laboratorio', 'Lab'), ('Analisi', ''),
                ('Metalli', 'Met'), ('Sabbia', 'Sab'), ('Superbi', 'Sup'), ('Sarco', 'Sar'), ('Manutenzione', 'Manut'),
-               ('Trasporti', 'Trasp'), ('Magazzino', 'Mag'), ('Ufficio', 'Uff'), ('Incolore', 'I'), ('Barrotti', 'B')]
+               ('Trasporti', 'Trasp'), ('Magazzino', 'Mag'), ('Ufficio', 'Uff'), ('Incolore', 'I'), ('Barrotti', 'B'),
+               ('Scarto', 'S'), ('Granella', 'Gran'), ('Officina', 'Off')]
+
+
+# nomi vecchi delle aree (salvati nelle settimane caricate prima del 23/11/2026) → nomi nuovi (Giulia, 23/11/2026)
+AREE_RINOMINATE = [
+    (r'^(IMPIANTO|IMP)\.?\s*2\s*-\s*(BARROTTI|BARR?|B)\.?$', 'Impianto 2 - Scarto'),
+    (r'^(IMPIANTO|IMP)\.?\s*2\s*-\s*(INCOLORE|I)\.?$', 'Impianto 2 - Incolore'),
+    (r'^(SABBIA|SAB)\.?\s*-\s*(SARCO|SAR)\.?$', 'Granella'),
+    (r'^(SABBIA|SAB)\.?\s*-\s*(SUPERBI|SUP)\.?$', 'Sabbia'),
+    (r'^(MANUTENZIONE|MANUT)\.?$', 'Officina'),
+]
+
+
+def area_attuale(area):
+    """«Imp 2 - B» / «Impianto 2 - Barrotti» → «Impianto 2 - Scarto», ecc.; le altre aree restano come sono."""
+    testo = ' '.join(str(area or '').split())
+    for regola, nuovo in AREE_RINOMINATE:
+        if re.match(regola, testo, flags=re.I):
+            return nuovo
+    return testo
 
 
 def sigla_area(area):
@@ -223,9 +252,11 @@ SIGLE_RUOLO = {'RESPONSABILE IMPIANTO': 'RI', 'RESPONSABILE PIAZZALE': 'RP', 'SU
 
 FASCE_LAYOUT = {'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE, 'G': Fascia.GIORNALIERO}
 
-# l'area decide la postazione (l'ordine conta: "Impianto 2 - Barrotti" prima di "Impianto 2")
+# l'area decide la postazione (l'ordine conta: "Impianto 2 - Scarto" prima di "Impianto 2").
+# Dal 23/11/2026: «Impianto 2 - Scarto» (era Barrotti), «Granella» (era Sabbia - Sarco), «Sabbia» (era Sabbia - Superbi),
+# «Officina» (era Manutenzione). I nomi vecchi valgono ancora per i file archiviati.
 AREE = [
-    (r'BARR?OTTI', Postazione.BARROTTI),
+    (r'BARR?OTTI|SCARTO', Postazione.BARROTTI),
     (r'IMPIANTO\s*2|INCOLORE', Postazione.IMP2),
     (r'IMPIANTO\s*1', Postazione.IMP1),
     (r'ROTOVAGLIO', Postazione.ROTOVAGLIO),
@@ -234,9 +265,10 @@ AREE = [
     (r'LABORATORIO|ANALISI', Postazione.ANALISI),
     (r'METALLI', Postazione.METALLI),
     (r'SUPERBI', Postazione.SUPERBI),
+    (r'SABBIA\s*-\s*SARCO|GRANELLA', Postazione.SABBIA),
     (r'MULINO', Postazione.MULINO),
-    (r'SABBIA', Postazione.SABBIA),
-    (r'MANUTENZ', Postazione.MANUT),
+    (r'SABBIA', Postazione.SUPERBI),
+    (r'MANUTENZ|OFFICINA', Postazione.MANUT),
     (r'TRASPORT|AUTIST', Postazione.AUTISTA),
     (r'UFFICIO', Postazione.UFFICIO),
     (r'MAGAZZINO', Postazione.MAGAZZINO),
@@ -337,13 +369,17 @@ def leggi_layout(wb, lunedi):
             sigla = SIGLE_RUOLO.get(ruolo.upper(), '')  # la colonna delle sigle è una formula: se manca il valore, dal nome
         abbr = (pulisci(ws.cell(r, c_abbr).value) if c_abbr else '') or area
         fascia = FASCE_LAYOUT.get(turno, Fascia.ALTRO)
+        if area.upper() in AREE_ASSENZA:  # aree «Ferie» (FER) e «Permesso» (PERM): chi c'è quel giorno è assente (Giulia, 23/11/2026)
+            fascia, turno = AREE_ASSENZA[area.upper()]
         letta.layout.append({'area': abbr, 'turno': turno, 'ruolo': sigla or ruolo, 'fascia': fascia,
                              'nomi': [pulisci(ws.cell(r, primo + i).value) or '-' for i in range(7)]})
         for i in range(7):
             v = pulisci(ws.cell(r, primo + i).value)
             if v in ('', '-', '–'):
                 continue
-            if len(v) <= 2 or v.startswith('('):  # segnaposto (X, Y…)
+            # segnaposto: «(…)» o nomi corti non collegati. X e Y di Sabbia - Superbi sono persone vere che si chiamano
+            # così: se nel «Collegamento Nomi» hanno un nome, si leggono (Giulia, 23/11/2026)
+            if v.startswith('(') or (len(v) <= 2 and v.upper() not in nomi):
                 saltati.add(v)
                 continue
             completo = nomi.get(v.upper())
@@ -377,6 +413,11 @@ def _unisci_posti(lista, nome, giorno, avvisi, ruoli_area=None):
     (quello da Capo Turno, se c'è) decide fascia e postazione, gli altri si aggiungono al nome del posto."""
     if not lista:
         return CodiceTurno('', Fascia.RIPOSO)
+    for fascia, sigla in AREE_ASSENZA.values():
+        if any(a['fascia'] == fascia for a in lista):
+            if len(lista) > 1:
+                avvisi.append(f'{nome.title()} {giorno:%d/%m} è in {fascia.label} e anche in un turno: controlla.')
+            return CodiceTurno(sigla, fascia, sigla=sigla)
     # "Piazzale - Pala" ripete il palista dell'impianto: se c'è già, non lo scrivo due volte
     pala = [a for a in lista if re.search(r'\bPALA\b', a['area'].upper())]
     if pala and len(lista) > len(pala):
@@ -433,7 +474,7 @@ def _sigla_vista(principale, lista, ruoli_area):
         parti += [area, ' + '.join(ruoli + altre)]
     else:
         parti.append(' + '.join([area] + altre))
-    return ' | '.join(parti)
+    return ' · '.join(parti)  # divisore «·» come nel file turni (Giulia, 23/11/2026)
 
 
 # ---------------------------------------------------------------- confronto nomi
@@ -455,6 +496,48 @@ def stesso_nome(a, b):
     if len(sa & sb) >= 2 and (sa <= sb or sb <= sa):
         return True
     return difflib.SequenceMatcher(None, ' '.join(sorted(ta)), ' '.join(sorted(tb))).ratio() >= 0.85
+
+
+PARTICELLE = {'DI', 'DE', 'DEL', 'DELLA', 'DALLA', 'DA', 'LI', 'LA', 'LO', 'LE', 'VAN', 'VON', 'MC', 'SAN', 'SANTA'}
+
+
+def cognome_e_nome(nome):
+    """«DI GIROLAMO FRANCESCO» → («Di Girolamo», «Francesco»): il cognome (con «Di», «Li»… davanti) e il resto.
+    Per la vista «Per Dipendente»: cognome in grassetto sopra, nome sotto (Giulia, 23/11/2026)."""
+    parole = str(nome or '').split()
+    if not parole:
+        return '', ''
+    k = 1
+    while k < len(parole) - 1 and parole[k - 1].upper().strip("'’") in PARTICELLE:
+        k += 1
+    return _accenti(' '.join(parole[:k])).title(), _accenti(' '.join(parole[k:])).title()
+
+
+def nomi_brevi(nomi):
+    """Per la vista «Per Area»: solo il cognome; se due persone hanno lo stesso cognome, vicino le iniziali
+    del nome («Spanò A.M.», «Di Girolamo G.»), e se anche le iniziali sono uguali la prima parola del nome
+    («Spanò Alessandra», «Spanò Aurora») (Giulia, 23/11/2026). Restituisce {nome completo: etichetta}."""
+    divisi = {n: cognome_e_nome(n) for n in nomi}
+    per_cognome = {}
+    for n, (cognome, _) in divisi.items():
+        per_cognome.setdefault(cognome, []).append(n)
+    brevi = {}
+    for cognome, gruppo in per_cognome.items():
+        if len(gruppo) == 1:
+            brevi[gruppo[0]] = cognome
+            continue
+        iniziali = {n: ''.join(p[0] + '.' for p in divisi[n][1].split()) for n in gruppo}
+        for n in gruppo:
+            doppie = list(iniziali.values()).count(iniziali[n]) > 1
+            resto = divisi[n][1].split()
+            brevi[n] = f'{cognome} {resto[0] if doppie and resto else iniziali[n]}'.strip()
+    return brevi
+
+
+def _accenti(testo):
+    """Nel file l'accento è scritto con l'apostrofo: «SPANO'» → «SPANÒ», «DESIRE'E» → «DESIRÉE» (prima del .title())."""
+    testo = re.sub(r"E['’](?=[A-Z])", 'É', testo.upper())
+    return re.sub(r"([AEIOU])['’]", lambda m: {'A': 'À', 'E': 'È', 'I': 'Ì', 'O': 'Ò', 'U': 'Ù'}[m.group(1)], testo)
 
 
 def trova_dipendente(nome, dipendenti):
@@ -615,6 +698,22 @@ def leggi_elenco_dipendenti(file):
                     elenco.setdefault(nome.upper(), mo)
                 return list(elenco.items())  # [(nome, livello macchine ottiche 1/2 o None)]
     raise ValueError(f'Nel foglio «{foglio}» non trovo la colonna «Dipendenti».')
+
+
+def aggiorna_mo(elenco):
+    """Solo la competenza per le macchine ottiche (1, 2 o nessuna) di chi è già nell'app, dall'Elenco del file turni.
+    Non aggiunge persone: i nuovi arrivano dal Layout. Restituisce quante persone sono cambiate."""
+    from .models import Dipendente
+
+    dipendenti = list(Dipendente.objects.all())
+    cambiati = 0
+    for nome, mo in elenco:
+        dip = trova_dipendente(nome, dipendenti)
+        if dip is not None and dip.livello_mo != mo:
+            dip.livello_mo = mo
+            dip.save(update_fields=['livello_mo'])
+            cambiati += 1
+    return cambiati
 
 
 def aggiorna_elenco_dipendenti(nomi):

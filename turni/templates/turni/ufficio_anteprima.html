@@ -25,8 +25,9 @@
   <li><i class="f-notte">N</i>Notturno</li>
   <li><i class="f-giorno">G</i>Giornaliero</li>
   <li><i class="f-capo">CT</i>Capo Turno</li>
-  <li><i class="f-riposo">R</i>Riposo</li>
-  <li><i class="f-ferie">F</i>Ferie</li>
+  <li><i class="f-riposo">RIP</i>Riposo</li>
+  <li><i class="f-ferie">FER</i>Ferie</li>
+  <li><i class="f-ferie">PERM</i>Permesso</li>
 </ul>
 
 {% if vista == 'area' %}
@@ -55,7 +56,7 @@
   <tbody>
   {% for r in righe %}
     <tr>
-      <th class="vp-fissa vp-nome">{{ r.nome }}{% if r.nuovo %} <span class="etichetta">nuovo</span>{% elif r.come %}<small class="tenue">= {{ r.come }}</small>{% endif %}</th>
+      <th class="vp-fissa vp-nome" title="{{ r.nome }}"><b>{{ r.cognome_nome.0 }}</b>{% if r.cognome_nome.1 %}<span>{{ r.cognome_nome.1 }}</span>{% endif %}{% if r.nuovo %} <span class="etichetta">nuovo</span>{% elif r.come %}<small class="tenue">= {{ r.come }}</small>{% endif %}</th>
       {% for c in r.caselle %}<td class="{{ c.classe }}" title="{{ c.titolo }}">{{ c.testo }}</td>{% endfor %}
     </tr>
   {% endfor %}

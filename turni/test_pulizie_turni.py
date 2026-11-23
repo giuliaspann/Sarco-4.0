@@ -59,7 +59,7 @@ class PulizieTurnoTest(TestCase):
         # carrelli: l'ultimo turno della settimana del manutentore (qui l'unico)
         self.assertEqual(self.voci(self.persona('MAN1', '2T', 'IMP1', ruolo='Man')), ['Ingrassaggio e Pulizia Carrelli Elevatori'])
         self.assertEqual(self.voci(self.persona('C', 'N', 'IMP2', ruolo='OdL')), ['Linea Incolore'])
-        self.assertEqual(self.voci(self.persona('D', '2T', 'BARROTTI', ruolo='OdL')), ['Linea Barrotti'])
+        self.assertEqual(self.voci(self.persona('D', '2T', 'BARROTTI', ruolo='OdL')), ['Linea Scarto'])
         # la pala una volta a settimana: all'ultimo turno del palista (finché non ne arriva uno più tardi)
         self.assertEqual(self.voci(self.persona('E', '1T', 'PALISTA', ruolo='Pal')), ['Piazzale', 'Pulizia Settimanale Pala'])
         self.assertEqual(self.voci(self.persona('E2', '1T', 'IMP1', ruolo='Pal')), ['Piazzale', 'Pulizia Settimanale Pala'])

@@ -47,7 +47,7 @@ class CalendarioDTest(TestCase):
         self.assertLess(pagina.index('>Calendario<'), pagina.index('>Turni di tutti<'))
         self.assertNotIn('>I miei turni<', pagina)
         self.assertNotIn('Eventi di tutti', pagina)
-        for t in ('kd-ct', 'IMP 1', 'SABB.', '🎂 Torre V.', '🎂 Tu!', '🩺 Visita'):
+        for t in ('kd-ct', 'IMP 1', 'GRAN.', '🎂 Torre V.', '🎂 Tu!', '🩺 Visita'):
             self.assertIn(t, pagina)
         self.assertNotIn('Corso', pagina)  # il corso di Torre lo vede solo l'ufficio
 

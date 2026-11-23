@@ -14,7 +14,7 @@ class Fascia(models.TextChoices):
     RIPOSO = 'RIP', 'Riposo'
     FERIE = 'FERIE', 'Ferie'
     FESTA = 'FESTA', 'Festa'
-    PERMESSO = 'CP', 'Congedo / permesso'
+    PERMESSO = 'CP', 'Permesso'
     ALTRO = 'ALTRO', 'Altro'
 
 
@@ -24,17 +24,18 @@ FASCE_LAVORATIVE = {Fascia.MATTINA, Fascia.POMERIGGIO, Fascia.NOTTE, Fascia.GIOR
 
 class Postazione(models.TextChoices):
     IMP1 = 'IMP1', 'Impianto 1'
-    IMP2 = 'IMP2', 'Impianto 2'
-    ANALISI = 'ANALISI', 'Analisi'
-    SUPERBI = 'SUPERBI', 'Superbi'
+    # i nomi delle aree come nel foglio «Nomi e sigle» del file turni (Giulia, 23/11/2026)
+    IMP2 = 'IMP2', 'Impianto 2 - Incolore'
+    ANALISI = 'ANALISI', 'Laboratorio Analisi'
+    SUPERBI = 'SUPERBI', 'Sabbia'  # prima «Sabbia - Superbi» (Giulia, 23/11/2026)
     MULINO = 'MULINO', 'Mulino'
-    BARROTTI = 'BARROTTI', 'Barrotti'
+    BARROTTI = 'BARROTTI', 'Impianto 2 - Scarto'  # prima «Impianto 2 - Barrotti»
     PALISTA = 'PALISTA', 'Palista'
     METALLI = 'METALLI', 'Metalli'
-    SABBIA = 'SABBIA', 'Sabbia'
+    SABBIA = 'SABBIA', 'Granella'  # prima «Sabbia - Sarco»
     PIAZZALE = 'PIAZZALE', 'Piazzale'
-    AUTISTA = 'AUTISTA', 'Autista'
-    MANUT = 'MANUT', 'Manutentore'
+    AUTISTA = 'AUTISTA', 'Trasporti'
+    MANUT = 'MANUT', 'Officina'  # l'area prima si chiamava «Manutenzione»
     UFFICIO = 'UFFICIO', 'Ufficio'
     ROTOVAGLIO = 'ROTOVAGLIO', 'Rotovaglio'
     MAGAZZINO = 'MAGAZZINO', 'Magazzino'
@@ -235,7 +236,7 @@ class Turno(models.Model):
         return ' · '.join(parti) or self.codice
 
     # il file a volte scrive solo "CAPO T. - Imp. 1": la fascia la indica poi il Capo Turno o l'ufficio
-    SIGLE_CAPO = {Fascia.MATTINA: 'CT | 1T', Fascia.POMERIGGIO: 'CT | 2T', Fascia.NOTTE: 'CT | N', Fascia.GIORNALIERO: 'CT | G'}
+    SIGLE_CAPO = {Fascia.MATTINA: 'CT · 1T', Fascia.POMERIGGIO: 'CT · 2T', Fascia.NOTTE: 'CT · N', Fascia.GIORNALIERO: 'CT · G'}
 
     @property
     def capo_da_completare(self):
@@ -273,10 +274,11 @@ class Turno(models.Model):
         Fascia.POMERIGGIO: '2T',
         Fascia.NOTTE: 'N',
         Fascia.GIORNALIERO: 'G',
-        Fascia.RIPOSO: 'R',
-        Fascia.FERIE: 'F',
-        Fascia.FESTA: 'FS',
-        Fascia.PERMESSO: 'P',
+        # le stesse sigle del foglio «Nomi e sigle» del file turni (Giulia, 23/11/2026)
+        Fascia.RIPOSO: 'RIP',
+        Fascia.FERIE: 'FER',
+        Fascia.FESTA: 'FEST',
+        Fascia.PERMESSO: 'PERM',
         Fascia.ALTRO: 'CT',
     }
 
@@ -301,17 +303,17 @@ class Turno(models.Model):
 
     SIGLE_POSTAZIONE = {
         Postazione.METALLI: 'MET.',
-        Postazione.SABBIA: 'SABB.',
+        Postazione.SABBIA: 'GRAN.',
         Postazione.PIAZZALE: 'PIAZ.',
         Postazione.AUTISTA: 'AUT.',
-        Postazione.MANUT: 'MAN.',
+        Postazione.MANUT: 'OFF.',
         Postazione.UFFICIO: 'UFF.',
         Postazione.IMP1: 'IMP 1',
         Postazione.IMP2: 'IMP 2',
         Postazione.ANALISI: 'ANAL.',
-        Postazione.SUPERBI: 'SUP.',
+        Postazione.SUPERBI: 'SABB.',
         Postazione.MULINO: 'MUL.',
-        Postazione.BARROTTI: 'BARR.',
+        Postazione.BARROTTI: 'SCAR.',
         Postazione.PALISTA: 'PALA',
         Postazione.ROTOVAGLIO: 'ROT.',
         Postazione.MAGAZZINO: 'MAG.',

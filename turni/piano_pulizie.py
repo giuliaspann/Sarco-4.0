@@ -33,7 +33,7 @@ NOMI = {'1T': ('1° turno', '6–14'), '2T': ('2° turno', '14–22'), 'G': ('Gi
 # stessi colori del calendario dell'app (.f-mattina, .f-pomeriggio, .f-giorno, .f-notte)
 CLASSI = {'1T': 'f-mattina', '2T': 'f-pomeriggio', 'G': 'f-giorno', 'N': 'f-notte'}
 
-AREE = [('IMP1', 'Impianto 1'), ('IMP2', 'Impianto 2'), ('SABBIA', 'Sabbia'), ('PIAZZALE', 'Piazzale e Metalli'),
+AREE = [('IMP1', 'Impianto 1'), ('IMP2', 'Impianto 2'), ('SABBIA', 'Granella e Sabbia'), ('PIAZZALE', 'Piazzale e Metalli'),
         ('ALTRO', 'Manutenzione e mezzi')]
 AREA_DI = {'IMP1': 'IMP1', 'IMP2': 'IMP2', 'BARROTTI': 'IMP2', 'SABBIA': 'SABBIA', 'SUPERBI': 'SABBIA', 'MULINO': 'SABBIA',
            'PIAZZALE': 'PIAZZALE', 'PALISTA': 'PIAZZALE', 'ROTOVAGLIO': 'PIAZZALE', 'METALLI': 'PIAZZALE'}
@@ -312,7 +312,7 @@ def quando_testo(e):
 
 def testi(e, righe=None):
     """Il testo dell'avviso, uguale per tutte le voci (colonna «Avviso - testo» del file):
-    «🔔 Linea Barrotti: mancano 15 min alla fine del turno: completa la pulizia.» → (titolo, testo)."""
+    «🔔 Linea Scarto: mancano 15 min alla fine del turno: completa la pulizia.» → (titolo, testo)."""
     q = quando_testo(e)
     return f'🔔 {e.nome}', f'{q[:1].upper()}{q[1:]}: completa {cosa_completare(e)}.'
 

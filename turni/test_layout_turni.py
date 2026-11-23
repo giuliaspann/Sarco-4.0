@@ -146,8 +146,8 @@ class AnteprimaTest(TestCase):
         r = self.client.get(reverse('turni:anteprima'))
         nomi = [x['nome'] for x in r.context['righe']]
         self.assertEqual(nomi, sorted(nomi))
-        self.assertContains(r, '1T | Impianto 1 | CT')
-        self.assertContains(r, '2T | Impianto 1 | Pal + Sabbia - Sarco')
+        self.assertContains(r, '1T · Impianto 1 · CT')
+        self.assertContains(r, '2T · Impianto 1 · Pal + Sabbia - Sarco')
         self.assertContains(r, 'Per Area')
 
     def test_per_area_come_il_layout(self):
@@ -436,3 +436,57 @@ class FileTurniSnelloTest(TestCase):
         self.assertEqual(turni['BIANCHI LUCA'].ruolo, 'Pal')
         self.assertEqual(turni['VERDI ANNA'].ruolo, 'Man')
         self.assertEqual(turni['NERI UGO'].ruolo, 'OdL')
+
+
+class AreaFerieTest(TestCase):
+    """Area «Ferie» (FER) nel Layout: chi c'è quel giorno è in ferie (Giulia, 23/11/2026)."""
+
+    def test_riga_ferie(self):
+        righe = [
+            ('Impianto 1', '1T', 'Operatore di Linea', 'OdL', 'Jarju', 'Jarju', 'Jarju', '-', '-', '-', '-'),
+            ('Ferie', '', '', '', '-', '-', '-', 'Jarju', 'Jarju', '-', '-'),
+        ]
+        letta = importa.leggi_file(file_layout(righe=righe), LUNEDI)
+        jarju = next(r for r in letta.righe if r.nome == 'JARJU NABIE')
+        self.assertEqual([t.fascia for t in jarju.turni],
+                         [Fascia.MATTINA] * 3 + [Fascia.FERIE] * 2 + [Fascia.RIPOSO] * 2)
+        self.assertEqual(jarju.turni[3].sigla, 'FER')
+        self.assertEqual(letta.avvisi, [])
+        # in ferie e anche in un turno lo stesso giorno: avviso
+        righe[1] = ('Ferie', '', '', '', 'Jarju', '-', '-', '-', '-', '-', '-')
+        letta = importa.leggi_file(file_layout(righe=righe), LUNEDI)
+        self.assertTrue(any('Ferie e anche in un turno' in a for a in letta.avvisi))
+
+    def test_riga_permesso(self):
+        righe = [
+            ('Ufficio', 'G', 'Dipendente', 'Dip', 'Jarju', 'Jarju', 'Jarju', '-', 'Jarju', '-', '-'),
+            ('Permesso', '', '', '', '-', '-', '-', 'Jarju', '-', '-', '-'),
+        ]
+        letta = importa.leggi_file(file_layout(righe=righe), LUNEDI)
+        jarju = next(r for r in letta.righe if r.nome == 'JARJU NABIE')
+        self.assertEqual(jarju.turni[3].fascia, Fascia.PERMESSO)
+        self.assertEqual(jarju.turni[3].sigla, 'PERM')
+        self.assertEqual(letta.avvisi, [])
+
+
+class NomiBreviTest(TestCase):
+    """Vista «Per Area»: cognome, e in caso di omonimia le iniziali del nome (Giulia, 23/11/2026)."""
+
+    def test_omonimi(self):
+        b = importa.nomi_brevi(["SPANO' ANNA MARIA", "SPANO' ALESSANDRA", "SPANO' AURORA", 'DI GIROLAMO GIANVITO',
+                                'DI GIROLAMO FRANCESCO', 'ODDO SALVATORE'])
+        self.assertEqual(b['ODDO SALVATORE'], 'Oddo')
+        self.assertEqual(b['DI GIROLAMO GIANVITO'], 'Di Girolamo G.')
+        self.assertEqual(b['DI GIROLAMO FRANCESCO'], 'Di Girolamo F.')
+        self.assertEqual(b["SPANO' ANNA MARIA"], 'Spanò A.M.')
+        self.assertEqual(b["SPANO' ALESSANDRA"], 'Spanò Alessandra')
+        self.assertEqual(b["SPANO' AURORA"], 'Spanò Aurora')
+
+    def test_aree_vecchie_con_nomi_nuovi(self):
+        for vecchio, nuovo in [('Imp 2 - B', 'Impianto 2 - Scarto'), ('Impianto 2 - Barrotti', 'Impianto 2 - Scarto'),
+                               ('Sab - Sar', 'Granella'), ('Sabbia - Sarco', 'Granella'), ('Sabbia - Superbi', 'Sabbia'),
+                               ('Sab - Sup', 'Sabbia'), ('Manutenzione', 'Officina'), ('Impianto 1', 'Impianto 1'),
+                               ('Sabbia', 'Sabbia'), ('Impianto 2 - I', 'Impianto 2 - Incolore')]:
+            self.assertEqual(importa.area_attuale(vecchio), nuovo)
+        self.assertEqual(importa.sigla_area(importa.area_attuale('Imp 2 - B')), 'Imp 2 - S')
+

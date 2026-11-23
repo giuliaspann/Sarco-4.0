@@ -150,7 +150,7 @@ class RegoleTest(TestCase):
         self.client.force_login(a.utente)
         r = self.client.get(reverse('turni:settimana_tutti'))
         self.assertContains(r, 'Per Dipendente')
-        self.assertContains(r, '1T | Imp 1 | CT')  # aree abbreviate (Giulia, 22/11/2026)
+        self.assertContains(r, '1T · Imp 1 · CT')  # aree abbreviate (Giulia, 22/11/2026)
         self.assertContains(r, 'vp-io')
         r = self.client.get(reverse('turni:settimana_tutti') + '?vista=area')
         self.assertContains(r, 'title="Impianto 1">Imp 1</th>', count=1)  # sigla, nome intero nel suggerimento

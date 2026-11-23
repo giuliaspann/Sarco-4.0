@@ -342,7 +342,7 @@ def incarichi_di(t):
     sigle = [r for _, r in t.lista_incarichi] if t.incarichi else []
     if t.capoturno and 'CT' not in sigle:
         sigle = ['CT'] + sigle
-    aree = [p.split(' · ')[0].strip() for p in (t.posto or '').split(' + ') if p.strip()]
+    aree = [importa.area_attuale(p.split(' · ')[0]) for p in (t.posto or '').split(' + ') if p.strip()]
     if not aree:
         aree = [t.get_postazione_display() if t.postazione else t.descrizione_fascia]
     if not sigle:
@@ -362,7 +362,7 @@ def casella_tutti(t):
     aree = list(dict.fromkeys(importa.sigla_area(a) for a, _ in inc))  # aree abbreviate (Giulia, 22/11/2026)
     ruoli = [r for _, r in inc if r and r not in ('OdL', 'CT')]
     parti = [t.sigla_fascia or '1T', ' + '.join(aree)] + ruoli + (['CT'] if t.capoturno else [])
-    return {'testo': ' | '.join(p for p in parti if p), 'classe': t.classe_fascia, 'titolo': t.posto or t.descrizione}
+    return {'testo': ' · '.join(p for p in parti if p), 'classe': t.classe_fascia, 'titolo': t.posto or t.descrizione}
 
 
 @login_required
@@ -383,12 +383,13 @@ def settimana_tutti(request):
     def cambiabile(d, t, g):
         return bool(mio and d != mio and t is not None and g > oggi)
 
-    righe = [{'nome': d.nome_breve, 'io': d == mio, 'dipendente_id': d.pk,
+    righe = [{'nome': d.nome_breve, 'cognome_nome': importa.cognome_e_nome(d.nome), 'io': d == mio, 'dipendente_id': d.pk,
               'caselle': [dict(casella_tutti(turni.get(g)), data=g.isoformat(), cambiabile=cambiabile(d, turni.get(g), g))
                           for g in giorni]}
              for d, turni in sorted(per_dip.items(), key=lambda x: x[0].nome)]
 
     # Per Area: un blocco per area, dentro per turno e ruolo; una riga per posto, un nome per giorno
+    brevi = importa.nomi_brevi([d.nome for d in per_dip])
     posti = {}
     for d, turni in per_dip.items():
         for k, g in enumerate(giorni):
@@ -399,11 +400,11 @@ def settimana_tutti(request):
             for area, ruolo in incarichi_di(t):
                 chiave = (area, sigla, ruolo or '')
                 posti.setdefault(chiave, [[] for _ in giorni])[k].append(
-                    {'nome': d.nome_breve.split()[0], 'mio': d == mio, 'dip': d.pk, 'data': g.isoformat(),
+                    {'nome': brevi[d.nome], 'mio': d == mio, 'dip': d.pk, 'data': g.isoformat(),
                      'cambiabile': cambiabile(d, t, g)})
     def ordine_area(area):
         a = area.lower()
-        for n, inizio in enumerate(['impianto 1', 'impianto 2', 'sabbia', 'piazzale', 'metalli', 'manutenzione', 'laboratorio']):
+        for n, inizio in enumerate(['impianto 1', 'impianto 2', 'granella', 'sabbia', 'piazzale', 'metalli', 'officina', 'laboratorio']):
             if a.startswith(inizio):
                 return (n, a)
         return (9, a)
@@ -1252,6 +1253,12 @@ def importa_turni(request):
                                                f'{dal_file:%d/%m/%Y}: ho usato la data del nome. Correggi la cella gialla del «Layout Turni».')
                     request.session['import_turni'] = importa.in_sessione(letta)
                     request.session['import_nome_file'] = f.name
+                    # la competenza per le macchine ottiche (colonna MO dell'Elenco) segue anche il file della settimana (23/11/2026)
+                    try:
+                        f.seek(0)
+                        request.session['import_mo'] = importa.leggi_elenco_dipendenti(f)
+                    except Exception:
+                        request.session.pop('import_mo', None)
                     return redirect('turni:anteprima')
     else:
         form = ImportaForm()
@@ -1280,7 +1287,8 @@ def anteprima(request):
             avvisa_modifiche(settimana, modifiche)
             messages.info(request, (lambda n: f'Turni cambiati a {n} persona: deve dare la presa visione.' if n == 1 else f'Turni cambiati a {n} persone: devono dare la presa visione.')(len({m.dipendente_id for m in modifiche})))
         del request.session['import_turni']
-        messages.success(request, f'Turni caricati: {settimana}.')
+        n_mo = importa.aggiorna_mo(request.session.pop('import_mo', None) or [])
+        messages.success(request, f'Turni caricati: {settimana}.' + (f' Aggiornata la competenza macchine ottiche di {n_mo} persone.' if n_mo else ''))
         if nuovi:
             messages.info(request, f'Nuovi dipendenti: {", ".join(nuovi)}. Ricorda di creare il loro PIN.')
         if mantenuti:
@@ -1298,7 +1306,7 @@ def anteprima(request):
         for c in r.turni:
             t = Turno(fascia=c.fascia, postazione=c.postazione, capoturno=c.capoturno, codice=c.codice)
             caselle.append({'testo': sigla_app(c, t), 'classe': t.classe_fascia, 'titolo': c.posto or c.codice})
-        righe.append({'nome': r.nome, 'nuovo': trovato is None,
+        righe.append({'nome': r.nome, 'cognome_nome': importa.cognome_e_nome(r.nome), 'nuovo': trovato is None,
                       'come': trovato.nome if trovato and trovato.nome != r.nome else '', 'caselle': caselle})
     # "Per Area": le righe del foglio "Layout Turni", con il turno scritto una volta per blocco
     aree = []
@@ -1344,11 +1352,11 @@ def sigla_app(c, t):
     testo = c.sigla or c.codice or t.descrizione
     if not c.capoturno:
         return testo
-    parti = [p.strip() for p in testo.split('|')]
+    parti = [p.strip() for p in testo.replace('|', '·').split('·')]
     if len(parti) == 3:  # "N | Imp 1 | CT + Pal": il CT esce dagli incarichi e va in fondo
         resto = [x.strip() for x in parti[2].split('+') if x.strip().upper() != 'CT']
         parti = parti[:2] + ([' + '.join(resto)] if resto else [])
-    return ' | '.join(parti + ['CT'])
+    return ' · '.join(parti + ['CT'])
 
 
 # Calendario inventato per far vedere l'app a chi non ha turni (es. un dipendente fittizio):

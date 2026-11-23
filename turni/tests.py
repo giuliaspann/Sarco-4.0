@@ -421,7 +421,7 @@ class CalendarioTest(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual([s['giorni'][0]['data'] for s in r.context['settimane']], [LUNEDI])  # una settimana per volta
         sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
-        self.assertEqual(sigle, ['N', 'CT | N', 'N', 'N', 'G', 'G', '1T'])  # il Capo Turno di notte è CT | N
+        self.assertEqual(sigle, ['N', 'CT · N', 'N', 'N', 'G', 'G', '1T'])  # il Capo Turno di notte è CT | N
         posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
         self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2', '', 'ANAL.', 'MUL.', 'PALA'])
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
@@ -530,7 +530,7 @@ class TurniProvaTest(TestCase):
         self.assertEqual(len(turni), 14)
         lunedi = timezone.localdate() - timedelta(days=timezone.localdate().weekday())
         self.assertEqual(turni[0].data, lunedi)
-        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT | 1T', 'N', 'G', 'R', 'F'})
+        self.assertEqual({t.sigla for t in turni}, {'1T', '2T', 'CT · 1T', 'N', 'G', 'RIP', 'FER'})
         # una seconda volta non fa nulla
         self.client.post(url, {'dipendente': dip.pk, 'azione': 'turni_prova'})
         self.assertEqual(dip.turni.count(), 14)
@@ -631,7 +631,7 @@ class CapoTurnoSenzaFasciaTest(TestCase):
         self.assertContains(self.client.get(reverse('turni:home')), 'In quale turno?')
         self.client.post(reverse('turni:fascia_capo'), {'turno': self.t.pk, 'fascia': Fascia.MATTINA, 'dopo': 'https://evil.example/'})
         self.t.refresh_from_db()
-        self.assertEqual((self.t.fascia, self.t.sigla, self.t.classe_fascia), (Fascia.MATTINA, 'CT | 1T', 'f-capo'))
+        self.assertEqual((self.t.fascia, self.t.sigla, self.t.classe_fascia), (Fascia.MATTINA, 'CT · 1T', 'f-capo'))
         # un collega qualsiasi non può cambiarlo
         altro = get_user_model().objects.create_user('altro', password='123456')
         Dipendente.objects.create(nome='ROSSI MARCO', utente=altro)

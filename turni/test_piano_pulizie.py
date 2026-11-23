@@ -228,20 +228,20 @@ class PianoPulizieTest(TestCase):
         man = self.persona('Neri Ugo', '2T', 'MANUT', ruolo='', mansione=Mansione.MANUTENTORE, giorno=SABATO)
         genera_pulizie(venerdi)
         self.assertFalse(venerdi.pulizie.exists())  # non è l'ultimo turno della settimana
-        self.adesso = alle(21, 29, SABATO)
+        self.adesso = alle(20, 59, SABATO)
         pp.controlla()
         self.assertFalse(self.notifiche(man))
-        self.adesso = alle(21, 30, SABATO)
+        self.adesso = alle(21, 0, SABATO)
         pp.controlla()
         self.assertIn('🔔 Ingrassaggio e Pulizia Carrelli Elevatori', self.notifiche(man))
-        self.assertIn("Mancano 30 min alla fine del turno: completa l'ingrassaggio e la pulizia.", self.messaggi(man))
+        self.assertIn("Mancano 60 min alla fine del turno: completa l'ingrassaggio e la pulizia.", self.messaggi(man))
 
     def test_voci_dal_file_delle_regole(self):
         e = ElementoPulizia.objects.get(nome='Macchine ottiche - metà turno')
         self.assertEqual((e.avviso, e.avviso_minuti, e.avviso_a, e.con_avvio, e.da_meta), ('DMETA', 15, 'CT', True, True))
         self.assertEqual(ElementoPulizia.objects.get(nome='Pozzetti').avviso, 'INIZIO')
         self.assertEqual(ElementoPulizia.objects.get(nome='Linea Incolore').minuti_prima_fine, 75)
-        self.assertEqual(ElementoPulizia.objects.get(nome='Generiche Superbi').convalida, 'PIAZZALE')
+        self.assertEqual(ElementoPulizia.objects.get(nome='Generiche Sabbia').convalida, 'PIAZZALE')
         self.assertEqual(ElementoPulizia.objects.filter(attivo=True).count(), 16)
         self.assertFalse(ElementoPulizia.objects.get(nome='Pulizia generale Impianto 2').attivo)
 
@@ -343,7 +343,7 @@ class FileRegolePulizieTest(TestCase):
         self.persona('Costa Dino', postazione='SUPERBI')
         self.adesso = alle(13, 45)
         pp.controlla()
-        p = Pulizia.objects.get(elemento__nome='Generiche Superbi')
+        p = Pulizia.objects.get(elemento__nome='Generiche Sabbia')
         self.adesso = alle(14, 1)
         pp.controlla()
         p.refresh_from_db()
@@ -365,7 +365,7 @@ class FileRegolePulizieTest(TestCase):
     def test_piu_foto_e_video_con_la_nota(self):
         op = self.persona('Costa Dino', postazione='SUPERBI')
         genera_pulizie(op)
-        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        p = op.pulizie.get(elemento__nome='Generiche Sabbia')
         self.adesso = alle(13, 40)
         self.entra(op)
         video = SimpleUploadedFile('v.mp4', b'\x00\x00\x00\x18ftypmp42', content_type='video/mp4')
@@ -395,7 +395,7 @@ class FileRegolePulizieTest(TestCase):
         op = self.persona('Costa Dino', postazione='SUPERBI')
         ct = self.persona('Galli Rino', capoturno=True)
         genera_pulizie(op)
-        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        p = op.pulizie.get(elemento__nome='Generiche Sabbia')
         self.entra(op)
         url = reverse('turni:pulizie_turno', args=[op.pk])
         self.client.post(url, {'azione': 'impedita', 'pulizia': p.pk, 'foto': foto()})
@@ -439,7 +439,7 @@ class FileRegolePulizieTest(TestCase):
         op = self.persona('Costa Dino', postazione='SUPERBI')
         estraneo = self.persona('Bianchi Luca', postazione='IMP2')
         genera_pulizie(op)
-        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        p = op.pulizie.get(elemento__nome='Generiche Sabbia')
         self.adesso = alle(13, 40)
         self.entra(op)
         self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {
@@ -480,7 +480,7 @@ class ArchivioSettimanaleTest(TestCase):
 
         op = self.persona('Costa Dino', postazione='SUPERBI')
         genera_pulizie(op)
-        p = op.pulizie.get(elemento__nome='Generiche Superbi')
+        p = op.pulizie.get(elemento__nome='Generiche Sabbia')
         self.adesso = alle(13, 40)
         self.entra(op)
         self.client.post(reverse('turni:pulizie_turno', args=[op.pk]), {
@@ -496,10 +496,10 @@ class ArchivioSettimanaleTest(TestCase):
         self.assertIn(f'Pulizie {LUNEDI.isoformat()}.xlsx', nomi)
         foto_zip = [n for n in nomi if n.startswith('Foto e video/')]
         self.assertEqual(len(foto_zip), 3)
-        self.assertTrue(any('Generiche Superbi - Costa D' in n and 'prima' in n for n in foto_zip))
+        self.assertTrue(any('Generiche Sabbia - Costa D' in n and 'prima' in n for n in foto_zip))
         ws = openpyxl.load_workbook(io.BytesIO(z.read(f'Pulizie {LUNEDI.isoformat()}.xlsx'))).active
         righe = [[c.value for c in r] for r in ws.iter_rows(min_row=3)]
-        riga = next(r for r in righe if r[3] == 'Generiche Superbi')
+        riga = next(r for r in righe if r[3] == 'Generiche Sabbia')
         self.assertEqual((riga[6], riga[10]), ('Fatta', 'Tutto pulito'))
         a = ArchivioPulizie.objects.get(lunedi=LUNEDI)
         self.assertEqual((a.file, a.da), (3, 'script settimanale'))

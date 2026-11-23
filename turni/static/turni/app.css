@@ -2900,3 +2900,8 @@ body.in-chat .avviso { position: fixed; z-index: 30; left: 12px; right: 12px; to
   body.in-chat .wa { background: #0b141a; }
   body.in-chat .wa-campo { background: #2a3942; border-color: #2a3942; }
 }
+
+/* Per Dipendente: cognome in grassetto sopra, nome sotto non in grassetto (Giulia, 23/11/2026) */
+.vp-nome { line-height: 1.15; }
+.vp-nome b { display: block; font-weight: 700; }
+.vp-nome span { display: block; font-weight: 400; color: var(--tenue); }
