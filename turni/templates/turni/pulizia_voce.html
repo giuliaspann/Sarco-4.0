@@ -11,7 +11,7 @@
   <p class="pv-riga"><b>Chi</b><span>{{ persone|join:', ' }}</span></p>
   {% if quando %}<p class="pv-riga"><b>Quando</b><span>{{ quando }}</span></p>{% endif %}
   <p class="pv-riga"><b>Stato</b><span>{{ stato }}</span></p>
-  {% if e.istruzioni %}<p class="tenue piccolo">{{ e.istruzioni }}</p>{% endif %}
+  {# niente istruzioni dell'avviso sotto «Stato» (Giulia, 24/11/2026): restano nel modulo di chi fa la pulizia #}
   {% if p.nota %}<p class="tenue piccolo">{{ p.nota }}</p>{% endif %}
 </div>
 

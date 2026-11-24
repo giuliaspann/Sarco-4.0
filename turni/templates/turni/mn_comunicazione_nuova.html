@@ -15,10 +15,10 @@
 <form method="post" enctype="multipart/form-data" class="scheda mn-form">{% csrf_token %}
   <input type="hidden" name="tipo" value="{{ tipo }}">
   {% if tipo == 'FERMO' %}
-  <fieldset class="cm-a cm-a3">
-    <legend>Quale impianto</legend>
-    {% for v, n, icona in impianti %}<label><input type="radio" name="luogo" value="{{ v }}" required><span>{{ icona|come_icona }} {{ n }}</span></label>{% endfor %}
-  </fieldset>
+  <p class="mn-sottotitolo">Quale impianto</p>
+  <div class="rp-aree">
+    {% for v, n, icona in impianti %}<label><input type="radio" name="luogo" value="{{ v }}" required><span><i class="rp-ico">{{ icona }}</i>{{ n }}</span></label>{% endfor %}
+  </div>
   <fieldset class="cm-a">
     <legend>Perché</legend>
     {% for v, n in motivi %}<label><input type="radio" name="motivo" value="{{ v }}" required><span>{{ n }}</span></label>{% endfor %}
@@ -49,7 +49,7 @@
   <label>fino al<input type="datetime-local" name="al" required></label>
   {% else %}
   <p class="mn-sottotitolo">Dove</p>
-  <div class="scegli">{% for v, n in luoghi %}<label><input type="radio" name="luogo" value="{{ v }}"><span>{{ n }}</span></label>{% endfor %}</div>
+  <div class="rp-aree">{% for v, n in luoghi %}<label><input type="radio" name="luogo" value="{{ v }}"><span><i class="rp-ico">{{ v|icona_area }}</i>{{ n }}</span></label>{% endfor %}</div>
   <p class="mn-sottotitolo">Turno</p>
   <div class="scegli tre"><label><input type="radio" name="fascia" value="1T"><span>1° turno</span></label><label><input type="radio" name="fascia" value="2T"><span>2° turno</span></label><label><input type="radio" name="fascia" value="N"><span>Notte</span></label></div>
   {% endif %}

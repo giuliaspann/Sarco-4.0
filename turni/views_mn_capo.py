@@ -17,7 +17,7 @@ from .models import FermoImpianto, Intervento, Luogo, Macchina
 from .views_manutenzione import _quando
 
 # dove si può lavorare (come nella segnalazione guasti), senza i mezzi delle ditte esterne
-LUOGHI = [Luogo.IMP1, Luogo.IMP2, Luogo.PIAZZALE, Luogo.METALLI, Luogo.SABBIA, Luogo.MEZZI, Luogo.ANALISI]
+LUOGHI = list(Luogo)  # tutte le aree di lavoro (Giulia, 24/11/2026)
 
 
 def _adesso():

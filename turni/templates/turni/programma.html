@@ -1,13 +1,14 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Programma {{ cosa }}{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% if passo == 'cosa' %}?{% else %}{{ indietro }}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if passo == 'cosa' %}Dove{% elif cosa == 'manutenzione' %}Manutenzione{% else %}Pulizia{% endif %}</a>
 <div class="intestazione"><h1>Programma {{ cosa }}</h1></div>
 
 {% if passo == 'dove' %}
-<p class="tenue">Dove va fatta la {{ cosa }}?</p>
-<div class="mn-capo">
-  {% for v, nome in luoghi %}<a class="mn-capo-tasto" href="?luogo={{ v }}"><span><b>{{ nome }}</b></span></a>{% endfor %}
+<p class="mn-sottotitolo">Dove va fatta la {{ cosa }}?</p>
+<div class="rp-aree">
+  {% for v, nome in luoghi %}<a href="?luogo={{ v }}"><i class="rp-ico">{{ v|icona_area }}</i>{{ nome }}</a>{% endfor %}
 </div>
 {% else %}
 <form method="post" class="scheda mc-form">{% csrf_token %}

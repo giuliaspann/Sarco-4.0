@@ -9,10 +9,10 @@
 </div>
 
 {% if not impianto %}
-  <h2 class="rq-sezione">Quale impianto si è fermato?</h2>
-  <div class="sg-gruppi">
+  <p class="mn-sottotitolo">Quale impianto si è fermato?</p>
+  <div class="rp-aree">
     {% for v, nome, icona, gia in impianti %}
-    <a href="?impianto={{ v }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b><small>{% if gia %}{% icona 'fermo' %} Già segnalato fermo{% else %}In funzione{% endif %}</small></a>
+    <a href="?impianto={{ v }}"><i class="rp-ico">{{ icona }}</i>{{ nome }}<small>{% if gia %}Già segnalato fermo{% else %}In funzione{% endif %}</small></a>
     {% endfor %}
   </div>
 {% else %}

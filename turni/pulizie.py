@@ -148,18 +148,23 @@ def richiedi_pulizia(utente, turno, elemento, nota=''):
     return p
 
 
-LUOGHI_PULIZIA = ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA', 'MEZZI', 'ANALISI']
+# tutte le aree di lavoro, nell'ordine di Luogo (Giulia, 24/11/2026)
+LUOGHI_PULIZIA = ['IMP1', 'IMP2', 'METALLI', 'ROTOVAGLIO', 'GRANELLA', 'SABBIA', 'PIAZZALE', 'OFFICINA', 'MAGAZZINO', 'ANALISI',
+                  'MEZZI', 'ESTERNI']
 
 # "Richiedi pulizia": per ogni area, le postazioni di chi ci lavora (li mostro per primi)
+# (la postazione SABBIA del file turni è la Granella, SUPERBI è la Sabbia)
 POSTAZIONI_AREA = {
-    'IMP1': ['IMP1', 'PALISTA', 'MULINO'], 'IMP2': ['IMP2', 'BARROTTI'], 'PIAZZALE': ['PIAZZALE', 'PALISTA'],
-    'METALLI': ['METALLI'], 'SABBIA': ['SABBIA'], 'MEZZI': ['PALISTA', 'AUTISTA'], 'ANALISI': ['ANALISI'],
+    'IMP1': ['IMP1', 'PALISTA'], 'IMP2': ['IMP2', 'BARROTTI'], 'METALLI': ['METALLI'], 'ROTOVAGLIO': ['ROTOVAGLIO'],
+    'GRANELLA': ['SABBIA', 'MULINO'], 'SABBIA': ['SUPERBI'], 'PIAZZALE': ['PIAZZALE', 'PALISTA'], 'OFFICINA': ['MANUT'],
+    'MAGAZZINO': ['MAGAZZINO'], 'ANALISI': ['ANALISI'], 'MEZZI': ['PALISTA', 'MANUT'], 'ESTERNI': ['AUTISTA'],
 }
 
 
 def puo_richiedere(utente):
-    """Tutti possono chiedere una pulizia (Giulia, 13/11/2026): il RP la assegna, gli altri la mandano al RP."""
-    return utente.is_authenticated and (utente.is_staff or getattr(utente, 'dipendente', None) is not None)
+    """Tutti possono chiedere una pulizia (Giulia, 13/11/2026): il RP la assegna, gli altri la mandano al RP.
+    Anche chi non ha la scheda dipendente: «tutti devono vedere tutto» (Giulia, 24/11/2026)."""
+    return utente.is_authenticated
 
 
 def in_turno(giorno, fascia, area):
@@ -187,7 +192,10 @@ def scelte_pulizia(escludi=()):
     for m in Macchina.objects.filter(attiva=True, luogo__in=LUOGHI_PULIZIA).exclude(tipo=Macchina.Tipo.SEGNALETICA).order_by('nome'):
         if m.nome.lower() not in nomi and m.nome.lower() not in gia:
             voci[m.luogo].append((f'm{m.pk}', m.nome, '🚜' if m.tipo == Macchina.Tipo.MEZZO else '⚙️'))
-    luoghi = [(v, Luogo(v).label, ICONE_LUOGHI.get(v, '📍'), voci[v]) for v in LUOGHI_PULIZIA if voci[v]]
+    # tutte le aree, anche quelle senza voci: in fondo a ognuna «Pulizia generica» (Giulia, 24/11/2026)
+    for v in LUOGHI_PULIZIA:
+        voci[v].append((f'g{v}', f'Pulizia generica {Luogo(v).label}', '🧹'))
+    luoghi = [(v, Luogo(v).label, ICONE_LUOGHI.get(v, '📍'), voci[v]) for v in LUOGHI_PULIZIA]
     if voci.get(''):
         luoghi.append(('ALTRO', 'Altro', '📍', voci['']))
     return luoghi
@@ -207,6 +215,12 @@ def elemento_da_scelta(valore):
                 'tipo': ElementoPulizia.Tipo.MEZZO if m.tipo == Macchina.Tipo.MEZZO else ElementoPulizia.Tipo.ZONA,
                 'luogo': m.luogo})
             return e if e.attivo else None
+    if valore.startswith('g') and valore[1:] in LUOGHI_PULIZIA:
+        from .models import Luogo
+
+        e, _ = ElementoPulizia.objects.get_or_create(nome=f'Pulizia generica {Luogo(valore[1:]).label}'[:100], defaults={
+            'tipo': ElementoPulizia.Tipo.ZONA, 'luogo': valore[1:]})
+        return e if e.attivo else None
     if valore.isdigit():
         return ElementoPulizia.objects.filter(pk=valore, attivo=True).first()
     return None

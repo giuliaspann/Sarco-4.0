@@ -19,7 +19,7 @@ from . import manutenzione as mn
 from .models import Comunicazione, Dipendente, Fascia, FermoImpianto, Intervento, Luogo, Macchina, Turno
 from .pulizie import POSTAZIONI_AREA
 
-LUOGHI = [Luogo.IMP1, Luogo.IMP2, Luogo.PIAZZALE, Luogo.METALLI, Luogo.SABBIA, Luogo.MEZZI, Luogo.ANALISI]
+LUOGHI = list(Luogo)  # tutte le aree di lavoro (Giulia, 24/11/2026)
 TURNI = [('1T', '1° turno · 06–14'), ('2T', '2° turno · 14–22'), ('N', 'Notturno · 22–06')]
 ORARI = {'1T': (time(6), time(14)), '2T': (time(14), time(22)), 'N': (time(22), time(6))}
 FASCIA_DI = {'1T': Fascia.MATTINA, '2T': Fascia.POMERIGGIO, 'N': Fascia.NOTTE}
@@ -31,7 +31,7 @@ def puo_programmare(utente, cosa='manutenzione'):
     from .views import e_capoturno
 
     if cosa == 'pulizia':
-        return utente.is_authenticated and (utente.is_staff or getattr(utente, 'dipendente', None) is not None)
+        return utente.is_authenticated  # anche senza scheda dipendente (Giulia, 24/11/2026)
 
     dip = getattr(utente, 'dipendente', None)
     return (utente.is_staff or e_capoturno(utente, timezone.localdate())

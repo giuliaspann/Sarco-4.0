@@ -1,14 +1,15 @@
 {% extends 'turni/base.html' %}
+{% load icone %}
 {% block titolo %}Manutenzione in corso{% endblock %}
 {% block contenuto %}
 <a class="tasto-indietro" href="{% if passo == 'cosa' %}{% url 'turni:mn_in_corso' %}{% else %}{% url 'turni:mn_scelta' %}{% endif %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>{% if passo == 'cosa' %}Dove{% else %}Manutenzione{% endif %}</a>
 <div class="intestazione"><h1>Manutenzione in corso</h1></div>
 
 {% if passo == 'dove' %}
-<p class="tenue">Dove si sta facendo la manutenzione?</p>
-<div class="mn-capo">
+<p class="mn-sottotitolo">Dove si sta facendo la manutenzione?</p>
+<div class="rp-aree">
   {% for v, nome in luoghi %}
-  <a class="mn-capo-tasto" href="?luogo={{ v }}"><span><b>{{ nome }}</b></span></a>
+  <a href="?luogo={{ v }}"><i class="rp-ico">{{ v|icona_area }}</i>{{ nome }}</a>
   {% endfor %}
 </div>
 {% else %}

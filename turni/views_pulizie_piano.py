@@ -170,9 +170,7 @@ def passaggi(righe):
     primo = lambda campo: min((getattr(r, campo) for r in righe if getattr(r, campo)), default=None)  # noqa: E731
     fatta = primo('fatta_il')
     passi = []
-    if e and e.avviso:
-        inviato = AvvisoPulizia.objects.filter(chiave=f'{e.pk}-{p.turno.data.isoformat()}-{pp.sigla(p.turno.fascia)}').first()
-        passi.append({'testo': 'Avviso ' + pp.quando_di(e).removeprefix('avviso '), 'ora': ora(inviato.inviato_il) if inviato else '', 'fatto': bool(inviato)})
+    # niente passaggio «Avviso» nella cronologia: l'orario dell'avviso resta nella riga «Quando» (Giulia, 24/11/2026)
     if e and e.con_avvio:
         iniziata = primo('iniziata_il')
         passi.append({'testo': 'Pulizia iniziata', 'ora': ora(iniziata), 'fatto': bool(iniziata)})
@@ -315,7 +313,7 @@ def pulizia_voce(request, pk):
         'p': p, 'righe': righe, 'e': e, 'passi': passaggi(righe),
         'persone': [r.fatta_da.nome_breve if r.fatta_da_id else r.turno.dipendente.nome_breve for r in righe],
         'sigla': s, 'classe': pp.CLASSI.get(s, ''), 'nome_turno': pp.NOMI.get(s, ('', ''))[0],
-        'area': dict(pp.AREE).get(pp.area_di(p.turno, e), ''), 'quando': pp.quando_di(e),
+        'area': dict(pp.AREE).get(pp.area_di(p.turno, e), ''), 'quando': pp.quando_si_fa(e, p.turno),
         'stato': pp.STATI[pp.stato_gruppo([pp.stato_di(r) for r in righe])],
         'capo': capo, 'mie': mie, 'da_fare': da_fare, 'iniziata': iniziata,
         'colleghi': colleghi, 'assegnata_a': da_fare[0].turno.dipendente_id if len(da_fare) == 1 else None,

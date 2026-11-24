@@ -36,6 +36,25 @@ RINOMINA = {
 
 NOTTURNE = 'Generiche Notturne'
 
+# colonna «Durata (min)» del file, voce per voce (Giulia, 24/11/2026)
+DURATE = {
+          'Pozzetti': 40,
+          'Macchine ottiche - metà turno': 15,
+          'Macchine ottiche - fine turno': 15,
+          'Pavimentazione + altro': 30,
+          'Controllo vagli zig-zag': 60,
+          'Generiche Notturne': 60,
+          'Linea Incolore': 75,
+          'Linea Scarto': 30,
+          'Area Metalli': 30,
+          'Pulizia Settimanale Area Metalli': 40,
+          'Pulizia Settimanale Pala': 40,
+          'Ingrassaggio e Pulizia Carrelli Elevatori': 90,
+          'Area Rotovaglio': 30,
+          'Piazzale': 30,
+          'Mulino e pressa': 30,
+          'Generiche Sabbia': 30}
+
 
 def r(postazione='', fascia='', ruolo='', giorno=None, a_rotazione=False, scelta='', ultimo=False):
     return {'postazione': postazione, 'fascia': fascia, 'ruolo': ruolo, 'giorno': giorno, 'a_rotazione': a_rotazione,
@@ -109,7 +128,7 @@ VOCI = [
      'istruzioni': "Una volta a settimana, nell'ultimo turno della settimana del Manutentore · fine turno, 90 minuti.",
      'avviso': avv(PRIMA, 60, 'ADDETTI'),
      'regole': [r('MANUT', a_rotazione=True, ultimo=True), r(ruolo='Man', a_rotazione=True, ultimo=True)]},
-    {'nome': 'Area Rotovaglio', 'luogo': 'PIAZZALE', 'modo': 'PULIZIA_FOTO', 'convalida': 'PIAZZALE', 'minuti': 30, 'tasto': 'Conferma pulizia',
+    {'nome': 'Area Rotovaglio', 'luogo': 'ROTOVAGLIO', 'modo': 'PULIZIA_FOTO', 'convalida': 'PIAZZALE', 'minuti': 30, 'tasto': 'Conferma pulizia',
      'istruzioni': 'Fine turno · 30 minuti. Il Palista che lavora al Rotovaglio.',
      'avviso': avv(PRIMA, 15, 'ADDETTI'),
      'regole': [r('ROTOVAGLIO')]},
@@ -117,7 +136,7 @@ VOCI = [
      'istruzioni': 'Inizio turno · 30 minuti. Il Palista di Impianto 1, 1° turno.',
      'avviso': avv(INIZIO, 30, 'ADDETTI'),
      'regole': [r('IMP1', '1T', 'Pal'), r('PALISTA', '1T')]},
-    {'nome': 'Mulino e pressa', 'luogo': 'SABBIA', 'modo': 'SOLO_TASTO', 'convalida': 'PIAZZALE', 'minuti': 30, 'tasto': 'Controllo fatto',
+    {'nome': 'Mulino e pressa', 'luogo': 'GRANELLA', 'modo': 'SOLO_TASTO', 'convalida': 'PIAZZALE', 'minuti': 30, 'tasto': 'Controllo fatto',
      'istruzioni': 'Fine turno · 30 minuti, solo turno Giornaliero. Chi lavora a Granella.',
      'avviso': avv(PRIMA, 15, 'ADDETTI'),
      'regole': [r('SABBIA', 'G'), r('MULINO', 'G')]},
@@ -145,6 +164,8 @@ def applica(Elemento, Regola):
         e.modo = v['modo']
         e.convalida = v['convalida']
         e.minuti_prima_fine = v['minuti']
+        if 'durata' in campi_e:
+            e.durata = DURATE.get(v['nome'])
         e.istruzioni = v['istruzioni']
         e.promemoria = v.get('promemoria', False)
         e.tasto = v.get('tasto', '')

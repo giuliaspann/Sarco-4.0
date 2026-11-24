@@ -1,6 +1,6 @@
 <p class="mn-sottotitolo">Dove?</p>
-<div class="scegli pl-luoghi">
-  {% for v, nome, icona, voci in luoghi %}<label><input type="radio" name="luogo" value="{{ v }}" required><span>{{ icona }} {{ nome }}</span></label>{% endfor %}
+<div class="rp-aree pl-luoghi">
+  {% for v, nome, icona, voci in luoghi %}<label><input type="radio" name="luogo" value="{{ v }}" required><span><i class="rp-ico">{{ icona }}</i>{{ nome }}</span></label>{% endfor %}
 </div>
 <p class="mn-sottotitolo pl-cosa-titolo">{{ domanda }}</p>
 {% for v, nome, icona, voci in luoghi %}

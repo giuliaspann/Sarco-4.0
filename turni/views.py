@@ -483,17 +483,25 @@ def squadra(request):
 # ---------------------------------------------------------------- pulizie
 
 
+def _menu_pulizia_senza_turno(request):
+    """Pagina Pulizia per chi oggi non è in turno (ufficio, riposo, senza scheda): gli stessi tasti di tutti
+    (Calendario, In corso adesso, Richiedi pulizia, Pulizia straordinaria), più quelli del suo ruolo (Giulia, 24/11/2026)."""
+    from .pulizie import puo_richiedere
+    from .views_programma import puo_programmare
+
+    oggi = timezone.localdate()
+    return render(request, 'turni/pulizia.html', {
+        'turno': None, 'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
+        'puo_programmare': puo_programmare(request.user, 'pulizia'),
+        'e_capo': e_capoturno(request.user, oggi), 'da_verificare': pulizie_da_verificare(request.user)})
+
+
 @login_required
 def pulizie(request, turno_id=None):
     dip = dipendente_di(request)
-    if dip is None and request.user.is_staff and turno_id is None and not request.GET.get('fai'):
-        # l'ufficio ha gli stessi tasti di tutti (Giulia, 12/11/2026): senza turno, con quelli che gli spettano
-        from .pulizie import puo_richiedere
-
-        return render(request, 'turni/pulizia.html', {
-            'turno': None, 'resp_piazzale': e_resp_piazzale(request.user), 'puo_richiedere': puo_richiedere(request.user),
-            'puo_programmare': __import__('turni.views_programma', fromlist=['puo_programmare']).puo_programmare(request.user, 'pulizia'),
-            'e_capo': False, 'da_verificare': 0})
+    if dip is None and turno_id is None and not request.GET.get('fai'):
+        # tutti vedono tutti i tasti (Giulia, 24/11/2026), anche chi non ha la scheda dipendente
+        return _menu_pulizia_senza_turno(request)
     if dip is None:
         return render(request, 'turni/nessun_dipendente.html')
     if turno_id is None:
@@ -548,7 +556,7 @@ def pulizie(request, turno_id=None):
             'controlli': [a for a in promemoria_di(turno) if not a['controllo']] if alla_squadra else []})
 
     if turno is None or not turno.lavora:
-        return render(request, 'turni/pulizia.html', {'turno': None})
+        return _menu_pulizia_senza_turno(request)
 
     if request.method == 'POST':
         azione = request.POST.get('azione')

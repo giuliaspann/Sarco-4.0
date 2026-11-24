@@ -13,7 +13,7 @@
 <p class="mn-sottotitolo">Dove va fatta la pulizia?</p>
 <div class="rp-aree">
   {% for v, nome, icona in aree %}
-  <a href="?area={{ v }}{% if giorno %}&giorno={{ giorno|date:'Y-m-d' }}{% endif %}{% if fascia %}&fascia={{ fascia }}{% endif %}{% if scelto %}&turno={{ scelto }}{% endif %}{% if torna %}&torna={{ torna }}{% endif %}{% if nota %}&nota={{ nota|urlencode }}{% endif %}"><span>{{ icona }}</span>{{ nome }}</a>
+  <a href="?area={{ v }}{% if giorno %}&giorno={{ giorno|date:'Y-m-d' }}{% endif %}{% if fascia %}&fascia={{ fascia }}{% endif %}{% if scelto %}&turno={{ scelto }}{% endif %}{% if torna %}&torna={{ torna }}{% endif %}{% if nota %}&nota={{ nota|urlencode }}{% endif %}"><i class="rp-ico">{{ icona }}</i>{{ nome }}</a>
   {% endfor %}
 </div>
 

@@ -70,7 +70,7 @@ class PianoPulizieTest(TestCase):
         self.assertContains(r, 'Bianchi L')
         self.assertContains(r, 'Giornaliero · 8–17:30')
         self.assertContains(r, 'Mulino e pressa')
-        self.assertContains(r, 'dopo metà turno')
+        self.assertContains(r, 'Metà turno · 15 min')  # il «Quando» dice momento e durata, non l'avviso (24/11/2026)
         self.assertContains(r, 'f-mattina')
         # i giorni futuri si calcolano dalle regole, senza scrivere le pulizie
         domani = self.persona('Rossi Mario', giorno=LUNEDI + timedelta(days=1))

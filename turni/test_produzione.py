@@ -143,8 +143,12 @@ class ProvaOperaioTest(TestCase):
         self.assertEqual(t.righe.count(), 2)
 
     def test_fermo_doppio_dal_capo_turno(self):
+        from django.apps import apps as registro
+
+        from .esempi_manutenzione import carica
         from .models import Macchina, Turno, Settimana
 
+        carica(registro, forza=True)  # le macchine d'esempio non ci sono più dopo la migrazione 0085
         FermoImpianto.objects.create(impianto='IMP2', causa='NASTRO')
         m = Macchina.objects.filter(luogo='IMP2', attiva=True).exclude(tipo='SEGNALETICA').first()
         r = self.client.post(reverse('turni:mn_in_corso'), {'luogo': 'IMP2', 'macchina': m.pk, 'descrizione': 'cambio rullo',

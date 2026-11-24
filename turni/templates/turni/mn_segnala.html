@@ -103,10 +103,10 @@
   </div>
 
 {% elif gruppo %}
-  <h2 class="rq-sezione">{% if gruppo.0 == 'mezzi' %}Interno o esterno?{% else %}Dove si trova?{% endif %}</h2>
-  <div class="sg-luoghi">
+  <p class="mn-sottotitolo">{% if gruppo.0 == 'mezzi' %}Interno o esterno?{% else %}Dove si trova?{% endif %}</p>
+  <div class="rp-aree">
     {% for v, nome, icona, n in luoghi %}
-    <a href="?{{ pre }}gruppo={{ gruppo.0 }}&luogo={{ v }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b><small>{{ n }} {% if gruppo.0 == 'mezzi' %}mezz{{ n|pluralize:'o,i' }}{% elif gruppo.0 == 'segnaletica' %}element{{ n|pluralize:'o,i' }}{% else %}macchin{{ n|pluralize:'a,e' }}{% endif %}</small></a>
+    <a href="?{{ pre }}gruppo={{ gruppo.0 }}&luogo={{ v }}"><i class="rp-ico">{{ icona }}</i>{{ nome }}</a>
     {% endfor %}
   </div>
 

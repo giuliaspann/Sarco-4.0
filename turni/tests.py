@@ -423,7 +423,7 @@ class CalendarioTest(TestCase):
         sigle = [c['turno'].sigla for s in r.context['settimane'] for c in s['giorni'] if c['turno']]
         self.assertEqual(sigle, ['N', 'CT · N', 'N', 'N', 'G', 'G', '1T'])  # il Capo Turno di notte è CT | N
         posti = [c['turno'].sigla_postazione for c in r.context['settimane'][0]['giorni']]
-        self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2', '', 'ANAL.', 'MUL.', 'PALA'])
+        self.assertEqual(posti, ['PALA', 'IMP 1', 'IMP 2 INC', '', 'ANAL.', 'MUL.', 'PALA'])
         self.assertEqual(r.context['turno'].data, LUNEDI + timedelta(days=1))
         self.assertTrue(r.context['turno'].capoturno)
 

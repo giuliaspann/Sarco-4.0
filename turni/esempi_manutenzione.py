@@ -62,7 +62,8 @@ PROGRAMMATE = [
 ]
 
 
-def carica(apps):
+def carica(apps, forza=False):
+    """forza=True: anche se ci sono già macchine (i test, dopo che la migrazione 0085 ha tolto gli esempi online)."""
     from django.utils import timezone
 
     Macchina = apps.get_model('turni', 'Macchina')
@@ -72,16 +73,15 @@ def carica(apps):
     Evento = apps.get_model('turni', 'EventoIntervento')
     Dipendente = apps.get_model('turni', 'Dipendente')
 
-    if Macchina.objects.exists():
+    if Macchina.objects.exists() and not forza:
         return
     oggi = timezone.localdate()
     adesso = timezone.now()
     m = {}
     for codice, nome, tipo, categoria, luogo, marca, modello in MACCHINE:
-        m[codice] = Macchina.objects.create(
-            codice=codice, nome=nome, tipo=tipo, categoria=categoria, luogo=luogo,
-            marca=marca, modello=modello, esempio=True,
-        )
+        m[codice], _ = Macchina.objects.get_or_create(codice=codice, defaults=dict(
+            nome=nome, tipo=tipo, categoria=categoria, luogo=luogo, marca=marca, modello=modello, esempio=True,
+        ))
     for nome, codice, scorta, minima, unita, dove, fornitore, macchine in RICAMBI:
         r = Ricambio.objects.create(nome=nome, codice=codice, scorta=scorta, scorta_minima=minima, unita=unita,
                                     ubicazione=dove, fornitore=fornitore, esempio=True)

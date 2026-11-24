@@ -203,23 +203,24 @@ FOGLIO_VISTA = 'Vista Dipendenti'
 # aree del Layout che non sono lavoro: chi c'è quel giorno è in ferie o in permesso (Giulia, 23/11/2026)
 AREE_ASSENZA = {'FERIE': (Fascia.FERIE, 'FER'), 'PERMESSO': (Fascia.PERMESSO, 'PERM')}
 
-# le aree e le loro sigle, come nel foglio «Nomi e sigle» del file turni (22/11/2026)
+# le aree e le loro sigle, come nel foglio «Nomi e sigle» del file turni (22/11/2026);
+# «Imp 2 - Inc» e «Imp 2 - Scar» al posto di «Imp 2 - I» e «Imp 2 - S» (Giulia, 24/11/2026)
 # i nomi del 23/11/2026 (Impianto 2 - Scarto, Granella, Sabbia, Officina) e, per i file vecchi, quelli di prima
-SIGLE_AREE = {'Ferie': 'FER', 'Permesso': 'PERM', 'Impianto 2 - Scarto': 'Imp 2 - S', 'Granella': 'Gran', 'Sabbia': 'Sabb', 'Officina': 'Off', 'Piazzale': 'Piazz', 'Impianto 1': 'Imp 1', 'Impianto 2 - Incolore': 'Imp 2 - I', 'Impianto 2 - Barrotti': 'Imp 2 - B',
+SIGLE_AREE = {'Ferie': 'FER', 'Permesso': 'PERM', 'Impianto 2 - Scarto': 'Imp 2 - Scar', 'Granella': 'Gran', 'Sabbia': 'Sabb', 'Officina': 'Off', 'Piazzale': 'Piazz', 'Impianto 1': 'Imp 1', 'Impianto 2 - Incolore': 'Imp 2 - Inc', 'Impianto 2 - Barrotti': 'Imp 2 - B',
               'Impianto 2': 'Imp 2', 'Rotovaglio': 'Rot', 'Laboratorio Analisi': 'Lab', 'Metalli': 'Met', 'Sabbia - Sarco': 'Sab - Sar',
               'Sabbia - Superbi': 'Sab - Sup', 'Manutenzione': 'Manut', 'Trasporti': 'Trasp', 'Magazzino': 'Mag', 'Ufficio': 'Uff',
               'Corso': 'Corso', 'Mezzi - Interni': 'Mezzi - I', 'Mezzi - Esterni': 'Mezzi - E'}
 
 PAROLE_AREE = [('Impianto', 'Imp'), ('Piazzale', 'Piazz'), ('Rotovaglio', 'Rot'), ('Laboratorio', 'Lab'), ('Analisi', ''),
                ('Metalli', 'Met'), ('Sabbia', 'Sab'), ('Superbi', 'Sup'), ('Sarco', 'Sar'), ('Manutenzione', 'Manut'),
-               ('Trasporti', 'Trasp'), ('Magazzino', 'Mag'), ('Ufficio', 'Uff'), ('Incolore', 'I'), ('Barrotti', 'B'),
-               ('Scarto', 'S'), ('Granella', 'Gran'), ('Officina', 'Off')]
+               ('Trasporti', 'Trasp'), ('Magazzino', 'Mag'), ('Ufficio', 'Uff'), ('Incolore', 'Inc'), ('Barrotti', 'B'),
+               ('Scarto', 'Scar'), ('Granella', 'Gran'), ('Officina', 'Off')]
 
 
 # nomi vecchi delle aree (salvati nelle settimane caricate prima del 23/11/2026) → nomi nuovi (Giulia, 23/11/2026)
 AREE_RINOMINATE = [
-    (r'^(IMPIANTO|IMP)\.?\s*2\s*-\s*(BARROTTI|BARR?|B)\.?$', 'Impianto 2 - Scarto'),
-    (r'^(IMPIANTO|IMP)\.?\s*2\s*-\s*(INCOLORE|I)\.?$', 'Impianto 2 - Incolore'),
+    (r'^(IMPIANTO|IMP)\.?\s*2\s*-\s*(BARROTTI|BARR?|B|SCARTO|SCAR|S)\.?$', 'Impianto 2 - Scarto'),
+    (r'^(IMPIANTO|IMP)\.?\s*2\s*-\s*(INCOLORE|INC|I)\.?$', 'Impianto 2 - Incolore'),
     (r'^(SABBIA|SAB)\.?\s*-\s*(SARCO|SAR)\.?$', 'Granella'),
     (r'^(SABBIA|SAB)\.?\s*-\s*(SUPERBI|SUP)\.?$', 'Sabbia'),
     (r'^(MANUTENZIONE|MANUT)\.?$', 'Officina'),

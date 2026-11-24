@@ -27,6 +27,10 @@ EXTRA = {
     'nastro': '<circle cx="6" cy="14" r="3"/><circle cx="18" cy="14" r="3"/><path d="M6 11h12M6 17h12"/>',
     'corrente': '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
     'carburante': '<path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M4 21h12M7 8h6M15 10h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-3-3"/>',
+    # aree nuove (Giulia, 24/11/2026)
+    'rotovaglio': '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v5M12 15v5M4 12h5M15 12h5"/>',
+    'granella': '<path d="M4 16l3-5 5 2-2 5zM12 9l4-4 4 4-3 4zM13 17l3-3 4 2-2 4z"/>',
+    'magazzino': '<path d="M3 8l9-5 9 5v12H3z"/><path d="M7 20v-7h10v7M7 16h10"/>',
     'altro': '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17v.1"/>',
 }
 
@@ -38,6 +42,7 @@ DA_EMOJI = {
     '⛽': 'carburante', '➰': 'nastro', '🗜': 'macchine', '💨': 'macchine', '🧲': 'macchine', '🧱': 'macchine',
     '⚖': 'produzione', '📋': 'richieste', '🚫': 'fermo', '🛑': 'fermo', '⛔': 'fermo', '⚡': 'corrente',
     '❓': 'altro', '🔧': 'manutenzione', '🛠': 'manutenzione',
+    '🔄': 'rotovaglio', '🪨': 'granella', '📦': 'magazzino',
 }
 
 
@@ -53,6 +58,13 @@ def icona(nome, classe='ico'):
     if not disegno:
         return ''
     return format_html('<svg class="{}" viewBox="0 0 24 24" aria-hidden="true">{}</svg>', classe, mark_safe(disegno))
+
+
+@register.filter
+def icona_area(codice):
+    """{{ v|icona_area }}: l'icona dell'area, la stessa di «Richiedi pulizia»."""
+    from ..views_manutenzione import ICONE_LUOGHI
+    return ICONE_LUOGHI.get(codice, '📍')
 
 
 @register.filter

@@ -377,10 +377,11 @@ def nuovo_avviso(request):
             elif dalle and alle and alle <= dalle:
                 messages.error(request, "L'ora di fine deve essere dopo quella di inizio.")
             else:
-                AvvisoAssenza.objects.create(
+                avviso = AvvisoAssenza.objects.create(
                     dipendente=dip, data=giorno, tipo=tipo, nota=request.POST.get('nota', '')[:300], dalle=dalle, alle=alle
                 )
-                messages.success(request, "Avviso inviato all'ufficio e al Capo Turno.")
+                svc.avvisa_assenza(avviso)
+                messages.success(request, "Avviso inviato all'ufficio, ai responsabili e al Capo Turno.")
                 return redirect(reverse('turni:richieste'))
     return render(
         request, 'turni/avviso_nuovo.html',

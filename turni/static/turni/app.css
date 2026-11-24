@@ -1365,6 +1365,9 @@ form:has(input[value=PERMESSO]:checked) span.solo-permesso { display: inline; }
 form:has(input[value=PERMESSO]:checked) div.solo-permesso { display: grid; }
 form:has(input[value=PERMESSO]:checked) .solo-ferie { display: none; }
 .se-uscita, .se-ritardo, .se-altro { display: none; }
+/* più forte di label:has(> input[type=time]) {display:block}: gli orari compaiono solo dopo aver scelto il tipo,
+   con la scritta giusta (Esco alle / Entro alle / Dalle-Alle) (giro bug prima della presentazione, 24/11/2026) */
+.orari > label.se-uscita, .orari > label.se-ritardo, .orari > label.se-altro { display: none; }
 form:has(input[value=USCITA]:checked) label.se-uscita,
 form:has(input[value=RITARDO]:checked) label.se-ritardo,
 form:has(input[value=ALTRO]:checked) label.se-altro { display: block; }
@@ -1531,6 +1534,11 @@ form:has(input[name=luogo][value="SABBIA"]:checked) .pl-voci[data-luogo="SABBIA"
 form:has(input[name=luogo][value="MEZZI"]:checked) .pl-voci[data-luogo="MEZZI"] { display: grid; }
 form:has(input[name=luogo][value="ANALISI"]:checked) .pl-voci[data-luogo="ANALISI"] { display: grid; }
 form:has(input[name=luogo][value="ALTRO"]:checked) .pl-voci[data-luogo="ALTRO"] { display: grid; }
+form:has(input[name=luogo][value="ROTOVAGLIO"]:checked) .pl-voci[data-luogo="ROTOVAGLIO"] { display: grid; }
+form:has(input[name=luogo][value="GRANELLA"]:checked) .pl-voci[data-luogo="GRANELLA"] { display: grid; }
+form:has(input[name=luogo][value="OFFICINA"]:checked) .pl-voci[data-luogo="OFFICINA"] { display: grid; }
+form:has(input[name=luogo][value="MAGAZZINO"]:checked) .pl-voci[data-luogo="MAGAZZINO"] { display: grid; }
+form:has(input[name=luogo][value="ESTERNI"]:checked) .pl-voci[data-luogo="ESTERNI"] { display: grid; }
 
 /* ------------------------------------------------ nuova struttura: Oggi, Area personale, Archivio */
 .oggi-data { margin: -6px 0 12px; color: var(--tenue); font-weight: 600; }
@@ -1723,8 +1731,14 @@ a.rq-riga { color: inherit; text-decoration: none; }
 .rp-passi span { flex: 1; text-align: center; padding: 6px 4px; border-radius: 99px; background: var(--altro); color: var(--tenue); }
 .rp-passi span.ok { background: var(--primario-chiaro); color: var(--testo); font-weight: 700; }
 .rp-aree { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.rp-aree a { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); color: inherit; text-decoration: none; font-weight: 700; text-align: center; }
-.rp-aree a span { font-size: 1.6rem; }
+.rp-aree > a, .rp-aree > label > span { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px 8px; background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); color: inherit; text-decoration: none; font-weight: 700; font-size: 1rem; text-align: center; height: 100%; box-sizing: border-box; }
+/* le schede dell'area: lo stesso tasto di «Richiedi pulizia» su tutte le schermate, link o scelta in un modulo (Giulia, 24/11/2026) */
+.rp-aree > label { position: relative; display: block; margin: 0; font-size: 1rem; font-weight: 700; }
+.rp-aree > label > input { position: absolute; opacity: 0; }
+.rp-aree > label > input:checked + span { border-color: var(--primario); background: var(--primario-chiaro); color: var(--primario-scuro); }
+.rp-aree > label > input:focus-visible + span { outline: 2px solid var(--primario); }
+.rp-ico { font-style: normal; font-size: 1.6rem; line-height: 1; }
+.rp-aree small { font-weight: 400; font-size: .8rem; color: var(--tenue); }
 .rp-giorni { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .rp-giorni label span { flex-direction: column; text-align: center; }
 .rp-riepilogo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

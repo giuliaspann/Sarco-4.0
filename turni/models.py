@@ -309,11 +309,11 @@ class Turno(models.Model):
         Postazione.MANUT: 'OFF.',
         Postazione.UFFICIO: 'UFF.',
         Postazione.IMP1: 'IMP 1',
-        Postazione.IMP2: 'IMP 2',
+        Postazione.IMP2: 'IMP 2 INC',  # come «Imp 2 - Inc» del file turni (Giulia, 24/11/2026)
         Postazione.ANALISI: 'ANAL.',
         Postazione.SUPERBI: 'SABB.',
         Postazione.MULINO: 'MUL.',
-        Postazione.BARROTTI: 'SCAR.',
+        Postazione.BARROTTI: 'IMP 2 SCAR',  # come «Imp 2 - Scar»
         Postazione.PALISTA: 'PALA',
         Postazione.ROTOVAGLIO: 'ROT.',
         Postazione.MAGAZZINO: 'MAG.',
@@ -395,6 +395,8 @@ class ElementoPulizia(models.Model):
     tasto = models.CharField('scritta del tasto', max_length=40, blank=True, help_text='es. «Piazzale pulito»; vuoto = «Segnala completata»')
     minuti_prima_fine = models.PositiveSmallIntegerField(
         'si fa da … minuti prima della fine del turno', null=True, blank=True, help_text='vuoto = in qualsiasi momento')
+    # quanto dura, dalla colonna «Durata (min)» del file «Regole Pulizie - unico.xlsx» (Giulia, 24/11/2026)
+    durata = models.PositiveSmallIntegerField('durata prevista (min)', null=True, blank=True)
     ordine = models.PositiveSmallIntegerField(default=50, help_text='più basso = più in alto nella lista')
     # es. il fermo per il controllo dei vagli zig-zag: in Oggi compare un promemoria con l'ora
     promemoria = models.BooleanField('ricordalo in Oggi', default=False)
@@ -1348,14 +1350,19 @@ class BloccoAccesso(models.Model):
 
 
 class Luogo(models.TextChoices):
+    # le aree di lavoro dell'azienda, in quest'ordine, su ogni schermata dove si sceglie un'area (Giulia, 24/11/2026)
     IMP1 = 'IMP1', 'Impianto 1'
-    IMP2 = 'IMP2', 'Impianto 2'
-    PIAZZALE = 'PIAZZALE', 'Piazzale'
+    IMP2 = 'IMP2', 'Impianto 2'  # linee Incolore e Scarto
     METALLI = 'METALLI', 'Metalli'
+    ROTOVAGLIO = 'ROTOVAGLIO', 'Rotovaglio'
+    GRANELLA = 'GRANELLA', 'Granella'
     SABBIA = 'SABBIA', 'Sabbia'
-    MEZZI = 'MEZZI', 'Mezzi interni'
-    ANALISI = 'ANALISI', 'Laboratorio analisi'
-    ESTERNI = 'ESTERNI', 'Mezzi esterni'
+    PIAZZALE = 'PIAZZALE', 'Piazzale'
+    OFFICINA = 'OFFICINA', 'Officina'
+    MAGAZZINO = 'MAGAZZINO', 'Magazzino'
+    ANALISI = 'ANALISI', 'Laboratorio Analisi'
+    MEZZI = 'MEZZI', 'Mezzi Interni'
+    ESTERNI = 'ESTERNI', 'Mezzi Esterni'
 
 
 class Macchina(models.Model):

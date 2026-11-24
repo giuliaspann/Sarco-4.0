@@ -111,6 +111,32 @@ def stato_gruppo(stati):
     return next((s for s in PRIORITA if s in stati), 'fare')
 
 
+def quando_si_fa(e, turno=None):
+    """«Quando» della pulizia: il momento del turno e la durata prevista, con l'orario se c'è il turno
+    (es. «Fine turno · 15 min (13:45–14:00)»). L'orario dell'avviso non si mostra (Giulia, 24/11/2026)."""
+    if e is None or not getattr(e, 'durata', None):
+        return ''
+    from datetime import timedelta
+
+    from django.utils import timezone as tz
+
+    durata = timedelta(minutes=e.durata)
+    if e.da_meta:
+        momento = 'Metà turno'
+        dalle = (turno.inizio + (turno.fine - turno.inizio) / 2) if turno else None
+    elif e.minuti_prima_fine:
+        momento = 'Fine turno'
+        dalle = (turno.fine - durata) if turno else None
+    else:
+        momento = 'Inizio turno'
+        dalle = turno.inizio if turno else None
+    testo = f'{momento} · {e.durata} min'
+    if dalle:
+        alle = dalle + durata
+        testo += f' ({tz.localtime(dalle):%H:%M}–{tz.localtime(alle):%H:%M})'
+    return testo
+
+
 def quando_di(e, turno=None):
     """La riga piccola sotto il nome: quando si fa o quando arriva l'avviso."""
     A = ElementoPulizia.Avviso
@@ -155,7 +181,7 @@ def piano_giorno(giorno, oggi=None):
     def aggiungi(s, chiave, nome, icona, area, elemento, persona, stato, pk=None, straordinaria=False):
         v = voci.setdefault((s, chiave), {
             'sigla': s, 'nome': nome, 'icona': icona, 'area': area, 'area_nome': dict(AREE).get(area, ''),
-            'elemento': elemento, 'persone': [], 'stati': [], 'pk': pk, 'quando': quando_di(elemento),
+            'elemento': elemento, 'persone': [], 'stati': [], 'pk': pk, 'quando': quando_si_fa(elemento),
             'straordinaria': straordinaria,
             'settimanale': bool(elemento and elemento.regole.filter(Q(giorno__isnull=False) | Q(ultimo_settimana=True)).exists()),
         })

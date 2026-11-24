@@ -19,11 +19,12 @@ from .accessi import qr_svg
 from .esempi_manutenzione import togli
 from .models import Comunicazione, Dipendente, FermoImpianto, FotoComunicazione, FotoIntervento, Intervento, Luogo, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio
 
-# prima si sceglie il gruppo, poi il luogo
+# prima si sceglie il gruppo, poi il luogo; le aree come in Luogo (Giulia, 24/11/2026)
+AREE_FISSE = [v for v in Luogo.values if v not in ('MEZZI', 'ESTERNI')]
 GRUPPI = [
-    ('macchinari', 'Macchinari e attrezzature', '🏭', ['IMP1', 'IMP2', 'PIAZZALE', 'METALLI', 'SABBIA', 'ANALISI']),
+    ('macchinari', 'Macchinari e attrezzature', '🏭', AREE_FISSE),
     ('mezzi', 'Mezzi', '🚚', ['MEZZI', 'ESTERNI']),
-    ('segnaletica', 'Segnaletica e Cartelli', '🪧', ['PIAZZALE', 'IMP1', 'IMP2', 'METALLI', 'SABBIA', 'ANALISI']),
+    ('segnaletica', 'Segnaletica e Cartelli', '🪧', AREE_FISSE),
 ]
 
 
@@ -40,7 +41,8 @@ def cond_gruppo(gruppo, luogo='', prefisso=''):
     elif gruppo:
         q &= ~Q(**{prefisso + 'tipo': Macchina.Tipo.SEGNALETICA})
     return q
-ICONE_LUOGHI = {'ANALISI': '🧪', 'IMP1': '🏭', 'IMP2': '🏭', 'PIAZZALE': '🅿️', 'METALLI': '🔩', 'SABBIA': '⏳', 'MEZZI': '🚜', 'ESTERNI': '🚛'}
+ICONE_LUOGHI = {'IMP1': '🏭', 'IMP2': '🏭', 'METALLI': '🔩', 'ROTOVAGLIO': '🔄', 'GRANELLA': '🪨', 'SABBIA': '⏳', 'PIAZZALE': '🅿️',
+                'OFFICINA': '🔧', 'MAGAZZINO': '📦', 'ANALISI': '🧪', 'MEZZI': '🚜', 'ESTERNI': '🚛'}
 
 
 class MacchinaForm(forms.ModelForm):

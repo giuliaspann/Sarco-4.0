@@ -100,6 +100,37 @@ def _avvisa(utenti, dip_mittente, titolo, testo, tipo='', oggetto_id=None):
                mittente=getattr(dip_mittente, 'utente', dip_mittente), tipo=tipo, oggetto_id=oggetto_id)
 
 
+def destinatari_avviso_assenza(avviso):
+    """Ritardo / uscita (Giulia, 24/11/2026): ufficio, responsabile piazzale, responsabile impianto e, se l'operaio
+    quel giorno è all'Impianto 1, il Capo Turno del suo turno. Mai chi l'ha scritto."""
+    from django.contrib.auth import get_user_model
+
+    from .models import Turno
+
+    U = get_user_model()
+    ids = set(_responsabili_turni())
+    ids |= set(U.objects.filter(is_active=True).filter(Q(dipendente__resp_piazzale=True) | Q(dipendente__resp_impianto=True))
+               .values_list('pk', flat=True))
+    turno = Turno.objects.filter(dipendente=avviso.dipendente, data=avviso.data).first()
+    if turno and turno.postazione == 'IMP1':
+        ids |= set(Turno.objects.filter(data=turno.data, fascia=turno.fascia, postazione='IMP1', capoturno=True)
+                   .exclude(dipendente=avviso.dipendente).exclude(dipendente__utente=None)
+                   .values_list('dipendente__utente_id', flat=True))
+    ids.discard(avviso.dipendente.utente_id)
+    return ids
+
+
+def avvisa_assenza(avviso):
+    """Manda la notifica del ritardo o dell'uscita a chi deve saperlo."""
+    from django.urls import reverse
+
+    from . import push
+
+    testo = f'{avviso.data:%d/%m}' + (f' · {avviso.orario}' if avviso.orario else '') + (f' · {avviso.nota}' if avviso.nota else '')
+    push.invia(destinatari_avviso_assenza(avviso), f'⏰ {avviso.get_tipo_display()} · {avviso.dipendente.nome_breve}', testo,
+               reverse('turni:ufficio_richiesta', args=['avviso', avviso.pk]), mittente=avviso.dipendente.utente)
+
+
 def risposta_collega(cambio, accetta):
     if cambio.stato != CambioTurno.Stato.ATTESA_COLLEGA:
         raise RichiestaNonValida('Questa richiesta non aspetta più la tua risposta.')

@@ -488,5 +488,5 @@ class NomiBreviTest(TestCase):
                                ('Sab - Sup', 'Sabbia'), ('Manutenzione', 'Officina'), ('Impianto 1', 'Impianto 1'),
                                ('Sabbia', 'Sabbia'), ('Impianto 2 - I', 'Impianto 2 - Incolore')]:
             self.assertEqual(importa.area_attuale(vecchio), nuovo)
-        self.assertEqual(importa.sigla_area(importa.area_attuale('Imp 2 - B')), 'Imp 2 - S')
+        self.assertEqual(importa.sigla_area(importa.area_attuale('Imp 2 - B')), 'Imp 2 - Scar')
 

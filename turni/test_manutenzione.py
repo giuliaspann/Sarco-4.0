@@ -13,7 +13,9 @@ from django.utils import timezone
 from PIL import Image
 
 from . import manutenzione as mn
-from .esempi_manutenzione import togli
+from django.apps import apps as registro
+
+from .esempi_manutenzione import carica, togli
 from .models import (
     Dipendente, Fascia, Intervento, Settimana, IscrizionePush, Macchina, ManutenzioneProgrammata, OrdineRicambio, Ricambio, Turno,
 )
@@ -29,6 +31,10 @@ def foto():
 
 @override_settings(MEDIA_ROOT=MEDIA)
 class ManutenzioneTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        carica(registro, forza=True)  # gli esempi non ci sono più dopo la migrazione 0085
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -241,7 +247,7 @@ class ManutenzioneTest(TestCase):
         r = self.client.get(reverse('turni:segnala'))
         self.assertEqual([g for g, _, _, _ in r.context['gruppi']], ['macchinari', 'mezzi', 'segnaletica'])
         r = self.client.get(reverse('turni:segnala'), {'gruppo': 'mezzi'})
-        self.assertEqual([nome for _, nome, _, _ in r.context['luoghi']], ['Mezzi interni', 'Mezzi esterni'])
+        self.assertEqual([nome for _, nome, _, _ in r.context['luoghi']], ['Mezzi Interni', 'Mezzi Esterni'])
         r = self.client.get(reverse('turni:segnala'), {'luogo': 'MEZZI'})
         self.assertIn(self.pala, r.context['elenco'])
         self.assertTrue(all(m.luogo == 'MEZZI' for m in r.context['elenco']))
@@ -424,6 +430,10 @@ class ManutenzioneTest(TestCase):
 
 @override_settings(MEDIA_ROOT=MEDIA)
 class FermoImpiantoTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        carica(registro, forza=True)  # gli esempi non ci sono più dopo la migrazione 0085
+
     def setUp(self):
         User = get_user_model()
         self.operaio = User.objects.create_user('operaio', password='123456')
@@ -479,6 +489,10 @@ class FermoImpiantoTest(TestCase):
 
 @override_settings(MEDIA_ROOT=MEDIA)
 class ComunicazioniTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        carica(registro, forza=True)  # gli esempi non ci sono più dopo la migrazione 0085
+
     def setUp(self):
         User = get_user_model()
         self.u = {}

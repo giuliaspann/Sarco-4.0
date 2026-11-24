@@ -152,6 +152,9 @@ def anteprima(m, direzione=False):
         return '🎥 Video'
     if m.documento:
         return '📄 ' + m.documento_nome
+    sondaggio = Sondaggio.objects.filter(messaggio=m).only('domanda').first()
+    if sondaggio:
+        return '📊 ' + sondaggio.domanda
     return ''
 
 

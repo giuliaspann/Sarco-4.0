@@ -4,10 +4,10 @@
 {% block contenuto %}
 <a class="tasto-indietro" href="{% url 'turni:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Oggi</a>
 <div class="intestazione"><h1>Inserisci produzione del turno</h1></div>
-<h2 class="rq-sezione">Quale impianto?</h2>
-<div class="sg-luoghi">
+<p class="mn-sottotitolo">Quale impianto?</p>
+<div class="rp-aree">
   {% for codice, nome, icona in impianti %}
-  <a href="?impianto={{ codice }}"><span>{{ icona|come_icona }}</span><b>{{ nome }}</b></a>
+  <a href="?impianto={{ codice }}"><i class="rp-ico">{{ icona }}</i>{{ nome }}</a>
   {% endfor %}
 </div>
 {% endblock %}
