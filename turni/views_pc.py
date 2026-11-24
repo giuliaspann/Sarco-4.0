@@ -31,7 +31,7 @@ IMPIANTI = [
 # il menu: (nome, url o None se l'area arriva più avanti)
 MENU_PRINCIPALE = [
     ('Oggi in Sarco', 'turni:pc', 'casa'),
-    ('Da approvare', 'turni:ufficio_richieste', 'spunta'),
+    ('Da approvare', 'turni:pc_richieste', 'spunta'),
     ('Turni', 'turni:settimana_tutti', 'calendario'),
     ('Pulizie', 'turni:pulizie', 'scopa'),
     ('Manutenzione', 'turni:manutenzione', 'chiave'),
@@ -102,7 +102,7 @@ def menu_pc(request):
                         + RichiestaFerie.objects.filter(stato=RichiestaFerie.Stato.ATTESA).count()
                         + AvvisoAssenza.objects.filter(esito='', annullato_il__isnull=True).count())
     voci = [{'nome': n, 'url': reverse(u), 'icona': i, 'attiva': request.resolver_match.view_name == u,
-             'conta': da_approvare if u == 'turni:ufficio_richieste' else 0} for n, u, i in MENU_PRINCIPALE]
+             'conta': da_approvare if u == 'turni:pc_richieste' else 0} for n, u, i in MENU_PRINCIPALE]
     return {'menu': voci, 'aree_in_arrivo': AREE_IN_ARRIVO, 'insieme_in_arrivo': INSIEME_IN_ARRIVO}
 
 
@@ -162,14 +162,13 @@ def oggi(request):
     aperte.sort(key=lambda v: v['quando'])
     sigle = {'cambio': 'TU', 'ferie': 'PE', 'avviso': 'AV'}
     da_fare = [{'sigla': sigle[v['tipo']], 'titolo': f'{v["cosa"]}', 'sotto': f'{v["chi"]} · {formatta(timezone.localtime(v["quando"]), "j/m H:i")}',
-                'url': reverse('turni:ufficio_richiesta', args=[v['tipo'], v['pk']]),
-                'approva': reverse('turni:ufficio_richiesta_scelta', args=[v['tipo'], v['pk'], 'approva']) if responsabile else None,
-                'rifiuta': reverse('turni:ufficio_richiesta_scelta', args=[v['tipo'], v['pk'], 'rifiuta']) if responsabile else None}
+                'url': f"{reverse('turni:pc_richieste')}?tipo={v['tipo']}&pk={v['pk']}",
+                'tipo': v['tipo'], 'pk': v['pk'], 'decide': responsabile}
                for v in aperte]
     da_verificare = Pulizia.objects.filter(stato=Pulizia.Stato.FATTA, turno__data__gte=giorno - timedelta(days=2)).count()
     if da_verificare:
         da_fare.append({'sigla': 'PU', 'titolo': f'{da_verificare} {"pulizia fatta" if da_verificare == 1 else "pulizie fatte"} da verificare',
-                        'sotto': 'Pulizie · con foto prima e dopo', 'url': reverse('turni:pulizie'), 'approva': None, 'rifiuta': None})
+                        'sotto': 'Pulizie · con foto prima e dopo', 'url': reverse('turni:pulizie'), 'decide': False})
 
     # colonna destra: Bacheca e avanzamento pulizie del turno in corso per area
     bacheca = list(Annuncio.objects.all()[:2])
@@ -193,3 +192,90 @@ def oggi(request):
     }
     contesto.update(menu_pc(request))
     return render(request, 'turni/pc/oggi.html', contesto)
+
+
+# ---------------------------------------------------------------- Da approvare (proposta B scelta da Giulia il 24/11/2026)
+
+SIGLE_TIPO = {'cambio': ('TU', 'blu'), 'ferie': ('PE', 'verde'), 'MALATTIA': ('MA', 'rosso'), 'RITARDO': ('RI', 'arancio'),
+              'USCITA': ('US', 'arancio')}
+
+
+def _riga_elenco(tipo, o):
+    v = _voce(tipo, o)
+    sigla, tono = SIGLE_TIPO.get(tipo if tipo != 'avviso' else o.tipo, ('AV', 'arancio'))
+    quando = timezone.localtime(v['quando'])
+    v.update({'sigla': sigla, 'tono': tono,
+              'ora': f'{quando:%H:%M}' if quando.date() == timezone.localdate() else formatta(quando, 'j/m')})
+    return v
+
+
+def _dettaglio(tipo, o):
+    """Cosa serve per decidere: i giorni prima → dopo del cambio, i turni che salta, chi manca già."""
+    from .views_richieste import _righe_cambio
+
+    d = {'motivo': '', 'persone': [], 'turni': [], 'colleghi_assenti': [], 'etichetta_turni': 'Turni che salta'}
+    if tipo == 'cambio':
+        d['motivo'] = o.motivo
+        d['persone'] = [(p, _righe_cambio(o, p)) for p in (o.richiedente, o.collega)]
+    elif tipo == 'ferie':
+        d['motivo'] = o.motivo
+        d['turni'] = [t for t in o.dipendente.turni.filter(data__range=(o.dal, o.al)) if t.lavora]
+        d['colleghi_assenti'] = [f.dipendente.nome_breve for f in RichiestaFerie.objects.filter(
+            stato=RichiestaFerie.Stato.APPROVATA, dal__lte=o.al, al__gte=o.dal).exclude(dipendente=o.dipendente).select_related('dipendente')]
+    else:
+        d['motivo'] = o.nota
+        if o.tipo != 'MALATTIA':  # ritardo e uscita non saltano il turno
+            d['etichetta_turni'] = 'Turno di quel giorno'
+        d['turni'] = [t for t in o.dipendente.turni.filter(data=o.data) if t.lavora]
+        d['colleghi_assenti'] = [a.dipendente.nome_breve for a in AvvisoAssenza.objects.filter(
+            data=o.data, annullato_il__isnull=True).exclude(esito='rifiutato').exclude(pk=o.pk).select_related('dipendente')]
+    return d
+
+
+@solo_ufficio
+def richieste(request):
+    from django.contrib import messages
+    from django.core.exceptions import PermissionDenied
+    from .views_ufficio import _oggetto, decidi
+
+    responsabile = svc.e_responsabile(request.user)
+    if request.method == 'POST':
+        if not responsabile:
+            raise PermissionDenied
+        tipo, scelta = request.POST.get('tipo'), request.POST.get('scelta')
+        o = _oggetto(tipo, request.POST.get('pk'))
+        if scelta not in ('approva', 'rifiuta'):
+            messages.error(request, 'Scegli Approva o Rifiuta.')
+        elif not _voce(tipo, o)['aperta']:
+            messages.info(request, 'Questa richiesta è già stata decisa.')
+        else:
+            decidi(request, tipo, o, scelta == 'approva', request.POST.get('nota'))
+        return redirect('turni:pc' if request.POST.get('torna') == 'plancia' else 'turni:pc_richieste')
+
+    decise = request.GET.get('vista') == 'decise'
+    if decise:
+        oggetti = [('cambio', c) for c in CambioTurno.objects.exclude(stato__in=CambioTurno.IN_CORSO).select_related('richiedente', 'collega')[:30]]
+        oggetti += [('ferie', f) for f in RichiestaFerie.objects.exclude(stato=RichiestaFerie.Stato.ATTESA).select_related('dipendente')[:30]]
+        oggetti += [('avviso', a) for a in AvvisoAssenza.objects.exclude(esito='', annullato_il__isnull=True).select_related('dipendente')[:30]]
+    else:
+        oggetti = [('cambio', c) for c in CambioTurno.objects.filter(stato=CambioTurno.Stato.ATTESA_UFFICIO).select_related('richiedente', 'collega')]
+        oggetti += [('ferie', f) for f in RichiestaFerie.objects.filter(stato=RichiestaFerie.Stato.ATTESA).select_related('dipendente')]
+        oggetti += [('avviso', a) for a in AvvisoAssenza.objects.filter(esito='', annullato_il__isnull=True).select_related('dipendente')]
+    elenco = sorted((dict(_riga_elenco(t, o), oggetto=o) for t, o in oggetti), key=lambda v: v['quando'], reverse=decise)[:40]
+
+    scelta = None
+    if request.GET.get('tipo') and request.GET.get('pk'):
+        tipo = request.GET['tipo']
+        o = _oggetto(tipo, request.GET['pk'])
+        scelta = dict(_riga_elenco(tipo, o), oggetto=o)
+    elif elenco:
+        scelta = elenco[0]
+    if scelta:
+        scelta['dettaglio'] = _dettaglio(scelta['tipo'], scelta['oggetto'])
+        for v in elenco:
+            v['scelta'] = v['tipo'] == scelta['tipo'] and v['pk'] == scelta['pk']
+
+    contesto = {'titolo_pagina': 'Da approvare', 'elenco': elenco, 'v': scelta, 'decise': decise,
+                'responsabile': responsabile}
+    contesto.update(menu_pc(request))
+    return render(request, 'turni/pc/richieste.html', contesto)

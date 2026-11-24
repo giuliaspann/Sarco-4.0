@@ -56,14 +56,18 @@
 
 <section class="pc-due">
   <div class="pc-riquadro pc-da-fare">
-    <div class="pc-riga-titolo"><span class="pc-titolo">Da fare in ufficio</span>{% if da_fare_tot %}<a href="{% url 'turni:ufficio_richieste' %}">Vedi tutte le {{ da_fare_tot }}</a>{% endif %}</div>
+    <div class="pc-riga-titolo"><span class="pc-titolo">Da fare in ufficio</span>{% if da_fare_tot %}<a href="{% url 'turni:pc_richieste' %}">Vedi tutte le {{ da_fare_tot }}</a>{% endif %}</div>
     {% for v in da_fare %}
       <div class="pc-compito">
         <span class="pc-sigla">{{ v.sigla }}</span>
         <a class="pc-compito-testo" href="{{ v.url }}"><b>{{ v.titolo }}</b><small>{{ v.sotto }}</small></a>
-        {% if v.approva %}
-          <a class="pc-tasto approva" href="{{ v.approva }}">Approva</a>
-          <a class="pc-tasto rifiuta" href="{{ v.rifiuta }}">Rifiuta</a>
+        {% if v.decide %}
+          <form method="post" action="{% url 'turni:pc_richieste' %}" class="pc-tasti">{% csrf_token %}
+            <input type="hidden" name="tipo" value="{{ v.tipo }}"><input type="hidden" name="pk" value="{{ v.pk }}">
+            <input type="hidden" name="torna" value="plancia">
+            <button class="pc-tasto approva" name="scelta" value="approva">Approva</button>
+            <button class="pc-tasto rifiuta" name="scelta" value="rifiuta">Rifiuta</button>
+          </form>
         {% else %}
           <a class="pc-tasto apri" href="{{ v.url }}">Apri</a>
         {% endif %}

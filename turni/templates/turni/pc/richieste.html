@@ -1,0 +1,84 @@
+{% extends 'turni/pc/base.html' %}
+{% block contenuto %}
+<header class="pc-testa">
+  <div>
+    <span class="pc-occhiello">Ufficio turni</span>
+    <h1>Da approvare</h1>
+  </div>
+</header>
+
+<div class="ra-corpo">
+  <section class="pc-riquadro ra-elenco" aria-label="{% if decise %}Richieste decise{% else %}Richieste in attesa{% endif %}">
+    <div class="ra-elenco-testa">
+      <a href="{% url 'turni:pc_richieste' %}" class="ra-scheda{% if not decise %} attiva{% endif %}">In attesa</a>
+      <a href="{% url 'turni:pc_richieste' %}?vista=decise" class="ra-scheda{% if decise %} attiva{% endif %}">Decise di recente</a>
+    </div>
+    {% if not decise and elenco %}<p class="ra-conta">{{ elenco|length }} in attesa · le più vecchie in alto</p>{% endif %}
+    {% for r in elenco %}
+      <a class="ra-voce{% if r.scelta %} scelta{% endif %}" href="?{% if decise %}vista=decise&amp;{% endif %}tipo={{ r.tipo }}&amp;pk={{ r.pk }}">
+        <span class="ra-sigla {{ r.tono }}">{{ r.sigla }}</span>
+        <span class="ra-voce-testo"><b>{{ r.chi }}</b><small>{{ r.cosa }}</small></span>
+        {% if decise %}<span class="pc-stato {% if r.ok %}verde{% else %}rosso{% endif %}">{{ r.stato }}</span>{% else %}<span class="ra-ora">{{ r.ora }}</span>{% endif %}
+      </a>
+    {% empty %}
+      <p class="pc-vuoto ra-vuoto">{% if decise %}Nessuna richiesta decisa di recente.{% else %}Niente da approvare: tutte le richieste sono state decise.{% endif %}</p>
+    {% endfor %}
+  </section>
+
+  {% if v %}
+  <section class="pc-riquadro ra-dettaglio" aria-label="Dettaglio della richiesta">
+    <div class="ra-dettaglio-testa">
+      <div>
+        <span class="ra-occhiello">{{ v.cosa }} · arrivata il {{ v.quando|date:'j/m' }} alle {{ v.quando|time:'H:i' }}</span>
+        <h2>{{ v.chi }}</h2>
+      </div>
+      {% if v.aperta %}
+        <span class="pc-stato {% if v.tipo == 'cambio' %}verde{% else %}arancio{% endif %}">{% if v.tipo == 'cambio' %}Il collega ha accettato{% else %}{{ v.stato }}{% endif %}</span>
+      {% else %}
+        <span class="pc-stato {% if v.ok %}verde{% else %}rosso{% endif %}">{{ v.stato }}</span>
+      {% endif %}
+    </div>
+
+    {% if v.dettaglio.persone %}
+      <div class="ra-persone">
+        {% for persona, righe in v.dettaglio.persone %}
+          <div class="ra-persona">
+            <b>{{ persona.nome_breve }}</b>
+            {% for r in righe %}
+              <div class="ra-scambio">
+                <span class="ra-giorno">{{ r.giorno|date:'D j'|capfirst }}</span>
+                <span class="ra-turno">{{ r.prima.sigla }}{% if r.prima.nome_postazione %} · {{ r.prima.nome_postazione }}{% endif %}</span>
+                <span aria-hidden="true">→</span>
+                <span class="ra-turno nuovo">{{ r.dopo.sigla }}{% if r.dopo.nome_postazione %} · {{ r.dopo.nome_postazione }}{% endif %}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if v.dettaglio.motivo %}<p class="ra-motivo">«{{ v.dettaglio.motivo }}»</p>{% endif %}
+    {% if v.dettaglio.turni %}<p class="ra-info">{{ v.dettaglio.etichetta_turni }}: {% for t in v.dettaglio.turni %}{{ t.data|date:'D j'|capfirst }} {{ t.sigla }}{% if t.nome_postazione %} {{ t.nome_postazione }}{% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    {% if v.tipo != 'cambio' %}<p class="ra-info">{% if v.dettaglio.colleghi_assenti %}Già assenti quel giorno: {{ v.dettaglio.colleghi_assenti|join:', ' }}{% else %}Nessun altro collega assente quel giorno{% endif %}</p>{% endif %}
+    {% if v.oggetto.nota_ufficio %}<p class="ra-info">Nota dell'ufficio: {{ v.oggetto.nota_ufficio }}</p>{% endif %}
+
+    {% if v.aperta %}
+      {% if responsabile %}
+        <form method="post" class="ra-decidi">{% csrf_token %}
+          <input type="hidden" name="tipo" value="{{ v.tipo }}"><input type="hidden" name="pk" value="{{ v.pk }}">
+          <label>Nota per il dipendente (facoltativa)
+            <textarea name="nota" rows="2" maxlength="300" placeholder="Es. Ricordati di avvisare il Capo Turno"></textarea>
+          </label>
+          <div class="pc-tasti">
+            <button class="pc-tasto approva grande" name="scelta" value="approva">Approva</button>
+            <button class="pc-tasto rifiuta grande" name="scelta" value="rifiuta">Rifiuta</button>
+          </div>
+        </form>
+      {% else %}
+        <p class="ra-info">Questa richiesta la decide l'ufficio turni.</p>
+      {% endif %}
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -102,6 +102,30 @@ def richiesta(request, tipo, pk):
     return render(request, 'turni/uff_richiesta.html', contesto)
 
 
+def decidi(request, tipo, o, approva, nota):
+    """Approva o rifiuta una richiesta aperta e avvisa il dipendente (usata dal telefono e dal PC)."""
+    v = _voce(tipo, o)
+    nota = (nota or '').strip()[:300]
+    try:
+        if tipo == 'cambio':
+            svc.decisione_ufficio_cambio(o, request.user, approva, nota)
+        elif tipo == 'ferie':
+            svc.decisione_ufficio_ferie(o, request.user, approva, nota)
+        else:
+            o.esito = 'approvato' if approva else 'rifiutato'
+            o.visto_da, o.visto_il, o.nota_ufficio = request.user, timezone.now(), nota
+            o.save(update_fields=['esito', 'visto_da', 'visto_il', 'nota_ufficio'])
+            if o.dipendente.utente_id:
+                push.invia([o.dipendente.utente_id], f'{o.get_tipo_display()} {"approvato" if approva else "non approvato"}',
+                           f'{_g(o.data)}' + (f' · {nota}' if nota else ''), reverse('turni:archivio_richieste'),
+                           mittente=request.user)
+    except svc.RichiestaNonValida as e:
+        messages.error(request, str(e))
+        return False
+    messages.success(request, f'{v["cosa"]} di {v["chi"]}: {"approvata" if approva else "rifiutata"}.')
+    return True
+
+
 @login_required
 def richiesta_scelta(request, tipo, pk, scelta):
     """Approva / Rifiuta: prima si chiede di convalidare la scelta, poi si esegue."""
@@ -115,24 +139,7 @@ def richiesta_scelta(request, tipo, pk, scelta):
         messages.info(request, 'Questa richiesta è già stata decisa.')
         return redirect('turni:ufficio_richieste')
     if request.method == 'POST':
-        nota = (request.POST.get('nota') or '').strip()[:300]
-        try:
-            if tipo == 'cambio':
-                svc.decisione_ufficio_cambio(o, request.user, approva, nota)
-            elif tipo == 'ferie':
-                svc.decisione_ufficio_ferie(o, request.user, approva, nota)
-            else:
-                o.esito = 'approvato' if approva else 'rifiutato'
-                o.visto_da, o.visto_il, o.nota_ufficio = request.user, timezone.now(), nota
-                o.save(update_fields=['esito', 'visto_da', 'visto_il', 'nota_ufficio'])
-                if o.dipendente.utente_id:
-                    push.invia([o.dipendente.utente_id], f'{o.get_tipo_display()} {"approvato" if approva else "non approvato"}',
-                               f'{_g(o.data)}' + (f' · {nota}' if nota else ''), reverse('turni:archivio_richieste'),
-                               mittente=request.user)
-        except svc.RichiestaNonValida as e:
-            messages.error(request, str(e))
-        else:
-            messages.success(request, f'{v["cosa"]} di {v["chi"]}: {"approvata" if approva else "rifiutata"}.')
+        decidi(request, tipo, o, approva, request.POST.get('nota'))
         return redirect('turni:ufficio_richieste')
     return render(request, 'turni/uff_richiesta_scelta.html', {'v': v, 'approva': approva, 'tipo': tipo, 'pk': pk})
 

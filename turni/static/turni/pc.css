@@ -32,7 +32,10 @@ body.pc { margin: 0; background: var(--fondo); color: var(--testo); font: 16px/1
 
 /* pagina */
 .pc-pagina { flex: 1; min-width: 0; padding: 28px 36px 40px; display: flex; flex-direction: column; gap: 22px; }
-.pc-messaggi p { margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--verde-chiaro); }
+.pc-messaggi { display: flex; flex-direction: column; gap: 8px; }
+.pc-messaggi p { margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--verde-chiaro); color: #1f3d12; font-weight: 600; }
+.pc-messaggi p.error { background: #fde7e5; color: #7a1712; }
+.pc-messaggi p.info, .pc-messaggi p.warning { background: var(--arancio-chiaro); color: #6b3d00; }
 .pc-testa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
 .pc-occhiello { font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--verde-testo); }
 .pc-testa h1 { margin: 2px 0 0; font: 700 46px/1 var(--titoli); color: var(--blu); }
@@ -117,3 +120,45 @@ kbd { font: 12px inherit; border: 1px solid #d5dde1; border-radius: 6px; padding
   .pc-pagina { padding: 20px 16px; }
   .pc-fascia, .pc-impianti { grid-template-columns: 1fr; }
 }
+
+/* Da approvare: elenco a sinistra, dettaglio a destra (proposta B scelta da Giulia, 24/11/2026) */
+.pc-tasti { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.pc-tasto { border: 0; cursor: pointer; font-family: inherit; }
+.pc-tasto.grande { padding: 12px 32px; font-size: 16px; }
+.ra-corpo { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.ra-elenco { flex: 1 1 340px; max-width: 420px; padding: 0; gap: 0; overflow: hidden; }
+.ra-elenco-testa { display: flex; border-bottom: 1px solid #e5e6e7; }
+.ra-scheda { flex: 1; text-align: center; padding: 14px 10px; font-size: 15px; font-weight: 700; color: var(--tenue) !important;
+  text-decoration: none; border-bottom: 3px solid transparent; }
+.ra-scheda.attiva { color: var(--blu) !important; border-bottom-color: var(--blu); }
+.ra-conta { margin: 0; padding: 12px 18px 4px; font-size: 14px; font-weight: 700; color: var(--tenue); }
+.ra-voce { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid #e5e6e7; color: var(--testo) !important; text-decoration: none; }
+.ra-conta + .ra-voce { border-top: 0; }
+.ra-voce:hover { background: #f5f7f8; }
+.ra-voce.scelta { background: #e3eef3; }
+.ra-sigla { flex: 0 0 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.ra-sigla.blu { background: var(--blu); color: #fff; }
+.ra-sigla.verde { background: var(--verde-chiaro); color: var(--verde-testo); }
+.ra-sigla.arancio { background: var(--arancio-chiaro); color: #8a4f00; }
+.ra-sigla.rosso { background: #fde7e5; color: var(--rosso); }
+.ra-voce-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ra-voce-testo small { font-size: 14px; color: var(--tenue); }
+.ra-ora { font-size: 13px; color: var(--tenue); white-space: nowrap; }
+.ra-vuoto { padding: 18px; }
+.ra-dettaglio { flex: 999 1 480px; min-width: 0; padding: 24px 28px; gap: 18px; }
+.ra-dettaglio-testa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.ra-occhiello { font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tenue); }
+.ra-dettaglio h2 { margin: 4px 0 0; font-size: 28px; line-height: 1.1; color: var(--blu); }
+.ra-persone { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ra-persona { background: #f5f7f8; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ra-scambio { display: grid; grid-template-columns: 52px minmax(0, 1fr) 16px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 14px; }
+.ra-giorno { color: var(--tenue); font-weight: 600; }
+.ra-turno { background: #fff; border: 1px solid var(--bordo); border-radius: 8px; padding: 5px 10px; line-height: 1.3; height: 100%;
+  display: flex; align-items: center; }
+.ra-turno.nuovo { background: var(--blu); border-color: var(--blu); color: #fff; }
+.ra-motivo { margin: 0; font-size: 16px; font-style: italic; }
+.ra-info { margin: 0; font-size: 15px; color: var(--tenue); }
+.ra-decidi { display: flex; flex-direction: column; gap: 14px; }
+.ra-decidi label { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; }
+.ra-decidi textarea { border: 1px solid #d5dde1; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; font-weight: 400; resize: vertical; }
+@media (max-width: 1100px) { .ra-elenco { max-width: none; } .ra-persone { grid-template-columns: 1fr; } }
