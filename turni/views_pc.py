@@ -32,7 +32,7 @@ IMPIANTI = [
 MENU_PRINCIPALE = [
     ('Oggi in Sarco', 'turni:pc', 'casa'),
     ('Da approvare', 'turni:pc_richieste', 'spunta'),
-    ('Turni', 'turni:settimana_tutti', 'calendario'),
+    ('Turni', 'turni:pc_turni', 'calendario'),
     ('Pulizie', 'turni:pulizie', 'scopa'),
     ('Manutenzione', 'turni:manutenzione', 'chiave'),
     ('Produzione', 'turni:produzione', 'polso'),
@@ -279,3 +279,30 @@ def richieste(request):
                 'responsabile': responsabile}
     contesto.update(menu_pc(request))
     return render(request, 'turni/pc/richieste.html', contesto)
+
+
+# ---------------------------------------------------------------- Turni (proposta B scelta da Giulia il 24/11/2026)
+
+@solo_ufficio
+def turni(request):
+    """Il Layout Turni a tutta larghezza (Per area) o la griglia Per dipendente; a destra il pannello dell'ufficio:
+    carica turni, turni extra aperti, turni cambiati con la presa visione dei dipendenti."""
+    from .models import ModificaTurno, Settimana, TurnoExtra
+    from .views import griglia_turni, leggi_data
+
+    oggi = timezone.localdate()
+    g = griglia_turni(leggi_data(request.GET.get('settimana'), oggi))
+    vista = 'dipendente' if request.GET.get('vista') == 'dipendente' else 'area'
+    q = (request.GET.get('q') or '').strip()
+    if q:
+        g['righe'] = [r for r in g['righe'] if q.lower() in r['nome'].lower()]
+    extra = list(TurnoExtra.objects.filter(data__gte=oggi, chiusa=False).prefetch_related('disponibilita__dipendente'))
+    modifiche = list(ModificaTurno.objects.filter(creata_il__gte=timezone.now() - timedelta(days=14))
+                     .select_related('dipendente').order_by('vista_il', '-creata_il')[:12])
+    ultima = Settimana.objects.filter(pubblicata=True).select_related('caricata_da').order_by('-lunedi').first()
+    contesto = dict(g, titolo_pagina='Turni', vista=vista, q=q, extra=extra, modifiche=modifiche,
+                    da_vedere=sum(1 for m in modifiche if not m.vista_il), ultima=ultima,
+                    puo_caricare=request.user.is_staff or svc.e_responsabile(request.user),
+                    fine=g['lunedi'] + timedelta(days=6), oggi_iso=oggi.isoformat())
+    contesto.update(menu_pc(request))
+    return render(request, 'turni/pc/turni.html', contesto)

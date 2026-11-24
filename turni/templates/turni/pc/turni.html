@@ -1,0 +1,112 @@
+{% extends 'turni/pc/base.html' %}
+{% block contenuto %}
+<header class="pc-testa">
+  <div>
+    <span class="pc-occhiello">{% if vista == 'area' %}Layout turni{% else %}Turni per dipendente{% endif %}</span>
+    <div class="tu-settimana">
+      <a class="tu-freccia" href="?settimana={{ prec|date:'Y-m-d' }}&amp;vista={{ vista }}" aria-label="Settimana prima">‹</a>
+      <h1>{{ lunedi|date:'j' }} – {{ fine|date:'j F'|lower }}</h1>
+      <a class="tu-freccia" href="?settimana={{ succ|date:'Y-m-d' }}&amp;vista={{ vista }}" aria-label="Settimana dopo">›</a>
+      {% if not oggi >= lunedi or not oggi <= fine %}<a class="tu-oggi" href="?vista={{ vista }}">Questa settimana</a>{% endif %}
+    </div>
+  </div>
+  <div class="tu-strumenti">
+    {% if vista == 'dipendente' %}
+      <form method="get" class="pc-cerca-finto tu-cerca">
+        {% include 'turni/pc/_icona.html' with nome='lente' %}
+        <input type="hidden" name="vista" value="dipendente"><input type="hidden" name="settimana" value="{{ lunedi|date:'Y-m-d' }}">
+        <input name="q" value="{{ q }}" placeholder="Cerca un nome…" aria-label="Cerca un nome">
+      </form>
+    {% endif %}
+    <div class="tu-vista" role="group" aria-label="Vista">
+      <a href="?settimana={{ lunedi|date:'Y-m-d' }}&amp;vista=area" class="{% if vista == 'area' %}attiva{% endif %}">Per area</a>
+      <a href="?settimana={{ lunedi|date:'Y-m-d' }}&amp;vista=dipendente" class="{% if vista == 'dipendente' %}attiva{% endif %}">Per dipendente</a>
+    </div>
+  </div>
+</header>
+
+<div class="tu-corpo">
+  <div class="tu-griglia">
+    {% if vista == 'area' %}
+      {% for a in aree %}
+        <section class="pc-riquadro tu-area">
+          <div class="tu-area-testa"><span class="tu-sigla-area">{{ a.sigla }}</span><b>{{ a.area }}</b></div>
+          <div class="tu-scorri">
+            <table class="tu-tabella">
+              <thead><tr><th class="tu-col-turno">Turno</th>{% for g in giorni %}<th class="{% if g == oggi %}oggi{% endif %}">{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
+              <tbody>
+                {% for r in a.righe %}
+                  <tr{% if r.prima %} class="nuovo-turno"{% endif %}>
+                    <td class="tu-col-turno"><span class="tu-chip {{ r.classe }}">{{ r.turno }}</span> <small>{{ r.ruolo }}</small></td>
+                    {% for n in r.nomi %}<td class="{% if n.dip %}pieno{% else %}vuoto{% endif %}{% if n.data == oggi_iso %} oggi{% endif %}">{{ n.nome }}</td>{% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      {% empty %}
+        <p class="pc-riquadro pc-vuoto">Nessun turno pubblicato per questa settimana.</p>
+      {% endfor %}
+    {% else %}
+      <section class="pc-riquadro tu-area">
+        <div class="tu-scorri">
+          <table class="tu-tabella tu-dip">
+            <thead><tr><th class="tu-col-nome">Dipendente</th>{% for g in giorni %}<th class="{% if g == oggi %}oggi{% endif %}">{{ g|date:'D j'|capfirst }}</th>{% endfor %}</tr></thead>
+            <tbody>
+              {% for r in righe %}
+                <tr>
+                  <td class="tu-col-nome"><b>{{ r.cognome_nome.0 }}</b> {{ r.cognome_nome.1 }}</td>
+                  {% for c in r.caselle %}<td class="{% if c.data == oggi_iso %}oggi{% endif %}"><span class="tu-casella {{ c.classe }}" title="{{ c.titolo }}">{{ c.testo }}</span></td>{% endfor %}
+                </tr>
+              {% empty %}
+                <tr><td colspan="8" class="pc-vuoto">{% if q %}Nessun dipendente con «{{ q }}».{% else %}Nessun turno pubblicato per questa settimana.{% endif %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endif %}
+    <ul class="tu-legenda" aria-label="Legenda">
+      <li><i class="f-mattina"></i>1° turno</li><li><i class="f-pomeriggio"></i>2° turno</li><li><i class="f-notte"></i>Notte</li>
+      <li><i class="f-giorno"></i>Giornaliero</li><li><i class="f-capo"></i>Capo Turno</li><li><i class="f-riposo"></i>Riposo</li><li><i class="f-ferie"></i>Ferie / permesso</li>
+    </ul>
+  </div>
+
+  <aside class="tu-pannello" aria-label="Ufficio turni">
+    {% if puo_caricare %}
+    <section class="pc-riquadro tu-carica">
+      <b class="pc-titolo">Carica turni</b>
+      <p>Scegli il file «Turni AAAA-MM-GG.xlsx» della settimana: prima di pubblicare vedi l'anteprima.</p>
+      <a class="pc-tasto approva" href="{% url 'turni:importa' %}">Scegli il file Excel</a>
+      {% if ultima %}<small>Ultima settimana caricata: {{ ultima.lunedi|date:'j/m' }}{% if ultima.caricata_da %}, da {{ ultima.caricata_da.first_name|default:ultima.caricata_da.username }}{% endif %} il {{ ultima.caricata_il|date:'j/m H:i' }}</small>{% endif %}
+    </section>
+    {% endif %}
+
+    <section class="pc-riquadro">
+      <div class="pc-riga-titolo"><span class="pc-titolo">Turni extra</span>{% if puo_caricare %}<a href="{% url 'turni:ufficio_extra_nuovo' %}">Richiedi</a>{% endif %}</div>
+      {% for e in extra %}
+        <div class="tu-extra {% if e.mancano %}manca{% else %}coperto{% endif %}">
+          <b>{{ e.data|date:'D j'|capfirst }} · {{ e.get_fascia_display }}{% if e.postazione %} · {{ e.get_postazione_display }}{% endif %}</b>
+          <span>{% if e.mancano %}Mancano {{ e.mancano }} su {{ e.posti }}{% else %}Coperto: {{ e.posti }} su {{ e.posti }}{% endif %}{% with conf=e.disponibilita.all %}{% if conf %} · {% for d in conf %}{{ d.dipendente.nome_breve }}{% if not d.confermata %} (in attesa){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}{% endwith %}</span>
+        </div>
+      {% empty %}
+        <p class="pc-vuoto">Nessun turno extra aperto.</p>
+      {% endfor %}
+    </section>
+
+    <section class="pc-riquadro">
+      <div class="pc-riga-titolo"><span class="pc-titolo">Turni cambiati</span>{% if da_vedere %}<span class="pc-stato arancio">{{ da_vedere }} da vedere</span>{% endif %}</div>
+      <p class="tu-nota">Dopo un nuovo caricamento: chi ha già preso visione.</p>
+      {% for m in modifiche %}
+        <div class="tu-modifica">
+          <span><b>{{ m.dipendente.nome_breve }}</b><small>{{ m.data|date:'D j'|capfirst }}: {{ m.prima }} → {{ m.dopo }}</small></span>
+          {% if m.vista_il %}<span class="pc-stato verde">Visto</span>{% else %}<span class="pc-stato arancio">Da vedere</span>{% endif %}
+        </div>
+      {% empty %}
+        <p class="pc-vuoto">Nessun turno cambiato nelle ultime due settimane.</p>
+      {% endfor %}
+    </section>
+  </aside>
+</div>
+{% endblock %}

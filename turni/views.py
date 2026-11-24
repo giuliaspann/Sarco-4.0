@@ -365,15 +365,11 @@ def casella_tutti(t):
     return {'testo': ' · '.join(p for p in parti if p), 'classe': t.classe_fascia, 'titolo': t.posto or t.descrizione}
 
 
-@login_required
-def settimana_tutti(request):
-    """Turni di tutti come l'anteprima del caricamento turni (Giulia, 13/11/2026): «Per Dipendente» in ordine
-    alfabetico con turno, area e ruolo in ogni casella; «Per Area» come il Layout Turni. Frecce per la settimana."""
+def griglia_turni(base, mio=None):
+    """Turni pubblicati della settimana di `base`, «Per Dipendente» e «Per Area» (usata da telefono e PC)."""
     oggi = timezone.localdate()
-    base = leggi_data(request.GET.get('settimana'), oggi)
     lunedi = base - timedelta(days=base.weekday())
     giorni = [lunedi + timedelta(days=i) for i in range(7)]
-    mio = dipendente_di(request)
     per_dip = {}
     for t in Turno.objects.filter(data__in=giorni, settimana__pubblicata=True, dipendente__attivo=True).select_related('dipendente'):
         per_dip.setdefault(t.dipendente, {})[t.data] = t
@@ -432,11 +428,18 @@ def settimana_tutti(request):
                 while k + n < len(blocco['righe']) and not blocco['righe'][k + n]['prima']:
                     n += 1
                 r['quante'] = n
+    return {'righe': righe, 'aree': aree, 'giorni': giorni, 'oggi': oggi, 'lunedi': lunedi,
+            'prec': lunedi - timedelta(days=7), 'succ': lunedi + timedelta(days=7)}
+
+
+@login_required
+def settimana_tutti(request):
+    """Turni di tutti come l'anteprima del caricamento turni (Giulia, 13/11/2026): «Per Dipendente» in ordine
+    alfabetico con turno, area e ruolo in ogni casella; «Per Area» come il Layout Turni. Frecce per la settimana."""
+    mio = dipendente_di(request)
+    g = griglia_turni(leggi_data(request.GET.get('settimana'), timezone.localdate()), mio)
     vista = 'area' if request.GET.get('vista') == 'area' else 'dipendente'
-    return render(request, 'turni/settimana_tutti.html', {
-        'righe': righe, 'aree': aree, 'vista': vista, 'giorni': giorni, 'oggi': oggi, 'lunedi': lunedi,
-        'prec': lunedi - timedelta(days=7), 'succ': lunedi + timedelta(days=7), 'mio': mio,
-    })
+    return render(request, 'turni/settimana_tutti.html', dict(g, vista=vista, mio=mio))
 
 
 @login_required

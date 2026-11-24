@@ -162,3 +162,57 @@ kbd { font: 12px inherit; border: 1px solid #d5dde1; border-radius: 6px; padding
 .ra-decidi label { display: flex; flex-direction: column; gap: 6px; font-size: 15px; font-weight: 600; }
 .ra-decidi textarea { border: 1px solid #d5dde1; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; font-weight: 400; resize: vertical; }
 @media (max-width: 1100px) { .ra-elenco { max-width: none; } .ra-persone { grid-template-columns: 1fr; } }
+
+/* Turni: Layout turni a tutta larghezza + pannello dell'ufficio (proposta B scelta da Giulia, 24/11/2026) */
+/* colori delle fasce uguali all'app del telefono: li conoscono già tutti */
+.f-mattina { background: #ffd60a; color: #3a2f00; }
+.f-pomeriggio { background: #ff7a00; color: #fff; }
+.f-notte { background: #1e3a8a; color: #fff; }
+.f-giorno { background: #16a34a; color: #fff; }
+.f-capo { background: #38bdf8; color: #06283d; }
+.f-riposo { background: #6b7280; color: #fff; }
+.f-ferie { background: #c026d3; color: #fff; }
+.vuota { background: transparent; color: #b9c3c8; }
+.tu-settimana { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tu-settimana h1 { margin: 2px 0 0; font: 700 42px/1 var(--titoli); color: var(--blu); }
+.tu-freccia { width: 40px; height: 40px; border-radius: 999px; border: 1px solid #d5dde1; background: var(--carta); color: var(--blu) !important;
+  font-size: 22px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.tu-oggi { font-size: 14px; font-weight: 700; }
+.tu-strumenti { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tu-cerca { flex: 0 1 240px; padding: 8px 16px; }
+.tu-vista { display: flex; background: var(--carta); border: 1px solid #d5dde1; border-radius: 999px; padding: 3px; }
+.tu-vista a { border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 700; color: var(--testo) !important; text-decoration: none; }
+.tu-vista a.attiva { background: var(--blu); color: #fff !important; }
+.tu-corpo { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.tu-griglia { flex: 999 1 620px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.tu-area { padding: 0; gap: 0; overflow: hidden; }
+.tu-area-testa { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #eef0f1; font-size: 17px; }
+.tu-sigla-area { background: var(--blu); color: #fff; font-size: 13px; font-weight: 700; border-radius: 8px; padding: 3px 9px; }
+.tu-scorri { overflow-x: auto; }
+.tu-tabella { width: 100%; border-collapse: collapse; min-width: 760px; font-size: 14px; }
+.tu-tabella th { padding: 8px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); text-align: center; }
+.tu-tabella th.oggi { background: var(--blu); color: #fff; }
+.tu-tabella td { padding: 6px 4px; text-align: center; border-top: 1px solid #f1f3f4; }
+.tu-tabella td.oggi { background: #f2f7f9; }
+.tu-tabella tr.nuovo-turno td { border-top-color: #dde2e5; }
+.tu-tabella td.pieno { font-weight: 600; }
+.tu-tabella td.vuoto { color: #b9c3c8; }
+.tu-col-turno { text-align: left !important; padding-left: 16px !important; width: 110px; white-space: nowrap; }
+.tu-col-turno small { font-size: 13px; color: var(--tenue); font-weight: 600; }
+.tu-col-nome { text-align: left !important; padding-left: 16px !important; white-space: nowrap; }
+.tu-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; border-radius: 6px; padding: 2px 6px; font-weight: 700; }
+.tu-casella { display: block; border-radius: 8px; padding: 6px 4px; font-size: 12px; font-weight: 700; line-height: 1.2; }
+.tu-legenda { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--tenue); }
+.tu-legenda li { display: flex; align-items: center; gap: 6px; }
+.tu-legenda i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+.tu-pannello { flex: 1 1 280px; max-width: 340px; display: flex; flex-direction: column; gap: 14px; }
+.tu-carica { background: var(--blu); border-color: var(--blu); color: #fff !important; }
+.tu-carica p { margin: 0; font-size: 14px; color: #bcd3de; }
+.tu-carica small { font-size: 13px; color: #bcd3de; }
+.tu-extra { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+.tu-extra.manca { background: var(--arancio-chiaro); color: #6b3d00; }
+.tu-extra.coperto { background: var(--verde-chiaro); color: #1f3d12; }
+.tu-nota { margin: -4px 0 0; font-size: 13px; color: var(--tenue); }
+.tu-modifica { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid #eef0f1; font-size: 14px; }
+.tu-modifica small { display: block; color: var(--tenue); font-size: 13px; }
+@media (max-width: 1100px) { .tu-pannello { max-width: none; } }

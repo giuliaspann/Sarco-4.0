@@ -126,3 +126,40 @@ class DaApprovarePC(TestCase):
         self.client.force_login(self.operaio)
         r = self.client.get(reverse('turni:pc_richieste'))
         self.assertRedirects(r, reverse('turni:home'), fetch_redirect_response=False)
+
+
+class TurniPC(TestCase):
+    """Turni su PC: Layout turni per area (proposta B), griglia per dipendente, pannello dell'ufficio."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from .models import Settimana, Turno
+        cls.ufficio = User.objects.create_user('giulia', password='x', is_staff=True)
+        cls.operaio = User.objects.create_user('operaio', password='x')
+        dip = Dipendente.objects.create(nome='ROSSI MARIO', utente=cls.operaio)
+        oggi = timezone.localdate()
+        lunedi = oggi - timedelta(days=oggi.weekday())
+        s = Settimana.objects.create(lunedi=lunedi)
+        Turno.objects.create(settimana=s, dipendente=dip, data=oggi, fascia='1T', postazione='IMP1', ruolo='OdL',
+                             posto='Impianto 1 · Operatore di Linea', incarichi='IMP1/OdL')
+
+    def test_per_area_e_pannello(self):
+        self.client.force_login(self.ufficio)
+        r = self.client.get(reverse('turni:pc_turni'))
+        self.assertContains(r, 'Layout turni')
+        self.assertContains(r, 'Impianto 1')
+        self.assertContains(r, 'Rossi')
+        self.assertContains(r, 'Scegli il file Excel')
+        self.assertContains(r, 'Nessun turno extra aperto.')
+
+    def test_per_dipendente_e_ricerca(self):
+        self.client.force_login(self.ufficio)
+        r = self.client.get(reverse('turni:pc_turni') + '?vista=dipendente')
+        self.assertContains(r, '<b>Rossi</b> Mario', html=False)
+        self.assertContains(r, '1T · Imp 1')
+        r = self.client.get(reverse('turni:pc_turni') + '?vista=dipendente&q=bianchi')
+        self.assertContains(r, 'Nessun dipendente con')
+
+    def test_operai_no(self):
+        self.client.force_login(self.operaio)
+        self.assertRedirects(self.client.get(reverse('turni:pc_turni')), reverse('turni:home'), fetch_redirect_response=False)
