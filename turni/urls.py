@@ -11,6 +11,7 @@ urlpatterns = [
     path('pc/', views_pc.oggi, name='pc'),
     path('pc/da-approvare/', views_pc.richieste, name='pc_richieste'),
     path('pc/turni/', views_pc.turni, name='pc_turni'),
+    path('pc/pulizie/', views_pc.pulizie, name='pc_pulizie'),
     path('manutenzione/in-corso/', views_mn_capo.in_corso, name='mn_in_corso'),
     path('programma/<str:cosa>/', views_programma.programma, name='programma'),
     path('riunioni/', views_riunioni.elenco, name='riunioni'),

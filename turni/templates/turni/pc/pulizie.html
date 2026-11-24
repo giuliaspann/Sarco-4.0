@@ -1,0 +1,67 @@
+{% extends 'turni/pc/base.html' %}
+{% block contenuto %}
+<header class="pc-testa">
+  <div>
+    <span class="pc-occhiello">Pulizie{% if in_corso %} · {{ in_corso }} in corso{% endif %}</span>
+    <div class="tu-settimana">
+      <a class="tu-freccia" href="?giorno={{ prec|date:'Y-m-d' }}" aria-label="Giorno prima">‹</a>
+      <h1>{{ titolo_giorno }}</h1>
+      <a class="tu-freccia" href="?giorno={{ succ|date:'Y-m-d' }}" aria-label="Giorno dopo">›</a>
+      {% if giorno != oggi %}<a class="tu-oggi" href="?">Oggi</a>{% endif %}
+    </div>
+  </div>
+  <div class="tu-strumenti">
+    <a class="pc-tasto approva" href="{% url 'turni:richiedi_pulizia' %}">Richiedi pulizia</a>
+    <a class="pc-tasto apri" href="{% url 'turni:programma' 'pulizia' %}">Pulizia straordinaria</a>
+    <a class="pc-tasto bianco" href="{% url 'turni:archivio_pulizie' %}">Archivio</a>
+  </div>
+</header>
+
+<section class="pu-numeri" aria-label="I numeri del giorno">
+  <div class="pu-numero blu"><span>Fatte</span><b>{{ numeri.fatte }}<small> di {{ numeri.tot }}</small></b></div>
+  <a class="pu-numero{% if filtro == 'verificare' %} scelto{% endif %}" href="?giorno={{ giorno|date:'Y-m-d' }}&amp;stato=verificare"><span>Da verificare</span><b class="azzurro">{{ numeri.verificare }}</b></a>
+  <a class="pu-numero{% if filtro == 'rifare' %} scelto{% endif %}" href="?giorno={{ giorno|date:'Y-m-d' }}&amp;stato=rifare"><span>Da rifare</span><b class="rosso">{{ numeri.rifare }}</b></a>
+  <a class="pu-numero{% if filtro == 'non' %} scelto{% endif %}" href="?giorno={{ giorno|date:'Y-m-d' }}&amp;stato=non"><span>Non eseguite o non eseguibili</span><b class="arancio">{{ numeri.non }}</b></a>
+</section>
+
+<section class="pc-riquadro pu-fasce" aria-label="Turni del giorno">
+  {% for f in fasce %}
+    <div class="pu-fascia">
+      <div class="pu-fascia-testa"><b><i class="{{ f.classe }}"></i>{{ f.nome }}</b><span{% if f.adesso %} class="adesso"{% endif %}>{{ f.stato }}</span></div>
+      <svg class="pc-barra" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="fondo" width="100" height="8" rx="4"/>{% if f.perc %}<rect class="pieno" width="{{ f.perc }}" height="8" rx="4"/>{% endif %}</svg>
+      <small>{% if f.tot %}{{ f.fatte }} di {{ f.tot }} fatte{% else %}Nessuna pulizia{% endif %}</small>
+    </div>
+  {% endfor %}
+</section>
+
+<section class="pc-riquadro tu-area">
+  <div class="pu-filtri">
+    <a href="?giorno={{ giorno|date:'Y-m-d' }}{% if filtro %}&amp;stato={{ filtro }}{% endif %}" class="{% if not area %}attiva{% endif %}">Tutte le aree</a>
+    {% for a, nome in aree %}<a href="?giorno={{ giorno|date:'Y-m-d' }}&amp;area={{ a }}{% if filtro %}&amp;stato={{ filtro }}{% endif %}" class="{% if area == a %}attiva{% endif %}">{{ nome }}</a>{% endfor %}
+    {% if filtro %}<a class="pu-togli" href="?giorno={{ giorno|date:'Y-m-d' }}{% if area %}&amp;area={{ area }}{% endif %}">{% for k, n in filtri.items %}{% if k == filtro %}{{ n }}{% endif %}{% endfor %} ✕</a>{% endif %}
+  </div>
+  <div class="tu-scorri">
+    <table class="pu-tabella">
+      <thead><tr><th>Pulizia</th><th>Area</th><th>Turno</th><th>Chi</th><th>Quando</th><th>Foto</th><th>Stato</th></tr></thead>
+      <tbody>
+        {% for r in righe %}
+          <tr>
+            <td class="pu-nome">{% if r.url %}<a href="{{ r.url }}">{{ r.nome }}</a>{% else %}{{ r.nome }}{% endif %}{% if r.straordinaria %} <small class="pu-extra">straordinaria</small>{% endif %}</td>
+            <td>{{ r.area }}</td>
+            <td><span class="tu-chip {{ r.classe }}">{{ r.sigla }}</span></td>
+            <td>{{ r.chi }}</td>
+            <td class="pu-quando">{{ r.quando }}</td>
+            <td><div class="pu-foto">
+              {% if r.foto_prima %}<a href="{{ r.foto_prima }}" target="_blank" rel="noopener"><img src="{{ r.foto_prima }}" alt="Foto prima di {{ r.nome }}" loading="lazy"></a>{% else %}<span></span>{% endif %}
+              {% if r.foto_dopo %}<a href="{{ r.foto_dopo }}" target="_blank" rel="noopener"><img src="{{ r.foto_dopo }}" alt="Foto dopo di {{ r.nome }}" loading="lazy"></a>{% else %}<span></span>{% endif %}
+            </div></td>
+            <td><span class="pc-stato {{ r.tono }}">{{ r.stato }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="pc-vuoto">{% if filtro or area %}Nessuna pulizia con questo filtro.{% else %}Nessuna pulizia in programma per questo giorno.{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

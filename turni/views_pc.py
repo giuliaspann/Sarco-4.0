@@ -33,7 +33,7 @@ MENU_PRINCIPALE = [
     ('Oggi in Sarco', 'turni:pc', 'casa'),
     ('Da approvare', 'turni:pc_richieste', 'spunta'),
     ('Turni', 'turni:pc_turni', 'calendario'),
-    ('Pulizie', 'turni:pulizie', 'scopa'),
+    ('Pulizie', 'turni:pc_pulizie', 'scopa'),
     ('Manutenzione', 'turni:manutenzione', 'chiave'),
     ('Produzione', 'turni:produzione', 'polso'),
     ('Messaggi', 'turni:messaggi', 'chat'),
@@ -168,7 +168,7 @@ def oggi(request):
     da_verificare = Pulizia.objects.filter(stato=Pulizia.Stato.FATTA, turno__data__gte=giorno - timedelta(days=2)).count()
     if da_verificare:
         da_fare.append({'sigla': 'PU', 'titolo': f'{da_verificare} {"pulizia fatta" if da_verificare == 1 else "pulizie fatte"} da verificare',
-                        'sotto': 'Pulizie · con foto prima e dopo', 'url': reverse('turni:pulizie'), 'decide': False})
+                        'sotto': 'Pulizie · con foto prima e dopo', 'url': reverse('turni:pc_pulizie') + '?stato=verificare', 'decide': False})
 
     # colonna destra: Bacheca e avanzamento pulizie del turno in corso per area
     bacheca = list(Annuncio.objects.all()[:2])
@@ -306,3 +306,76 @@ def turni(request):
                     fine=g['lunedi'] + timedelta(days=6), oggi_iso=oggi.isoformat())
     contesto.update(menu_pc(request))
     return render(request, 'turni/pc/turni.html', contesto)
+
+
+# ---------------------------------------------------------------- Pulizie: regia del giorno (proposta A scelta da Giulia il 25/11/2026)
+
+GRUPPI_STATO = {
+    'fatte': ('ok', 'ct', 'rp'), 'verificare': ('ct', 'rp'), 'rifare': ('rifare',), 'non': ('impedita', 'nonfatta'),
+}
+TONI_STATO = {'fare': 'grigio', 'corso': 'azzurro', 'ct': 'azzurro', 'rp': 'azzurro', 'ok': 'verde', 'rifare': 'rosso',
+              'impedita': 'arancio', 'nonfatta': 'rosso'}
+
+
+@solo_ufficio
+def pulizie(request):
+    """Tutte le pulizie del giorno: quattro numeri, i turni con la barra di avanzamento, la tabella con foto e stato."""
+    from . import piano_pulizie as pp
+    from .views import leggi_data
+    from .views_pulizie_piano import _fasce_in_corso, _titolo_giorno
+
+    adesso = timezone.localtime()
+    oggi = adesso.date()
+    giorno = leggi_data(request.GET.get('giorno'), oggi)
+    piano = pp.piano_giorno(giorno, oggi)
+    if giorno == oggi and adesso.hour < 6:  # prima delle 6 la notte in corso è quella cominciata ieri
+        piano['N'] = pp.piano_giorno(oggi - timedelta(days=1), oggi)['N']
+    attivi = _fasce_in_corso(adesso) if giorno == oggi else set()
+    tutte = [v for s in pp.ORDINE for v in piano[s]]
+
+    numeri = {k: sum(v['stato'] in stati for v in tutte) for k, stati in GRUPPI_STATO.items()}
+    numeri['tot'] = len(tutte)
+
+    fasce = []
+    for s in pp.ORDINE:
+        voci = piano[s]
+        fatte = sum(v['stato'] in GRUPPI_STATO['fatte'] for v in voci)
+        if s in attivi:
+            stato = 'In corso'
+        elif giorno < oggi or (giorno == oggi and fatte == len(voci) and voci):
+            stato = 'Finito'
+        else:
+            stato = pp.NOMI[s][1]
+        fasce.append({'nome': pp.NOMI[s][0], 'classe': pp.CLASSI[s], 'stato': stato, 'adesso': s in attivi,
+                      'fatte': fatte, 'tot': len(voci), 'perc': round(100 * fatte / len(voci)) if voci else 0})
+
+    area = request.GET.get('area', '')
+    if area not in dict(pp.AREE):
+        area = ''
+    filtro = request.GET.get('stato', '')
+    if filtro not in GRUPPI_STATO:
+        filtro = ''
+    scelte = [v for v in tutte if (not area or v['area'] == area) and (not filtro or v['stato'] in GRUPPI_STATO[filtro])]
+    pulizie_db = {p.pk: p for p in Pulizia.objects.filter(pk__in=[v['pk'] for v in scelte if v['pk']]).select_related('turno', 'elemento')}
+    righe = []
+    for v in scelte:
+        p = pulizie_db.get(v['pk'])
+        righe.append({
+            'nome': v['nome'], 'area': v['area_nome'], 'sigla': v['sigla'], 'classe': pp.CLASSI[v['sigla']],
+            'chi': ', '.join(v['persone']), 'stato': v['stato_nome'], 'tono': TONI_STATO.get(v['stato'], 'grigio'),
+            'quando': pp.quando_si_fa(v['elemento'], p.turno if p else None) if v['elemento'] else '',
+            'url': reverse('turni:pulizia_voce', args=[v['pk']]) if v['pk'] else '',
+            'foto_prima': reverse('turni:foto', args=[p.pk]) + '?quale=prima' if p and p.foto_prima else '',
+            'foto_dopo': reverse('turni:foto', args=[p.pk]) if p and p.foto else '',
+            'straordinaria': v['straordinaria'],
+        })
+
+    contesto = {
+        'titolo_pagina': 'Pulizie', 'giorno': giorno, 'titolo_giorno': _titolo_giorno(giorno), 'oggi': oggi,
+        'prec': giorno - timedelta(days=1), 'succ': giorno + timedelta(days=1),
+        'in_corso': ' e '.join(f['nome'] for f in fasce if f['adesso']),
+        'numeri': numeri, 'fasce': fasce, 'righe': righe, 'aree': [(a, n) for a, n in pp.AREE if any(v['area'] == a for v in tutte)],
+        'area': area, 'filtro': filtro, 'filtri': {'verificare': 'Da verificare', 'rifare': 'Da rifare', 'non': 'Non eseguite o non eseguibili'},
+    }
+    contesto.update(menu_pc(request))
+    return render(request, 'turni/pc/pulizie.html', contesto)

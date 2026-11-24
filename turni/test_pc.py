@@ -163,3 +163,30 @@ class TurniPC(TestCase):
     def test_operai_no(self):
         self.client.force_login(self.operaio)
         self.assertRedirects(self.client.get(reverse('turni:pc_turni')), reverse('turni:home'), fetch_redirect_response=False)
+
+
+class PuliziePC(TestCase):
+    """Pulizie su PC: regia del giorno (proposta A)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.ufficio = User.objects.create_user('giulia', password='x', is_staff=True)
+        cls.impiegato = User.objects.create_user('impiegato', password='x')
+        Dipendente.objects.create(nome='BIANCHI ANNA', utente=cls.impiegato, mansione='UFFICIO')
+        cls.operaio = User.objects.create_user('operaio', password='x')
+        Dipendente.objects.create(nome='ROSSI MARIO', utente=cls.operaio)
+
+    def test_pagina_e_filtri(self):
+        self.client.force_login(self.ufficio)
+        r = self.client.get(reverse('turni:pc_pulizie'))
+        self.assertContains(r, 'Da verificare')
+        self.assertContains(r, '1° turno')
+        self.assertContains(r, 'Richiedi pulizia')
+        r = self.client.get(reverse('turni:pc_pulizie') + '?stato=rifare&area=IMP1')
+        self.assertEqual(r.status_code, 200)
+        r = self.client.get(reverse('turni:pc_pulizie') + '?stato=xx&area=yy&giorno=2026-11-01')
+        self.assertEqual(r.status_code, 200)
+
+    def test_operai_no(self):
+        self.client.force_login(self.operaio)
+        self.assertRedirects(self.client.get(reverse('turni:pc_pulizie')), reverse('turni:home'), fetch_redirect_response=False)

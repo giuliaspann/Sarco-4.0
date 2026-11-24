@@ -216,3 +216,42 @@ kbd { font: 12px inherit; border: 1px solid #d5dde1; border-radius: 6px; padding
 .tu-modifica { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid #eef0f1; font-size: 14px; }
 .tu-modifica small { display: block; color: var(--tenue); font-size: 13px; }
 @media (max-width: 1100px) { .tu-pannello { max-width: none; } }
+
+/* Pulizie: regia del giorno (proposta A scelta da Giulia, 25/11/2026) */
+.pc-tasto.bianco { background: var(--carta); color: var(--blu) !important; border: 1px solid #d5dde1; }
+.tu-strumenti .pc-tasto { padding: 11px 22px; font-size: 15px; }
+.pc-stato.azzurro { background: #dcefff; color: #0b4f72; }
+.pu-numeri { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pu-numero { background: var(--carta); border: 1px solid var(--bordo); border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column;
+  gap: 4px; color: var(--testo) !important; text-decoration: none; }
+.pu-numero:hover { border-color: #b9c7ce; }
+.pu-numero.scelto { border: 2px solid var(--blu); }
+.pu-numero span { font-size: 14px; font-weight: 600; color: var(--tenue); }
+.pu-numero b { font: 700 48px/1 var(--titoli); }
+.pu-numero b small { font-size: 24px; color: #8fdc66; }
+.pu-numero.blu { background: var(--blu); border-color: var(--blu); color: #fff !important; }
+.pu-numero.blu span { color: #bcd3de; }
+.pu-numero .azzurro { color: #0b6b9a; } .pu-numero .rosso { color: var(--rosso); } .pu-numero .arancio { color: #8a4f00; }
+.pu-fasce { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.pu-fascia { display: flex; flex-direction: column; gap: 6px; }
+.pu-fascia-testa { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pu-fascia-testa b { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.pu-fascia-testa i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.pu-fascia-testa span { font-size: 13px; color: var(--tenue); }
+.pu-fascia-testa span.adesso { color: var(--verde-testo); font-weight: 700; }
+.pu-fascia small { font-size: 13px; color: var(--tenue); }
+.pu-filtri { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #eef0f1; }
+.pu-filtri a { border: 1px solid #d5dde1; border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; color: var(--testo) !important; text-decoration: none; }
+.pu-filtri a.attiva { background: var(--blu); border-color: var(--blu); color: #fff !important; }
+.pu-filtri a.pu-togli { margin-left: auto; background: var(--arancio-chiaro); border-color: transparent; color: #6b3d00 !important; }
+.pu-tabella { width: 100%; border-collapse: collapse; min-width: 900px; font-size: 14px; }
+.pu-tabella th { text-align: left; padding: 10px 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--tenue); }
+.pu-tabella th:first-child, .pu-tabella td:first-child { padding-left: 18px; }
+.pu-tabella td { padding: 10px 8px; border-top: 1px solid #eef0f1; vertical-align: middle; }
+.pu-nome a { font-weight: 700; color: var(--testo) !important; text-decoration: none; }
+.pu-nome a:hover { text-decoration: underline; }
+.pu-extra { font-size: 12px; color: #8a4f00; font-weight: 700; }
+.pu-quando { color: var(--tenue); }
+.pu-foto { display: flex; gap: 4px; }
+.pu-foto img, .pu-foto span { width: 40px; height: 30px; border-radius: 5px; object-fit: cover; display: block; background: #f1f3f4; }
+@media (max-width: 1100px) { .pu-numeri, .pu-fasce { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

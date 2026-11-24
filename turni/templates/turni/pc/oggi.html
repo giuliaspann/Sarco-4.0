@@ -87,7 +87,7 @@
       {% endfor %}
     </div>
     <div class="pc-riquadro">
-      <div class="pc-riga-titolo"><span class="pc-titolo">Pulizie del {{ fascia_nome }}</span><a href="{% url 'turni:pulizie' %}">Apri</a></div>
+      <div class="pc-riga-titolo"><span class="pc-titolo">Pulizie del {{ fascia_nome }}</span><a href="{% url 'turni:pc_pulizie' %}">Apri</a></div>
       {% for r in avanzamento %}
         <div class="pc-barra-riga">
           <div><span>{{ r.area }}</span><b>{{ r.fatte }} di {{ r.tot }}</b></div>

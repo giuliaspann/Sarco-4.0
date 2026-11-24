@@ -1091,8 +1091,10 @@ def foto(request, pulizia_id):
     proprietario = p.turno.dipendente.utente_id == request.user.pk
     # le pulizie approvate stanno nell'archivio: le foto le vedono tutti i dipendenti
     in_archivio = p.stato == Pulizia.Stato.VERIFICATA and (dipendente_di(request) or request.user.is_staff)
+    from .views_pc import e_ufficio
+
     if not (proprietario or in_archivio or e_capoturno(request.user, p.turno.data) or p.richiesta_da_id == request.user.pk
-            or e_resp_piazzale(request.user) or request.user.is_staff):
+            or e_resp_piazzale(request.user) or request.user.is_staff or e_ufficio(request.user)):
         raise PermissionDenied
     f = {'prima': p.foto_prima, 'richiesta': p.foto_richiesta}.get(request.GET.get('quale'), p.foto)
     if not f:
