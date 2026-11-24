@@ -1,0 +1,98 @@
+{% extends 'turni/pc/base.html' %}
+{% block contenuto %}
+<header class="pc-testa">
+  <div>
+    <span class="pc-occhiello">{{ giorno }} · {{ turno_ora }} in corso</span>
+    <h1>{{ saluto }}</h1>
+  </div>
+  <label class="pc-cerca-finto">
+    {% include 'turni/pc/_icona.html' with nome='lente' %}
+    <input data-apri-cerca placeholder="Chiedi a Sarco: pagine, turni, fermi…" readonly>
+    <kbd>Ctrl K</kbd>
+  </label>
+</header>
+
+<section class="pc-fascia" aria-label="I numeri di oggi">
+  <div>
+    <span class="pc-etic">Vetro lavorato oggi</span>
+    {% if numeri.c_produzione %}
+      <span class="pc-numero">{{ numeri.t_oggi }}<small> t</small></span>
+      <span class="pc-nota">Imp. 1 {{ numeri.t_imp1 }} t · Imp. 2 {{ numeri.t_imp2 }} t</span>
+    {% else %}
+      <span class="pc-numero">0<small> t</small></span>
+      <span class="pc-nota">Nessuna produzione ancora inserita oggi</span>
+    {% endif %}
+  </div>
+  <div>
+    <span class="pc-etic">Da inizio anno</span>
+    <span class="pc-numero">{{ numeri.t_anno }}<small> t</small></span>
+    <span class="pc-nota">{% if numeri.c_anno %}Somma della produzione inserita in app{% else %}Si riempie con la produzione di fine turno{% endif %}</span>
+  </div>
+  <div>
+    <span class="pc-etic">In turno adesso</span>
+    <span class="pc-numero">{{ numeri.in_turno }}</span>
+    <span class="pc-nota">Persone nel {{ turno_ora }}, ufficio escluso</span>
+  </div>
+  <div>
+    <span class="pc-etic">Fermi impianto oggi</span>
+    <span class="pc-numero">{{ numeri.fermi }}</span>
+    <span class="pc-nota">{% if numeri.fermi %}{{ numeri.fermi_minuti }} minuti di fermo in tutto{% else %}Nessun fermo segnalato{% endif %}</span>
+  </div>
+</section>
+
+<section class="pc-impianti" aria-label="Impianti">
+  {% for i in impianti %}
+    <a class="pc-riquadro pc-impianto" href="{{ i.url }}">
+      <div class="pc-riga-titolo"><span class="pc-titolo">{{ i.nome }}</span><span class="pc-stato {{ i.tono }}">{{ i.stato }}</span></div>
+      {% if i.grafico %}
+        <svg class="pc-linea {{ i.tono }}" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="{{ i.grafico.area }}"/><path class="tratto" d="{{ i.grafico.linea }}"/></svg>
+      {% else %}
+        <svg class="pc-linea grigio" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true"><path class="tratto" d="M0 40 L200 40" stroke-dasharray="6 6"/></svg>
+      {% endif %}
+      <span class="pc-nota-scura">{{ i.riga }}</span>
+    </a>
+  {% endfor %}
+</section>
+
+<section class="pc-due">
+  <div class="pc-riquadro pc-da-fare">
+    <div class="pc-riga-titolo"><span class="pc-titolo">Da fare in ufficio</span>{% if da_fare_tot %}<a href="{% url 'turni:ufficio_richieste' %}">Vedi tutte le {{ da_fare_tot }}</a>{% endif %}</div>
+    {% for v in da_fare %}
+      <div class="pc-compito">
+        <span class="pc-sigla">{{ v.sigla }}</span>
+        <a class="pc-compito-testo" href="{{ v.url }}"><b>{{ v.titolo }}</b><small>{{ v.sotto }}</small></a>
+        {% if v.approva %}
+          <a class="pc-tasto approva" href="{{ v.approva }}">Approva</a>
+          <a class="pc-tasto rifiuta" href="{{ v.rifiuta }}">Rifiuta</a>
+        {% else %}
+          <a class="pc-tasto apri" href="{{ v.url }}">Apri</a>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p class="pc-vuoto">Niente da approvare: tutte le richieste sono state decise.</p>
+    {% endfor %}
+  </div>
+
+  <div class="pc-colonna">
+    <div class="pc-riquadro pc-verde">
+      <div class="pc-riga-titolo"><span class="pc-titolo">Bacheca</span><a href="{% url 'turni:messaggi' %}">Apri</a></div>
+      {% for a in bacheca %}
+        <p>{% if a.importante %}<b>Importante · </b>{% endif %}{{ a.testo|truncatechars:160 }}</p>
+      {% empty %}
+        <p>Nessun avviso in bacheca.</p>
+      {% endfor %}
+    </div>
+    <div class="pc-riquadro">
+      <div class="pc-riga-titolo"><span class="pc-titolo">Pulizie del {{ fascia_nome }}</span><a href="{% url 'turni:pulizie' %}">Apri</a></div>
+      {% for r in avanzamento %}
+        <div class="pc-barra-riga">
+          <div><span>{{ r.area }}</span><b>{{ r.fatte }} di {{ r.tot }}</b></div>
+          <svg class="pc-barra" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="fondo" width="100" height="8" rx="4"/>{% if r.pct %}<rect class="pieno" width="{{ r.pct }}" height="8" rx="4"/>{% endif %}</svg>
+        </div>
+      {% empty %}
+        <p class="pc-vuoto">Nessuna pulizia in programma in questo turno.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

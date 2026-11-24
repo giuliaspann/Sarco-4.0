@@ -1,0 +1,119 @@
+/* Sarco Workspace su PC · Plancia di comando (disegno A scelto da Giulia il 23/11/2026) */
+:root {
+  --blu: #00384f; --blu-scuro: #00283a; --verde: #4fac25; --verde-chiaro: #e5f4dd; --verde-testo: #2f7a12;
+  --fondo: #eef2f4; --carta: #ffffff; --bordo: #dde2e5; --testo: #1f2a30; --tenue: #54595f;
+  --arancio: #b86a00; --arancio-chiaro: #fff1dc; --rosso: #b3261e; --rosso-chiaro: #f9d4d0;
+  --titoli: "Barlow Condensed", "Arial Narrow", sans-serif;
+}
+* { box-sizing: border-box; }
+body.pc { margin: 0; background: var(--fondo); color: var(--testo); font: 16px/1.4 "Source Sans 3", -apple-system, "Segoe UI", sans-serif; }
+.pc a { color: var(--blu); }
+.pc-guscio { display: flex; min-height: 100vh; }
+
+/* menu blu a sinistra */
+.pc-menu { flex: 0 0 240px; background: var(--blu); color: #fff; padding: 22px 14px; display: flex; flex-direction: column; gap: 2px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.pc-marchio { display: flex; align-items: center; gap: 10px; padding: 0 12px 20px; color: #fff !important; text-decoration: none; }
+.pc-marchio b { display: block; font: 700 30px/1 var(--titoli); letter-spacing: .02em; }
+.pc-marchio small { display: block; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8fdc66; }
+.pc-voce { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #d6e5ec !important;
+  text-decoration: none; font-size: 16px; font-weight: 600; }
+.pc-voce:hover { background: rgba(255,255,255,.08); }
+.pc-voce.attiva { background: rgba(255,255,255,.16); color: #fff !important; }
+.pc-conta { margin-left: auto; background: var(--verde); color: #10260a; font: 700 13px/1 inherit; font-style: normal;
+  border-radius: 999px; padding: 3px 9px; }
+.pc-gruppo { padding: 18px 12px 6px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #8fb3c4; }
+.pc-presto { color: #9db9c6 !important; padding: 7px 12px; cursor: default; }
+.pc-presto:hover { background: none; }
+.pc-gruppo small { font-size: 11px; letter-spacing: .06em; color: #6f97aa; }
+.pc-menu-piede { margin-top: auto; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.14); }
+.pc-menu-piede form { margin: 0; }
+.pc-esci { width: 100%; border: 0; background: none; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; text-align: left; }
+
+/* pagina */
+.pc-pagina { flex: 1; min-width: 0; padding: 28px 36px 40px; display: flex; flex-direction: column; gap: 22px; }
+.pc-messaggi p { margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--verde-chiaro); }
+.pc-testa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.pc-occhiello { font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--verde-testo); }
+.pc-testa h1 { margin: 2px 0 0; font: 700 46px/1 var(--titoli); color: var(--blu); }
+.pc-cerca-finto { flex: 0 1 420px; display: flex; align-items: center; gap: 10px; background: var(--carta); border: 1px solid #d5dde1;
+  border-radius: 999px; padding: 11px 18px; color: var(--tenue); cursor: text; }
+.pc-cerca-finto input { border: 0; outline: 0; flex: 1; font: inherit; font-size: 15px; background: transparent; min-width: 0; cursor: text; }
+kbd { font: 12px inherit; border: 1px solid #d5dde1; border-radius: 6px; padding: 1px 7px; color: var(--tenue); background: var(--carta); }
+
+/* fascia blu con i quattro numeri */
+.pc-fascia { background: var(--blu); color: #fff; border-radius: 20px; padding: 28px 32px; display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.pc-fascia > div { display: flex; flex-direction: column; gap: 6px; }
+.pc-etic { font-size: 14px; font-weight: 600; color: #bcd3de; }
+.pc-numero { font: 700 64px/.95 var(--titoli); }
+.pc-numero small { font-size: 26px; color: #8fdc66; }
+.pc-nota { font-size: 14px; color: #bcd3de; }
+
+/* riquadri */
+.pc-riquadro { background: var(--carta); border: 1px solid var(--bordo); border-radius: 16px; padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 10px; color: inherit !important; text-decoration: none; }
+.pc-riga-titolo { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pc-riga-titolo a { font-size: 14px; font-weight: 600; }
+.pc-titolo { font-size: 18px; font-weight: 700; }
+.pc-nota-scura { font-size: 14px; color: var(--tenue); }
+.pc-vuoto { margin: 0; color: var(--tenue); font-size: 15px; padding: 8px 0; }
+
+.pc-impianti { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.pc-impianto:hover { border-color: #b9c7ce; }
+.pc-stato { font-size: 13px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.pc-stato.verde { background: var(--verde-chiaro); color: var(--verde-testo); }
+.pc-stato.arancio { background: var(--arancio-chiaro); color: #8a4f00; }
+.pc-stato.rosso { background: #fde7e5; color: var(--rosso); }
+.pc-stato.grigio { background: #e9edef; color: var(--tenue); }
+.pc-linea { width: 100%; height: 44px; }
+.pc-linea .tratto { fill: none; stroke-width: 2.5; stroke: var(--verde); }
+.pc-linea .area { fill: rgba(79,172,37,.14); }
+.pc-linea.arancio .tratto { stroke: var(--arancio); } .pc-linea.arancio .area { fill: rgba(184,106,0,.12); }
+.pc-linea.rosso .tratto { stroke: var(--rosso); } .pc-linea.rosso .area { fill: rgba(179,38,30,.1); }
+.pc-linea.grigio .tratto { stroke: #b9c3c8; }
+
+.pc-due { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+.pc-colonna { display: flex; flex-direction: column; gap: 16px; }
+.pc-compito { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid #e5e6e7; }
+.pc-sigla { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--verde-chiaro); color: var(--verde-testo);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.pc-compito-testo { flex: 1; min-width: 0; color: inherit !important; text-decoration: none; }
+.pc-compito-testo b { display: block; font-weight: 600; }
+.pc-compito-testo small { display: block; font-size: 14px; color: var(--tenue); }
+.pc-tasto { border-radius: 999px; padding: 8px 18px; font-size: 14px; font-weight: 700; text-decoration: none;
+  display: flex; align-items: center; justify-content: center; text-align: center; }
+.pc-tasto.approva { background: var(--verde); color: #10260a !important; }
+.pc-tasto.rifiuta { background: var(--rosso-chiaro); color: #7a1712 !important; }
+.pc-tasto.apri { background: var(--blu); color: #fff !important; }
+
+.pc-verde { background: var(--verde-chiaro); border-color: transparent; color: #1f3d12 !important; }
+.pc-verde p { margin: 0; font-size: 15px; line-height: 1.45; }
+.pc-barra-riga { display: flex; flex-direction: column; gap: 5px; }
+.pc-barra-riga > div:first-child { display: flex; justify-content: space-between; font-size: 14px; }
+.pc-barra { display: block; width: 100%; height: 8px; }
+.pc-barra .fondo { fill: #e9edef; } .pc-barra .pieno { fill: var(--verde); }
+
+/* Ctrl K */
+.pc-cerca { width: min(560px, 92vw); border: 0; border-radius: 18px; padding: 10px; box-shadow: 0 20px 60px rgba(0,40,58,.3); margin-top: 14vh; }
+.pc-cerca::backdrop { background: rgba(0,40,58,.35); }
+.pc-cerca form { margin: 0; }
+.pc-cerca-campo { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--bordo); color: var(--tenue); }
+.pc-cerca-campo input { flex: 1; border: 0; outline: 0; font: inherit; font-size: 17px; color: var(--testo); background: transparent; }
+#pc-cerca-lista { list-style: none; margin: 6px 0 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+#pc-cerca-lista a { display: block; padding: 10px 14px; border-radius: 10px; color: var(--testo); text-decoration: none; font-weight: 600; }
+#pc-cerca-lista a:hover, #pc-cerca-lista a:focus { background: var(--fondo); outline: 0; }
+#pc-cerca-lista li:not([hidden]):first-child a { background: var(--fondo); }
+.pc-cerca-vuoto { margin: 12px 14px; color: var(--tenue); }
+
+/* schermi più stretti (portatile piccolo) */
+@media (max-width: 1100px) {
+  .pc-fascia, .pc-impianti { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pc-due { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .pc-guscio { flex-direction: column; }
+  .pc-menu { position: static; height: auto; flex: none; }
+  .pc-pagina { padding: 20px 16px; }
+  .pc-fascia, .pc-impianti { grid-template-columns: 1fr; }
+}

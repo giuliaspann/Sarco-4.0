@@ -2,12 +2,13 @@ from django.contrib.auth.views import LogoutView, PasswordChangeView
 from django.urls import path, reverse_lazy
 
 from . import views_pulizie_piano
-from . import copia_database, views, views_menu, views_mn_capo, views_programma, views_riunioni, views_hr, views_calendario, views_ufficio, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente
+from . import copia_database, views, views_menu, views_mn_capo, views_programma, views_riunioni, views_hr, views_calendario, views_ufficio, views_archivio, views_report, views_manutenzione, views_messaggi, views_produzione, views_richieste, views_statistiche, views_assistente, views_pc
 
 app_name = 'turni'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('pc/', views_pc.oggi, name='pc'),
     path('manutenzione/in-corso/', views_mn_capo.in_corso, name='mn_in_corso'),
     path('programma/<str:cosa>/', views_programma.programma, name='programma'),
     path('riunioni/', views_riunioni.elenco, name='riunioni'),

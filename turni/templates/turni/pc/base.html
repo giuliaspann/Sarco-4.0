@@ -1,0 +1,71 @@
+{% load static %}<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ titolo_pagina }} · Sarco Workspace</title>
+  <link rel="icon" href="{% static 'turni/app-192.png' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+  <link rel="stylesheet" href="{% static 'turni/pc.css' %}">
+</head>
+<body class="pc">
+<div class="pc-guscio">
+  <nav class="pc-menu" aria-label="Menu">
+    <a class="pc-marchio" href="{% url 'turni:pc' %}">
+      <img src="{% static 'turni/logo-campana.png' %}" alt="" width="34" height="30">
+      <span><b>SARCO</b><small>Workspace</small></span>
+    </a>
+    {% for v in menu %}
+      <a class="pc-voce{% if v.attiva %} attiva{% endif %}" href="{{ v.url }}">
+        {% include 'turni/pc/_icona.html' with nome=v.icona %}<span>{{ v.nome }}</span>
+        {% if v.conta %}<em class="pc-conta">{{ v.conta }}</em>{% endif %}
+      </a>
+    {% endfor %}
+    <span class="pc-gruppo">Aree <small>· in arrivo</small></span>
+    {% for a in aree_in_arrivo %}<span class="pc-voce pc-presto" title="Arriva nelle prossime fasi">{{ a }}</span>{% endfor %}
+    <span class="pc-gruppo">Insieme <small>· in arrivo</small></span>
+    {% for a in insieme_in_arrivo %}<span class="pc-voce pc-presto" title="Arriva nelle prossime fasi">{{ a }}</span>{% endfor %}
+    <div class="pc-menu-piede">
+      <a class="pc-voce" href="{% url 'turni:home' %}">{% include 'turni/pc/_icona.html' with nome='telefono' %}<span>Versione telefono</span></a>
+      <form method="post" action="{% url 'turni:logout' %}">{% csrf_token %}
+        <button type="submit" class="pc-voce pc-esci">{% include 'turni/pc/_icona.html' with nome='esci' %}<span>Esci</span></button>
+      </form>
+    </div>
+  </nav>
+
+  <main class="pc-pagina">
+    {% if messages %}<div class="pc-messaggi">{% for m in messages %}<p class="{{ m.tags }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+    {% block contenuto %}{% endblock %}
+  </main>
+</div>
+
+{# Ctrl K: cerca tra le pagine dell'app #}
+<dialog class="pc-cerca" id="pc-cerca" aria-label="Chiedi a Sarco">
+  <form method="dialog">
+    <label class="pc-cerca-campo">
+      {% include 'turni/pc/_icona.html' with nome='lente' %}
+      <input id="pc-cerca-testo" type="search" placeholder="Cerca una pagina: turni, pulizie, fermi…" autocomplete="off">
+      <kbd>Esc</kbd>
+    </label>
+    <ul id="pc-cerca-lista">
+      {% for v in menu %}<li><a href="{{ v.url }}">{{ v.nome }}</a></li>{% endfor %}
+      <li><a href="{% url 'turni:miei_turni' %}">I miei turni</a></li>
+      <li><a href="{% url 'turni:calendario' %}">Calendario</a></li>
+      <li><a href="{% url 'turni:fermi' %}">Fermi impianto</a></li>
+      <li><a href="{% url 'turni:interventi' %}">Interventi di manutenzione</a></li>
+      <li><a href="{% url 'turni:macchine' %}">Macchine</a></li>
+      <li><a href="{% url 'turni:comunicazioni' %}">Comunicazioni</a></li>
+      <li><a href="{% url 'turni:statistiche' %}">Statistiche e analisi</a></li>
+      <li><a href="{% url 'turni:archivio' %}">Archivio</a></li>
+      <li><a href="{% url 'turni:documenti' %}">Documenti</a></li>
+      <li><a href="{% url 'turni:riunioni' %}">Riunioni</a></li>
+      <li><a href="{% url 'turni:profilo' %}">Il mio profilo</a></li>
+    </ul>
+    <p class="pc-cerca-vuoto" hidden>Nessuna pagina con questo nome.</p>
+  </form>
+</dialog>
+<script src="{% static 'turni/pc.js' %}" defer></script>
+</body>
+</html>
