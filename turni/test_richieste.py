@@ -80,6 +80,10 @@ class RichiesteTest(TestCase):
         self.client.post(reverse('turni:ufficio_richiesta_scelta', args=['cambio', cambio.pk, 'approva']))
         cambio.refresh_from_db()
         self.assertEqual(cambio.stato, CambioTurno.Stato.APPROVATO)
+        # approvato dall'ufficio: lo sanno tutti i dipendenti (25/11/2026), i due coinvolti con la loro notifica
+        from .models import Notifica
+        self.assertTrue(Notifica.objects.filter(utente__username='crimi', titolo='Turni cambiati').exists())
+        self.assertFalse(Notifica.objects.filter(utente__username='drame', titolo='Turni cambiati').exists())
 
         mar_s, mer_s = self.turno(self.spano, self.MAR), self.turno(self.spano, self.MER)
         mar_d, mer_d = self.turno(self.drame, self.MAR), self.turno(self.drame, self.MER)

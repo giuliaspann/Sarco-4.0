@@ -46,6 +46,8 @@ STATI = {
 # nella riga di più persone vince lo stato che chiede ancora qualcosa
 PRIORITA = ['rifare', 'impedita', 'nonfatta', 'fare', 'corso', 'ct', 'rp', 'ok']
 RIPETI_OGNI = 15  # minuti tra un avviso e il successivo, finché nessuno risponde
+# dopo la fine del turno c'è ancora un'ora per confermare le pulizie; poi diventano Non eseguite (Giulia, 25/11/2026)
+MARGINE_FINE_TURNO = timedelta(minutes=60)
 
 
 def sigla(fascia):
@@ -378,7 +380,7 @@ def controlla(adesso=None):
             if not turni:
                 continue
             rif = next((t for t in turni if t.fascia == FASCE[s]), turni[0])
-            if adesso >= rif.fine:
+            if adesso >= rif.fine + MARGINE_FINE_TURNO:
                 mandati += chiudi_turno(giorno, s, adesso)
                 continue
             if adesso < rif.inizio:
@@ -429,7 +431,7 @@ def controlla(adesso=None):
 
 
 def chiudi_turno(giorno, s, adesso):
-    """Fine turno: le pulizie con avviso ancora da fare diventano Non eseguite; avvisati i Capi Turno in servizio e il RP.
+    """Fine turno (più il margine di un'ora): le pulizie con avviso ancora da fare diventano Non eseguite; avvisati i Capi Turno in servizio e il RP.
     Solo per i turni finiti da poco (6 ore), così le pulizie vecchie restano come sono."""
     from . import manutenzione as mn
     from .pulizie import resp_piazzale
@@ -439,7 +441,8 @@ def chiudi_turno(giorno, s, adesso):
                  .select_related('turno__dipendente', 'elemento'))
     chiuse = 0
     for p in righe:
-        if not (p.turno.fine <= adesso < p.turno.fine + timedelta(hours=6)):
+        scade = p.turno.fine + MARGINE_FINE_TURNO
+        if not (scade <= adesso < scade + timedelta(hours=6)):
             continue
         if not Pulizia.objects.filter(pk=p.pk, stato=Pulizia.Stato.DA_FARE).update(stato=Pulizia.Stato.NON_ESEGUITA):
             continue

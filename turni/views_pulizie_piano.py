@@ -347,8 +347,10 @@ def avviso_pulizia(request, pk):
         a, _ = AvvisoPulizia.objects.get_or_create(chiave=pp.chiave_avviso(p), defaults={'ultimo_il': timezone.now()})
         a.rimanda_al = quando
         a.save(update_fields=['rimanda_al'])
-        if quando >= p.turno.fine:
-            messages.info(request, "Il turno finisce prima: l'avviso non tornerà. A fine turno, se non è fatta, risulterà Non eseguita.")
+        scade = p.turno.fine + pp.MARGINE_FINE_TURNO
+        if quando >= scade:
+            messages.info(request, f"Il tempo per confermarla finisce alle {timezone.localtime(scade):%H:%M}: l'avviso non tornerà. "
+                                   "Se a quell'ora non è fatta, risulterà Non eseguita.")
         else:
             messages.success(request, f'Va bene: te lo ricordo alle {timezone.localtime(quando):%H:%M}.')
         return redirect('turni:notifiche')

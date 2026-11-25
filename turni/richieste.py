@@ -185,6 +185,19 @@ def decisione_ufficio_cambio(cambio, utente, approva, nota=''):
     esito = 'approvato' if approva else 'non approvato'
     _avvisa([cambio.richiedente.utente_id, cambio.collega.utente_id], utente,
             f"Cambio turno {esito} dall'ufficio", _giorni_testo(cambio) + (f' · {nota}' if nota else ''))
+    if approva:
+        # il cambio approvato lo sanno tutti i dipendenti, dal primo all'ultimo (Giulia, 25/11/2026)
+        from django.urls import reverse
+
+        from . import push
+        from .models import Dipendente
+
+        coinvolti = {cambio.richiedente.utente_id, cambio.collega.utente_id}
+        tutti = [u for u in Dipendente.objects.filter(attivo=True, utente__isnull=False).values_list('utente_id', flat=True)
+                 if u not in coinvolti]
+        push.invia(tutti, 'Turni cambiati',
+                   f'{cambio.richiedente.nome_breve} e {cambio.collega.nome_breve} si scambiano il turno: {_giorni_testo(cambio)}.',
+                   reverse('turni:settimana_tutti'), mittente=utente)
 
 
 def crea_ferie(dipendente, tipo, dal, al, motivo='', dalle=None, alle=None):
