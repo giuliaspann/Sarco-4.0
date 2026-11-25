@@ -41,6 +41,7 @@ urlpatterns = [
     path('pulizie/richieste/<int:pk>/', views_pulizie_piano.richiesta_rp, name='richiesta_rp'),
     path('pulizie/richieste/<int:pk>/foto/', views_pulizie_piano.foto_richiesta_rp, name='foto_richiesta_rp'),
     path('pulizie/richiedi/', views.richiedi_pulizia_vista, name='richiedi_pulizia'),
+    path('pulizie/richieste/', views_pulizie_piano.richieste_pulizia, name='richieste_pulizia'),
     path('capoturno/', views.capoturno, name='capoturno'),
     path('archivio/', views.archivio, name='archivio'),
     path('archivio/inventario/', views_archivio.inventario, name='inventario'),

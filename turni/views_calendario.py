@@ -153,11 +153,7 @@ def eventi(utente, dal, al, tutti=True, dip=None):
             g += timedelta(days=1)
 
     if tutti:
-        for p in Pulizia.objects.filter(richiesta_da__isnull=False, turno__data__range=(dal, al)).select_related(
-                'turno__dipendente', 'elemento'):
-            metti(_evento('pulizia', p.turno.data, p.titolo, f'{p.turno.descrizione_fascia} · {p.turno.dipendente.nome_breve}'
-                          f' · {p.get_stato_display().lower()}', reverse('turni:capoturno') + f'?giorno={p.turno.data.isoformat()}',
-                          breve=f'🧹 {p.titolo}'))
+        # le richieste di pulizia non stanno più qui: hanno la loro area «Richieste di pulizia» (Giulia, 25/11/2026)
         for i in Intervento.objects.filter(tipo=Intervento.Tipo.PROGRAMMATA, da_fare_il__range=(dal, al)).exclude(
                 stato=Intervento.Stato.RIFIUTATA).select_related('macchina'):
             metti(_evento('manutenzione', i.da_fare_il, i.macchina.nome, f'{i.descrizione[:80]} · {i.get_stato_display().lower()}',

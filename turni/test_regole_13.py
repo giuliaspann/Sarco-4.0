@@ -49,7 +49,9 @@ class RegoleTest(TestCase):
         r = self.client.get(url)
         self.assertContains(r, 'Manda al responsabile piazzale')
         self.assertNotContains(r, 'A chi la assegni?')
-        self.client.post(url, {'area': 'IMP1', 'giorno': self.oggi.isoformat(), 'fascia': '1T', 'nota': 'Olio sotto il nastro', 'foto': foto()})
+        r = self.client.post(url, {'area': 'IMP1', 'giorno': self.oggi.isoformat(), 'fascia': '1T', 'nota': 'Olio sotto il nastro', 'foto': foto()}, follow=True)
+        self.assertContains(r, 'Richiesta inviata al Responsabile Piazzale')  # si vede subito che è partita
+        self.assertContains(r, 'Da approvare')
         s = Straordinaria.objects.get()
         self.assertEqual((s.tipo, s.stato), (Straordinaria.Tipo.RICHIESTA, Straordinaria.Stato.ATTESA))
         self.assertFalse(Pulizia.objects.filter(richiesta_da__isnull=False).exists())
@@ -64,6 +66,13 @@ class RegoleTest(TestCase):
         self.assertIn('Olio sotto il nastro', p.nota)
         self.assertTrue(p.foto_richiesta)
         self.assertTrue(Notifica.objects.filter(utente=op.utente, titolo__contains='approvata').exists())
+        # archivio «Richieste di pulizia» (25/11/2026): la vedono tutti, una volta sola, con lo stato
+        s.refresh_from_db()
+        self.assertEqual(s.pulizia, p)
+        self.client.force_login(ct.utente)
+        r = self.client.get(reverse('turni:richieste_pulizia'))
+        self.assertContains(r, 'Olio sotto il nastro', count=1)
+        self.assertContains(r, 'assegnata a Galli Rino')
 
     def test_rp_rifiuta_e_chi_chiede_viene_avvisato(self):
         op = self.dip('ROSSI MARIO')
@@ -87,6 +96,10 @@ class RegoleTest(TestCase):
         self.client.post(url, {'area': 'IMP1', 'giorno': self.oggi.isoformat(), 'fascia': '1T', 'turno': t.pk, 'foto': foto()})
         self.assertTrue(t.pulizie.exists())
         self.assertFalse(Straordinaria.objects.exists())
+        # finisce nell'archivio delle richieste, non nel Calendario generale (25/11/2026)
+        self.assertContains(self.client.get(reverse('turni:richieste_pulizia')), 'assegnata a Rossi Mario')
+        self.client.force_login(get_user_model().objects.create_user('uff.prova', is_staff=True))
+        self.assertNotContains(self.client.get(reverse('turni:calendario')), '🧹')
 
     def test_ottiche_solo_il_capo_turno(self):
         a = self.dip('ROSSI MARIO', livello_mo=1)

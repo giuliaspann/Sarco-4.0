@@ -2060,6 +2060,8 @@ class Straordinaria(models.Model):
     stato = models.CharField(max_length=10, choices=Stato.choices, default=Stato.ATTESA)
     gestita_da = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     gestita_il = models.DateTimeField(null=True, blank=True)
+    # la pulizia assegnata dal RP, per seguirla nell'archivio «Richieste di pulizia» (Giulia, 25/11/2026)
+    pulizia = models.ForeignKey('Pulizia', null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
 
     class Meta:
         verbose_name = 'pulizia chiesta al responsabile piazzale'

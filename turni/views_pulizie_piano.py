@@ -419,3 +419,99 @@ def foto_richiesta_rp(request, pk):
     if not s.foto:
         raise Http404
     return FileResponse(s.foto.open('rb'), content_type='image/jpeg')
+
+
+# ---------------------------------------------------------------- Richieste di pulizia (proposta A, Giulia 25/11/2026)
+# Un'area sola, visibile a tutti, dove finiscono tutte le richieste: quelle mandate al RP e quelle assegnate
+# direttamente (dal RP o a un collega in turno). Prima finivano nel Calendario generale.
+
+STATI_RICHIESTA = {
+    'attesa': ('Da approvare', 'attesa'), 'no': ('Non approvata', 'no'), 'assegnata': ('Assegnata', 'corso'),
+    'rifare': ('Da rifare', 'no'), 'fatta': ('Fatta', 'ok'), 'convalidata': ('Convalidata', 'ok'),
+    'nonfatta': ('Non eseguita', 'no'), 'impedita': ('Non eseguibile', 'no'),
+}
+CHIUSE = {'no', 'convalidata', 'nonfatta', 'impedita'}
+
+
+def _stato_pulizia(p):
+    S = Pulizia.Stato
+    return {S.DA_FARE: 'assegnata', S.SEGNALATA: 'rifare', S.FATTA: 'fatta', S.VERIFICATA: 'convalidata',
+            S.NON_ESEGUITA: 'nonfatta', S.IMPEDITA: 'impedita'}.get(p.stato, 'assegnata')
+
+
+GIORNI_BREVI = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']
+
+
+def _giorno(d):
+    return f'{GIORNI_BREVI[d.weekday()]} {d:%d/%m}'
+
+
+def _nome(utente):
+    if utente is None:
+        return ''
+    dip = getattr(utente, 'dipendente', None)
+    return dip.nome_breve if dip else (utente.get_full_name() or utente.get_username())
+
+
+@login_required
+def richieste_pulizia(request):
+    from datetime import datetime, time
+
+    from .models import Fascia, Luogo, Straordinaria
+
+    oggi = timezone.localdate()
+    da = oggi - timedelta(days=30)
+    filtro = request.GET.get('vista', 'tutte')
+    io = request.user
+    voci = []
+    collegate = set()
+    for s in (Straordinaria.objects.filter(chiesta_il__date__gte=da)
+              .select_related('chiesta_da__dipendente', 'gestita_da__dipendente', 'pulizia__turno__dipendente')):
+        luogo = Luogo(s.luogo).label if s.luogo in Luogo.values else s.luogo
+        p = s.pulizia
+        if p:
+            collegate.add(p.pk)
+        if s.stato == Straordinaria.Stato.ATTESA:
+            stato, chi = 'attesa', f'Chiesta da {_nome(s.chiesta_da)} alle {timezone.localtime(s.chiesta_il):%H:%M} · al Responsabile Piazzale'
+        elif s.stato == Straordinaria.Stato.RIFIUTATA:
+            stato, chi = 'no', f'{_nome(s.chiesta_da)} → non approvata da {_nome(s.gestita_da)}'
+        else:
+            stato = _stato_pulizia(p) if p else 'assegnata'
+            chi = f'{_nome(s.chiesta_da)} → assegnata a {p.turno.dipendente.nome_breve}' if p else f'{_nome(s.chiesta_da)} → assegnata'
+        voci.append({
+            'quando': s.chiesta_il, 'area': f'{luogo} · {_giorno(s.giorno)} {s.turno}', 'cosa': s.testo,
+            'chi': chi, 'stato': stato, 'mia': s.chiesta_da_id == io.pk,
+            'url': reverse('turni:pulizia_voce', args=[p.pk]) if p else (
+                reverse('turni:richiesta_rp', args=[s.pk]) if s.chiesta_da_id == io.pk or pp_e_rp(io) else ''),
+            'tipo': 'Straordinaria' if s.tipo == Straordinaria.Tipo.STRAORDINARIA else '',
+        })
+    for p in (Pulizia.objects.filter(richiesta_da__isnull=False, turno__data__gte=da)
+              .exclude(pk__in=collegate).select_related('turno__dipendente', 'richiesta_da__dipendente', 'elemento')):
+        t = p.turno
+        voci.append({
+            'quando': timezone.make_aware(datetime.combine(t.data, time(0))),
+            'area': f'{p.titolo} · {_giorno(t.data)} {Fascia(t.fascia).label if t.fascia in Fascia.values else t.fascia}',
+            'cosa': p.nota if p.elemento_id is None and len(p.nota or '') > 40 else '',
+            'chi': f'{_nome(p.richiesta_da)} → assegnata a {t.dipendente.nome_breve}',
+            'stato': _stato_pulizia(p), 'mia': p.richiesta_da_id == io.pk,
+            'url': reverse('turni:pulizia_voce', args=[p.pk]), 'tipo': '',
+        })
+    for v in voci:
+        v['etichetta'], v['classe'] = STATI_RICHIESTA[v['stato']]
+    conta = {'attesa': sum(v['stato'] == 'attesa' for v in voci)}
+    if filtro == 'mie':
+        voci = [v for v in voci if v['mia']]
+    elif filtro == 'attesa':
+        voci = [v for v in voci if v['stato'] == 'attesa']
+    elif filtro == 'chiuse':
+        voci = [v for v in voci if v['stato'] in CHIUSE]
+    else:
+        filtro = 'tutte'
+    voci.sort(key=lambda v: v['quando'], reverse=True)
+    return render(request, 'turni/richieste_pulizia.html', {'voci': voci, 'filtro': filtro, 'conta': conta})
+
+
+def pp_e_rp(utente):
+    from .pulizie import e_resp_piazzale
+
+    return e_resp_piazzale(utente)

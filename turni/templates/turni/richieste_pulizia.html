@@ -1,0 +1,27 @@
+{% extends 'turni/base.html' %}
+{% block titolo %}Richieste di pulizia{% endblock %}
+{% block contenuto %}
+<a class="tasto-indietro" href="{% url 'turni:pulizie' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8"/></svg>Pulizie</a>
+<div class="intestazione"><h1>Richieste di pulizia</h1></div>
+
+{# proposta A «Elenco con stati» (Giulia, 25/11/2026): le vedono tutti, con chi le ha chieste e com'è finita #}
+<nav class="rp-filtri" aria-label="Filtra le richieste">
+  <a href="?vista=tutte" class="{% if filtro == 'tutte' %}attivo{% endif %}">Tutte</a>
+  <a href="?vista=mie" class="{% if filtro == 'mie' %}attivo{% endif %}">Le mie</a>
+  <a href="?vista=attesa" class="{% if filtro == 'attesa' %}attivo{% endif %}">Da approvare{% if conta.attesa %} · {{ conta.attesa }}{% endif %}</a>
+  <a href="?vista=chiuse" class="{% if filtro == 'chiuse' %}attivo{% endif %}">Chiuse</a>
+</nav>
+
+<div class="rp-elenco">
+  {% for v in voci %}
+  {% if v.url %}<a class="rp-voce" href="{{ v.url }}">{% else %}<div class="rp-voce">{% endif %}
+    <div class="rqp-testa"><b>{{ v.area }}</b><span class="rp-stato {{ v.classe }}">{{ v.etichetta }}</span></div>
+    {% if v.cosa %}<span class="rp-cosa">{% if v.tipo %}{{ v.tipo }} · {% endif %}{{ v.cosa }}</span>{% endif %}
+    <small class="tenue">{{ v.chi }}</small>
+  {% if v.url %}</a>{% else %}</div>{% endif %}
+  {% empty %}
+  <div class="vuoto"><p>{% if filtro == 'mie' %}Non hai fatto richieste negli ultimi 30 giorni.{% else %}Nessuna richiesta negli ultimi 30 giorni.{% endif %}</p></div>
+  {% endfor %}
+</div>
+<p class="tenue piccolo">Le richieste degli ultimi 30 giorni. Una nuova si fa da Pulizie → Richiedi pulizia.</p>
+{% endblock %}

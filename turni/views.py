@@ -929,8 +929,8 @@ def richiedi_pulizia_vista(request):
                 except Exception:
                     messages.error(request, 'La foto non si legge: riprova a scattarla.')
                 else:
-                    messages.success(request, 'Richiesta mandata al responsabile piazzale: se la approva la assegna a chi di dovere.')
-                    return redirect('turni:pulizie')
+                    messages.success(request, 'Richiesta inviata al Responsabile Piazzale: la trovi qui sotto. Se la approva la assegna a chi di dovere.')
+                    return redirect(reverse('turni:richieste_pulizia') + '?vista=mie')
     elif area and giorno and fascia:
         io = getattr(dipendente_di(request), 'pk', None)
         # solo chi lavora nell'area scelta
@@ -957,7 +957,9 @@ def richiedi_pulizia_vista(request):
                     push.invia([t.dipendente.utente_id], '🧹 Ti chiedono una pulizia', f'{p.titolo} (da {da})',
                                f'/turni/pulizie/{t.pk}/', mittente=request.user, tipo='pulizia', oggetto_id=p.pk)
                 messages.success(request, f'Pulizia assegnata a {t.dipendente.nome_breve} · {giorno:%d/%m} {Fascia(fascia).label}.')
-                return redirect('turni:pulizie_piazzale' if torna == 'piazzale' else 'turni:pulizie')
+                if torna == 'piazzale':
+                    return redirect('turni:pulizie_piazzale')
+                return redirect(reverse('turni:richieste_pulizia') + '?vista=mie')
         contesto['vicini'] = vicini
     else:
         contesto['aree'] = [(v, Luogo(v).label, ICONE_LUOGHI.get(v, '📍')) for v in LUOGHI_PULIZIA]

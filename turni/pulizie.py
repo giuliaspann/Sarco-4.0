@@ -334,7 +334,7 @@ def approva_richiesta(utente, s, turno):
         with s.foto.open('rb') as f:
             p.foto_richiesta.save('richiesta.jpg', ContentFile(f.read()), save=False)
     p.save()
-    s.stato, s.gestita_da, s.gestita_il = Straordinaria.Stato.INOLTRATA, utente, timezone.now()
+    s.stato, s.gestita_da, s.gestita_il, s.pulizia = Straordinaria.Stato.INOLTRATA, utente, timezone.now(), p
     s.save()
     mn.avvisa([turno.dipendente.utente_id], utente, '🧹 Ti assegnano una pulizia', f'{p.titolo}',
               f'/turni/pulizie/{turno.pk}/', tipo='pulizia', oggetto_id=p.pk)

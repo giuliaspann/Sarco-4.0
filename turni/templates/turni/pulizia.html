@@ -36,6 +36,7 @@
   <a class="mn-capo-tasto" href="{% url 'turni:pulizie_turno' turno.pk %}?fai=libera"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span><span><b>Pulizia aggiuntiva completata</b></span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:capoturno' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2M8.5 13.5l2.5 2.5 4.5-5"/></svg></span><span><b>Da verificare</b></span>{% if da_verificare %}<i class="badge-riga">{{ da_verificare }}</i>{% endif %}</a>
   <a class="mn-capo-tasto" href="{% url 'turni:richiedi_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></span><span><b>Richiedi pulizia</b></span></a>
+  <a class="mn-capo-tasto" href="{% url 'turni:richieste_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></span><span><b>Richieste di pulizia</b></span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></span><span><b>Pulizia straordinaria</b></span></a>
   {% if puo_notturne %}
   {# Generiche Notturne: se il responsabile piazzale è assente le registra il Capo Turno (file del 21/11/2026) #}
@@ -58,6 +59,7 @@
   {% if puo_richiedere %}
   <a href="{% url 'turni:richiedi_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></span>Richiedi pulizia</a>
   {% endif %}
+  <a href="{% url 'turni:richieste_pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></span>Richieste di pulizia</a>
   {% if puo_programmare %}
   <a href="{% url 'turni:programma' 'pulizia' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></svg></span>Pulizia straordinaria</a>
   {% endif %}

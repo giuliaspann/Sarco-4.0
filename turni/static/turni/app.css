@@ -2940,3 +2940,24 @@ body.in-chat .avviso { position: fixed; z-index: 30; left: 12px; right: 12px; to
 .conferma-tasti .bottone { min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center; }
 .conferma-tasti .conferma-si { background: #fcd9d9; color: #9b1c1c; border: 1px solid #f5b5b5; font-weight: 700; }
 @media (prefers-color-scheme: dark) { .conferma-tasti .conferma-si { background: #5a2222; color: #ffd4d4; border-color: #7a3030; } }
+
+/* Richieste di pulizia, proposta A (Giulia, 25/11/2026) */
+.rp-filtri { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.rp-filtri a { min-height: 38px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--bordo); background: var(--carta); color: var(--testo); font-weight: 700; font-size: .9rem; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.rp-filtri a.attivo { background: var(--blu, #00384f); border-color: var(--blu, #00384f); color: #fff; }
+.rp-elenco { display: grid; gap: 10px; margin-bottom: 12px; }
+.rp-voce { display: grid; gap: 4px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--bordo); background: var(--carta); color: var(--testo); text-decoration: none; }
+.rqp-testa { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rp-cosa { font-size: .92rem; }
+.rp-stato { flex: none; font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 99px; text-align: center; }
+.rp-stato.attesa { background: #fff1d6; color: #8a5300; }
+.rp-stato.corso { background: #e3eef5; color: #00384f; }
+.rp-stato.ok { background: #e5f4dd; color: #1d5c10; }
+.rp-stato.no { background: #fcd9d9; color: #9b1c1c; }
+@media (prefers-color-scheme: dark) { .rp-stato.attesa { background: #4a3510; color: #ffd98a; } .rp-stato.corso { background: #12303f; color: #bfe0f2; } .rp-stato.ok { background: #1e3b16; color: #b9eaa0; } .rp-stato.no { background: #5a2222; color: #ffd4d4; } }
+
+/* Turni di tutti e anteprima: la riga dei giorni resta sempre in alto (Giulia, 25/11/2026). La tabella scorre
+   dentro il suo riquadro, in verticale e di lato, così l'intestazione sticky resta visibile */
+.vp-scorre { overflow: auto; max-height: calc(100dvh - 210px); overscroll-behavior: contain; }
+.vp-tabella thead th { z-index: 3; }
+.vp-tabella thead .vp-fissa { z-index: 4; }
