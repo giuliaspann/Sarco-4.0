@@ -79,7 +79,9 @@ def home(request):
     """Per l'operaio: pagina di scorciatoie (un pulsante grande per ogni cosa che può fare).
     HR, direzione e amministrazione hanno la home dell'ufficio (Giulia, 13/11/2026)."""
     dip = dipendente_di(request)
-    if dip is not None and dip.ruolo_app in RUOLI_UFFICIO:
+    from .accessi import e_ufficio_dip
+
+    if e_ufficio_dip(dip):  # anche il Responsabile Impianto (Giulia, 25/11/2026)
         from .views_menu import home_ufficio
 
         return home_ufficio(request)

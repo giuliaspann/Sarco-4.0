@@ -48,8 +48,10 @@ def nome_utente_per(dip):
 # Gestione accessi: i ruoli da scegliere (Giulia, 13/11/2026). «Operaio» vale per OdL e Capi Turno
 # (il Capo Turno lo decide il file turni); «Ufficio» è uno solo: chi è già direzione o amministrazione lo resta,
 # gli altri diventano ufficio (HR / ufficio turni).
-RUOLI_ACCESSO = [('RI', 'Responsabile Impianto'), ('RP', 'Responsabile Piazzale'), ('OPERAIO', 'Operaio (OdL e Capo Turno)'),
-                 ('MAN', 'Manutentore'), ('UFFICIO', 'Ufficio')]
+# Dal 25/11/2026: solo RI, RP, OdL e Ufficio; Capo Turno, Palista, Manutentore, Autista, Analista li dice ogni
+# settimana il file turni (alcuni hanno più competenze). Il Responsabile Impianto ha le stesse funzioni dell'ufficio.
+RUOLI_ACCESSO = [('RI', 'Responsabile Impianto'), ('RP', 'Responsabile Piazzale'), ('OPERAIO', 'OdL'),
+                 ('UFFICIO', 'Ufficio')]
 UFFICI = [('RESP_TURNI', 'HR / ufficio turni'), ('DIREZIONE', 'Direzione'), ('AMMINIS', 'Amministrazione')]
 
 
@@ -61,24 +63,24 @@ def ruolo_accesso(dip):
         return 'Responsabile Impianto'
     if dip.resp_piazzale:
         return 'Responsabile Piazzale'
-    if 'MANUTENTORE' in dip.mansioni:
-        return 'Manutentore'
-    return 'Operaio'
+    return 'OdL'
 
 
 def codice_ruolo(dip):
     """Il codice di RUOLI_ACCESSO che corrisponde al ruolo attuale (per preselezionarlo)."""
-    return {'Ufficio': 'UFFICIO', 'Responsabile Impianto': 'RI', 'Responsabile Piazzale': 'RP',
-            'Manutentore': 'MAN'}.get(ruolo_accesso(dip), 'OPERAIO')
+    return {'Ufficio': 'UFFICIO', 'Responsabile Impianto': 'RI', 'Responsabile Piazzale': 'RP'}.get(ruolo_accesso(dip), 'OPERAIO')
+
+
+def e_ufficio_dip(dip):
+    """Ufficio (HR, Direzione, Amministrazione) e Responsabile Impianto: per ora funzioni identiche (Giulia, 25/11/2026)."""
+    return bool(dip) and (dip.ruolo_app in dict(UFFICI) or dip.resp_impianto)
 
 
 def imposta_ruolo(dip, ruolo, ufficio=''):
     """Applica il ruolo scelto in Gestione accessi."""
-    mansioni = [m for m in dip.mansioni if m != 'MANUTENTORE']
+    mansioni = list(dip.mansioni)  # le competenze non si toccano: arrivano dal file turni
     dip.resp_impianto = ruolo == 'RI'
     dip.resp_piazzale = ruolo == 'RP'
-    if ruolo == 'MAN':
-        mansioni.append('MANUTENTORE')
     if ruolo == 'UFFICIO':
         dip.ruolo_app = dip.ruolo_app if dip.ruolo_app in dict(UFFICI) else 'RESP_TURNI'
         mansioni = [m for m in mansioni if m != 'OPERAIO'] + (['UFFICIO'] if 'UFFICIO' not in mansioni else [])
@@ -98,7 +100,7 @@ def crea_credenziali(dip):
         dip.save(update_fields=['utente'])
     utente.set_password(pin)  # cambia anche l'impronta di sessione: il vecchio PIN smette di valere ovunque
     utente.is_active = True
-    ufficio = dip.ruolo_app in dict(UFFICI)
+    ufficio = e_ufficio_dip(dip)
     if not utente.is_superuser:
         # tutto l'ufficio ha le stesse funzioni del profilo «ufficio»: carica turni, gestione accessi,
         # richieste da approvare (Giulia, 25/11/2026; prima solo HR / ufficio turni)

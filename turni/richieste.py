@@ -109,7 +109,8 @@ def destinatari_avviso_assenza(avviso):
 
     U = get_user_model()
     ids = set(_responsabili_turni())
-    ids |= set(U.objects.filter(is_active=True).filter(Q(dipendente__resp_piazzale=True) | Q(dipendente__resp_impianto=True))
+    ids |= set(U.objects.filter(is_active=True).filter(Q(dipendente__resp_piazzale=True) | Q(dipendente__resp_impianto=True)
+                                                       | Q(dipendente__ruolo_app__in=('RESP_TURNI', 'DIREZIONE', 'AMMINIS')))
                .values_list('pk', flat=True))
     turno = Turno.objects.filter(dipendente=avviso.dipendente, data=avviso.data).first()
     if turno and turno.postazione == 'IMP1':
@@ -248,6 +249,11 @@ def ferie_approvate(dipendente, giorno):
 # ---------------------------------------------------------------- turni extra (volontari)
 
 
+# ruolo del turno extra → sigla del ruolo nel Layout Turni
+SIGLA_COMPETENZA = {'OPERAIO': 'OdL', 'MANUTENTORE': 'Man', 'PALISTA': 'Pal', 'AUTISTA': 'Aut', 'ANALISTA': 'AL',
+                    'PIAZZALE': 'SP'}
+
+
 def ha_mansione(dipendente, ruolo):
     """Può rispondere a una richiesta per quel ruolo? I palisti si riconoscono anche dai turni
     da palista dell'ultimo mese, così l'ufficio non deve impostarli tutti a mano."""
@@ -255,13 +261,16 @@ def ha_mansione(dipendente, ruolo):
 
     if not ruolo or ruolo in dipendente.mansioni:
         return True
-    if ruolo == Mansione.PALISTA:
-        da = timezone.localdate() - timedelta(days=31)
-        return dipendente.turni.filter(postazione=Postazione.PALISTA, data__gte=da).exists()
-    if ruolo == 'CT':  # Capo Turno: chi l'ha fatto negli ultimi due mesi
-        da = timezone.localdate() - timedelta(days=62)
-        return dipendente.turni.filter(capoturno=True, data__gte=da).exists()
-    return False
+    # le competenze le dice ogni settimana il file turni (Giulia, 25/11/2026): chi ha fatto quel ruolo
+    # negli ultimi due mesi può rispondere, anche se ha più competenze
+    da = timezone.localdate() - timedelta(days=62)
+    turni = dipendente.turni.filter(data__gte=da)
+    if ruolo == 'CT':
+        return turni.filter(capoturno=True).exists()
+    if ruolo == Mansione.PALISTA and turni.filter(postazione=Postazione.PALISTA).exists():
+        return True
+    sigla = SIGLA_COMPETENZA.get(ruolo)
+    return bool(sigla) and turni.filter(Q(ruolo=sigla) | Q(incarichi__contains=f'/{sigla}')).exists()
 
 
 def extra_per(dipendente):

@@ -189,7 +189,25 @@ class RegoleTest(TestCase):
 
 
 class RuoliAccessoTest(TestCase):
-    """Gestione accessi: Responsabile Impianto, Responsabile Piazzale, Operaio, Manutentore, Ufficio (Giulia, 13/11/2026)."""
+    """Gestione accessi: Responsabile Impianto, Responsabile Piazzale, OdL, Ufficio (Giulia, 13/11 e 25/11/2026)."""
+
+    def test_competenze_dal_file_turni(self):
+        """Chi negli ultimi due mesi ha fatto il manutentore o l'autista nel file turni risponde a quelle richieste."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from .models import Settimana, Turno
+        from .richieste import ha_mansione
+
+        d = Dipendente.objects.create(nome='BIANCHI LUCA')
+        oggi = timezone.localdate()
+        s = Settimana.objects.create(lunedi=oggi - timedelta(days=oggi.weekday()))
+        Turno.objects.create(settimana=s, dipendente=d, data=oggi, fascia='1T', postazione='MANUT', ruolo='Man',
+                             incarichi='MANUT/Man IMP1/Aut')
+        self.assertTrue(ha_mansione(d, 'MANUTENTORE'))
+        self.assertTrue(ha_mansione(d, 'AUTISTA'))
+        self.assertFalse(ha_mansione(d, 'ANALISTA'))
 
     def setUp(self):
         hr = Dipendente.objects.create(nome='ANCORA MARTA', ruolo_app=RuoloApp.RESP_TURNI)
@@ -205,12 +223,21 @@ class RuoliAccessoTest(TestCase):
 
     def test_ruoli(self):
         r = self.client.get(reverse('turni:accessi'))
-        for testo in ('Responsabile Impianto', 'Responsabile Piazzale', 'Operaio (OdL e Capo Turno)', 'Manutentore', 'Ufficio'):
+        # dal 25/11/2026: RI, RP, OdL, Ufficio; le altre competenze arrivano dal file turni
+        for testo in ('>Responsabile Impianto<', '>Responsabile Piazzale<', '>OdL<', '>Ufficio<'):
             self.assertContains(r, testo)
+        self.assertNotContains(r, '>Manutentore<')
         self.assertNotContains(r, 'Quale ufficio')
-        self.assertTrue(self.attiva('MARINO LEO', 'RI').resp_impianto)
+        ri = self.attiva('MARINO LEO', 'RI')
+        self.assertTrue(ri.resp_impianto)
+        self.assertTrue(ri.utente.is_staff)  # il RI ha le funzioni dell'ufficio
+        self.assertTrue(ri.utente.has_perm('turni.approva_richieste'))
+        self.client.force_login(ri.utente)
+        self.assertEqual(self.client.get(reverse('turni:accessi')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('turni:importa')).status_code, 200)
+        self.assertContains(self.client.get(reverse('turni:home')), 'Gestione accessi')  # home dell'ufficio
+        self.client.force_login(Dipendente.objects.get(nome='ANCORA MARTA').utente)
         self.assertTrue(self.attiva('LOMBARDI GINO', 'RP').resp_piazzale)
-        self.assertIn('MANUTENTORE', self.attiva('NERI UGO', 'MAN').mansioni)
         op = self.attiva('ROSSI MARIO', 'OPERAIO')
         self.assertEqual((op.ruolo_app, op.resp_impianto, op.resp_piazzale), ('OPERAIO', False, False))
         uff = self.attiva('VERDI ANNA', 'UFFICIO')

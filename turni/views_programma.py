@@ -13,6 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.db.models import Q
 from django.utils import timezone
 
 from . import manutenzione as mn
@@ -64,7 +65,9 @@ def interessati(giorno, turno, impianto):
     turni = Turno.objects.filter(data=giorno, fascia=FASCIA_DI[turno], dipendente__attivo=True).select_related('dipendente')
     ids = [t.dipendente.utente_id for t in turni if t.postazione in postazioni or t.capoturno]
     ids += [d.utente_id for d in mn.manutentori()] + mn.responsabili()
-    ids += list(Dipendente.objects.filter(attivo=True).filter(resp_impianto=True).values_list('utente_id', flat=True))
+    # Responsabile Impianto e ufficio ricevono le stesse cose (Giulia, 25/11/2026)
+    ids += list(Dipendente.objects.filter(attivo=True).filter(Q(resp_impianto=True) | Q(ruolo_app__in=('RESP_TURNI', 'DIREZIONE', 'AMMINIS')))
+                .values_list('utente_id', flat=True))
     ids += list(Dipendente.objects.filter(attivo=True).filter(resp_piazzale=True).values_list('utente_id', flat=True))
     return [i for i in dict.fromkeys(ids) if i]
 

@@ -14,7 +14,7 @@ def navigazione(request):
     # un dipendente collegato non basta per avere turni fisici (es. direzione/HR/amministrazione
     # possono avere un dipendente collegato per altri motivi): solo ruolo_app OPERAIO li ha davvero
     grezzo = getattr(user, 'dipendente', None)
-    dip = grezzo if grezzo and grezzo.ruolo_app == RuoloApp.OPERAIO else None
+    dip = grezzo if grezzo and grezzo.ruolo_app == RuoloApp.OPERAIO and not grezzo.resp_impianto else None
     responsabile = e_responsabile(user)
     contesto = {
         'nav_capoturno': e_capoturno(user, timezone.localdate()),

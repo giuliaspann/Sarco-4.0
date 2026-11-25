@@ -80,7 +80,7 @@ def e_ufficio(utente):
     if utente.is_superuser or utente.is_staff:
         return True
     dip = getattr(utente, 'dipendente', None)
-    return dip is not None and dip.attivo and ('UFFICIO' in dip.mansioni or dip.ruolo_app != RuoloApp.OPERAIO)
+    return dip is not None and dip.attivo and ('UFFICIO' in dip.mansioni or dip.ruolo_app != RuoloApp.OPERAIO or dip.resp_impianto)
 
 
 def solo_ufficio(vista):

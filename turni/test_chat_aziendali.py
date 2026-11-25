@@ -81,6 +81,6 @@ class ChatAziendaliTest(TestCase):
         utente = get_user_model().objects.get(username=username)
         self.assertTrue(utente.is_staff)
         self.assertTrue(e_responsabile(utente))
-        # la direzione invece no: entra nelle chat ma non approva i turni
+        # dal 25/11/2026 anche la direzione ha le funzioni dell'ufficio (Giulia)
         username, _ = accessi.crea_credenziali(Dipendente.objects.get(nome='MARCHESE LEONARDO'))
-        self.assertFalse(e_responsabile(get_user_model().objects.get(username=username)))
+        self.assertTrue(e_responsabile(get_user_model().objects.get(username=username)))
