@@ -5,6 +5,7 @@
 <div class="intestazione"><h1>Turni</h1></div>
 
 <div class="mn-capo">
+  <a class="mn-capo-tasto" href="{% url 'turni:settimana_tutti' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span><span><b>Vedi i turni di tutti</b></span><span class="sg-freccia">›</span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:importa' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></span><span><b>Carica turni della settimana</b></span><span class="sg-freccia">›</span></a>
   <a class="mn-capo-tasto" href="{% url 'turni:ufficio_extra_nuovo' %}"><span class="ig-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-4 3-6 6.5-6s6 2 6.5 6M19 8v6M16 11h6"/></svg></span><span><b>Richiedi turno extra</b></span><span class="sg-freccia">›</span></a>
 </div>

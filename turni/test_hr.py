@@ -183,6 +183,7 @@ class UfficioNuovoTest(TestCase):
         self.assertEqual(TurnoExtra.objects.get().posti, 2)
         self.assertTrue(Notifica.objects.filter(utente=self.op.utente, titolo='Cercasi turno extra').exists())
         self.assertContains(self.client.get(reverse('turni:ufficio_turni')), 'Mancano 2 su 2')
+        self.assertContains(self.client.get(reverse('turni:ufficio_turni')), 'Vedi i turni di tutti')
 
 
 class ElencoDipendentiTest(TestCase):
