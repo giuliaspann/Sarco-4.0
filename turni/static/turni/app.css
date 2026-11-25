@@ -2961,3 +2961,11 @@ body.in-chat .avviso { position: fixed; z-index: 30; left: 12px; right: 12px; to
 .vp-scorre { overflow: auto; max-height: calc(100dvh - 210px); overscroll-behavior: contain; }
 .vp-tabella thead th { z-index: 3; }
 .vp-tabella thead .vp-fissa { z-index: 4; }
+
+/* chi ha messo le reazioni (Giulia, 25/11/2026) */
+.wa-reazioni { cursor: pointer; }
+.wa-chi-dlg .wa-chi-titolo { margin: 0 0 12px; font-size: 1.05rem; font-weight: 700; text-align: center; }
+.wa-chi-riga { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--bordo); }
+.wa-chi-emoji { font-size: 1.4rem; line-height: 1; flex: none; }
+.wa-chi-nomi { font-size: .98rem; line-height: 1.35; }
+.wa-chi-chiudi { width: 100%; min-height: 46px; margin-top: 12px; display: flex; align-items: center; justify-content: center; }

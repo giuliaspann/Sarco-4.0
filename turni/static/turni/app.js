@@ -380,7 +380,28 @@ async function iscrivi(riquadro) {
     foglio.hidden = false;
     document.body.classList.add('foglio-aperto');
   }
+  // tocco sulle reazioni sotto il fumetto: chi ha messo cosa, come WhatsApp (Giulia, 25/11/2026)
+  function chiHaReagito(box) {
+    const d = el('dialog', 'conferma-dlg wa-chi-dlg');
+    d.appendChild(el('p', 'wa-chi-titolo', 'Reazioni'));
+    box.querySelectorAll('.wa-reazione').forEach(r => {
+      const riga = el('div', 'wa-chi-riga');
+      riga.appendChild(el('span', 'wa-chi-emoji', r.firstChild ? r.firstChild.textContent : ''));
+      riga.appendChild(el('span', 'wa-chi-nomi', r.title || ''));
+      d.appendChild(riga);
+    });
+    const ok = el('button', 'bottone wa-chi-chiudi', 'Chiudi');
+    ok.type = 'button';
+    ok.addEventListener('click', () => d.close());
+    d.appendChild(ok);
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });
+    document.body.appendChild(d);
+    if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+  }
   chat.addEventListener('click', e => {
+    const reazioni = e.target.closest('.wa-reazioni');
+    if (reazioni && reazioni.children.length) { e.preventDefault(); chiHaReagito(reazioni); return; }
     if (e.target.closest('a, button, video, form, input, [data-vai]')) return;
     const b = e.target.closest('.wa-msg');
     if (b && !b.classList.contains('bacheca')) apri(b);
