@@ -258,6 +258,9 @@ def ha_mansione(dipendente, ruolo):
     if ruolo == Mansione.PALISTA:
         da = timezone.localdate() - timedelta(days=31)
         return dipendente.turni.filter(postazione=Postazione.PALISTA, data__gte=da).exists()
+    if ruolo == 'CT':  # Capo Turno: chi l'ha fatto negli ultimi due mesi
+        da = timezone.localdate() - timedelta(days=62)
+        return dipendente.turni.filter(capoturno=True, data__gte=da).exists()
     return False
 
 

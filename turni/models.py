@@ -878,7 +878,9 @@ class TurnoExtra(models.Model):
     # chi può offrirsi: vuoto = chiunque
     ruolo = models.CharField(
         'chi serve', max_length=12, blank=True,
-        choices=[c for c in Mansione.choices if c[0] != Mansione.UFFICIO],
+        # «Capo Turno» si può cercare come gli altri ruoli (Giulia, 25/11/2026)
+        choices=[('CT', 'Capo Turno'), (Mansione.OPERAIO, 'Operatore di Linea')]
+        + [c for c in Mansione.choices if c[0] not in (Mansione.UFFICIO, Mansione.OPERAIO)],
     )
     posti = models.PositiveSmallIntegerField(default=1)
     nota = models.CharField(max_length=300, blank=True)

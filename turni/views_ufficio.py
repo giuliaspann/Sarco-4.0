@@ -161,7 +161,9 @@ def turni(request):
 
 @login_required
 def extra_nuovo(request):
-    """Richiedi turno extra: quando, quale turno, quale area e chi serve. Tutti gli operai ricevono la notifica."""
+    """Richiedi turno extra: quando, quale turno, quale area e chi serve, anche più ruoli insieme
+    (es. 1 Capo Turno, 3 Operatori di Linea, 1 Palista: proposta B «Aggiungi righe», Giulia 25/11/2026).
+    Ogni riga diventa un turno extra a sé; ogni operaio riceve una sola notifica."""
     if not (request.user.is_staff or svc.e_responsabile(request.user)):
         raise PermissionDenied
     oggi = timezone.localdate()
@@ -174,27 +176,37 @@ def extra_nuovo(request):
             giorno = None
         fascia = request.POST.get('fascia')
         postazione = request.POST.get('postazione', '')
-        ruolo = request.POST.get('ruolo', '')
-        try:
-            posti = max(1, min(20, int(request.POST.get('posti') or 1)))
-        except ValueError:
-            posti = 1
+        righe = {}  # ruolo -> quante persone; lo stesso ruolo su due righe si somma
+        for ruolo, n in zip(request.POST.getlist('ruolo') or [''], request.POST.getlist('posti') or ['1']):
+            ruolo = ruolo if ruolo in dict(ruoli) else ''
+            try:
+                n = max(1, min(20, int(n or 1)))
+            except ValueError:
+                n = 1
+            righe[ruolo] = min(20, righe.get(ruolo, 0) + n)
         if not giorno or giorno < oggi or fascia not in dict(fasce):
             messages.error(request, 'Scegli un giorno da oggi in poi e il turno.')
+        elif not righe:
+            messages.error(request, 'Indica chi serve.')
         else:
-            e = TurnoExtra.objects.create(
-                data=giorno, fascia=fascia, postazione=postazione if postazione in Postazione.values else '',
-                ruolo=ruolo if ruolo in dict(ruoli) else '', posti=posti, nota=(request.POST.get('nota') or '')[:300],
-                creata_da=request.user)
+            postazione = postazione if postazione in Postazione.values else ''
+            nota = (request.POST.get('nota') or '')[:300]
+            creati = [TurnoExtra.objects.create(data=giorno, fascia=fascia, postazione=postazione, ruolo=ruolo, posti=n,
+                                                nota=nota, creata_da=request.user) for ruolo, n in righe.items()]
+            squadra = ', '.join(f'{e.posti} {e.get_ruolo_display() if e.ruolo else "operai"}' for e in creati)
+            # una sola notifica a testa, anche se l'operaio va bene per più ruoli
             liberi = [d for d in Dipendente.objects.filter(attivo=True, utente__isnull=False)
-                      if svc.ha_mansione(d, e.ruolo) and not d.turni.filter(data=giorno, fascia__in=list(FASCE_LAVORATIVE)).exists()]
+                      if any(svc.ha_mansione(d, e.ruolo) for e in creati)
+                      and not d.turni.filter(data=giorno, fascia__in=list(FASCE_LAVORATIVE)).exists()]
+            e = creati[0]
             push.invia([d.utente_id for d in liberi], 'Cercasi turno extra',
                        f'{_g(giorno)} · {e.get_fascia_display()}' + (f' · {e.get_postazione_display()}' if e.postazione else '')
-                       + f' · servono {posti}', reverse('turni:miei_turni'), mittente=request.user)
-            messages.success(request, f'Richiesta inviata a {len(liberi)} operai: chi è disponibile lo conferma dall\'app.')
+                       + f' · servono {squadra}', reverse('turni:miei_turni'), mittente=request.user)
+            messages.success(request, f'Richiesta inviata a {len(liberi)} operai ({squadra}): chi è disponibile lo conferma dall\'app.')
             return redirect('turni:ufficio_turni')
     return render(request, 'turni/uff_extra_nuovo.html', {
         'fasce': fasce, 'ruoli': [r for r in ruoli if r[0]], 'postazioni': Postazione.choices, 'oggi': oggi.isoformat(),
+        'altre_righe': range(7),
     })
 
 

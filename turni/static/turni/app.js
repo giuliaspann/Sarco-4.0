@@ -918,3 +918,21 @@ document.querySelectorAll('select[data-mostra-se]').forEach(s => {
   s.addEventListener('change', aggiorna);
   aggiorna();
 });
+
+// Richiedi turno extra: «+ Aggiungi un ruolo» mostra una riga in più, la × la toglie (Giulia, 25/11/2026)
+document.querySelectorAll('[data-ex-ruoli]').forEach(box => {
+  const aggiungi = box.querySelector('[data-ex-aggiungi]');
+  const righe = [...box.querySelectorAll('[data-ex-riga]')];
+  const mostra = (riga, si) => {
+    riga.hidden = !si;
+    riga.querySelectorAll('select, input').forEach(c => { c.disabled = !si; if (!si) c.value = c.tagName === 'INPUT' ? '1' : ''; });
+  };
+  const aggiorna = () => { aggiungi.hidden = righe.every(r => !r.hidden); };
+  aggiungi.addEventListener('click', () => {
+    const riga = righe.find(r => r.hidden);
+    if (riga) { mostra(riga, true); riga.querySelector('select').focus(); }
+    aggiorna();
+  });
+  righe.forEach(r => r.querySelector('[data-ex-togli]').addEventListener('click', () => { mostra(r, false); aggiorna(); }));
+  aggiorna();
+});

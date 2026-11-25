@@ -185,6 +185,18 @@ class UfficioNuovoTest(TestCase):
         self.assertContains(self.client.get(reverse('turni:ufficio_turni')), 'Mancano 2 su 2')
         self.assertContains(self.client.get(reverse('turni:ufficio_turni')), 'Vedi i turni di tutti')
 
+    def test_turno_extra_con_piu_ruoli(self):
+        """1 Capo Turno, 3 Operatori di Linea, 1 Palista: un turno extra per ruolo, una notifica a testa."""
+        from .models import Notifica, TurnoExtra
+
+        self.assertContains(self.client.get(reverse('turni:ufficio_extra_nuovo')), 'Aggiungi un ruolo')
+        self.client.post(reverse('turni:ufficio_extra_nuovo'), {
+            'data': timezone.localdate().isoformat(), 'fascia': '1T', 'postazione': 'IMP1',
+            'ruolo': ['CT', 'OPERAIO', 'PALISTA', 'OPERAIO'], 'posti': ['1', '2', '1', '1']})
+        self.assertEqual(sorted(TurnoExtra.objects.values_list('ruolo', 'posti')), [('CT', 1), ('OPERAIO', 3), ('PALISTA', 1)])
+        self.assertEqual(Notifica.objects.filter(utente=self.op.utente, titolo='Cercasi turno extra').count(), 1)
+        self.assertIn('1 Capo Turno, 3 Operatore di Linea, 1 Palista', Notifica.objects.get(utente=self.op.utente).testo)
+
 
 class ElencoDipendentiTest(TestCase):
     """Elenco dipendenti dal foglio «Elenco Dipendenti, Aree e Orari» e accesso per tutti (nomi inventati)."""

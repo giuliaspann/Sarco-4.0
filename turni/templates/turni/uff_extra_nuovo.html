@@ -10,12 +10,25 @@
     <label class="mc-campo">Turno<select name="fascia" required>{% for v, n in fasce %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
   </div>
   <label class="mc-campo">Area<select name="postazione"><option value="">Qualsiasi</option>{% for v, n in postazioni %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
-  <div class="mc-due">
-    <label class="mc-campo">Chi serve<select name="ruolo"><option value="">Qualsiasi operaio</option>{% for v, n in ruoli %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select></label>
-    <label class="mc-campo">Quante persone<input type="number" name="posti" min="1" max="20" value="1" inputmode="numeric"></label>
+  {# Chi serve: una riga per ruolo con quante persone; «+ Aggiungi un ruolo» mostra la riga dopo (proposta B, Giulia 25/11/2026) #}
+  <div class="ex-ruoli" data-ex-ruoli>
+    <div class="ex-riga ex-testa"><span>Chi serve</span><span>Quante</span><span></span></div>
+    <div class="ex-riga">
+      <select name="ruolo" aria-label="Chi serve"><option value="">Qualsiasi operaio</option>{% for v, n in ruoli %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select>
+      <input type="number" name="posti" min="1" max="20" value="1" inputmode="numeric" aria-label="Quante persone">
+      <span></span>
+    </div>
+    {% for i in altre_righe %}
+    <div class="ex-riga" data-ex-riga hidden>
+      <select name="ruolo" aria-label="Chi serve" disabled><option value="">Qualsiasi operaio</option>{% for v, n in ruoli %}<option value="{{ v }}">{{ n }}</option>{% endfor %}</select>
+      <input type="number" name="posti" min="1" max="20" value="1" inputmode="numeric" aria-label="Quante persone" disabled>
+      <button type="button" class="ex-togli" data-ex-togli aria-label="Togli questo ruolo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    {% endfor %}
+    <button type="button" class="ex-aggiungi" data-ex-aggiungi hidden>+ Aggiungi un ruolo</button>
   </div>
   <label class="mc-campo">Nota (facoltativa)<input type="text" name="nota" maxlength="300"></label>
-  <p class="tenue piccolo">Tutti gli operai liberi quel giorno ricevono la notifica e toccano «Sono disponibile»: i primi che rispondono coprono i posti e il turno entra subito nel loro calendario. Ricevi una notifica a ogni risposta.</p>
+  <p class="tenue piccolo">Gli operai liberi quel giorno che fanno quel ruolo ricevono la notifica e toccano «Sono disponibile»: i primi che rispondono coprono i posti e il turno entra subito nel loro calendario. Ricevi una notifica a ogni risposta.</p>
   <button class="bottone pieno piena-larghezza">Invia la richiesta</button>
 </form>
 {% endblock %}
