@@ -181,6 +181,9 @@ async function iscrivi(riquadro) {
   if (dentro && window.visualViewport) {
     const vv = window.visualViewport, radice = document.documentElement.style;
     const adatta = () => {
+      // la pagina non deve scorrere: se il telefono la sposta per far posto alla tastiera, la barra con il nome
+      // del gruppo uscirebbe dallo schermo (bug 25/11/2026). La riportiamo su e la chat si stringe sopra la tastiera
+      if (window.scrollY) window.scrollTo(0, 0);
       const inFondo = sfondo.scrollTop + sfondo.clientHeight >= sfondo.scrollHeight - 60;
       radice.setProperty('--vv-h', vv.height + 'px');
       radice.setProperty('--vv-top', vv.offsetTop + 'px');
@@ -189,6 +192,8 @@ async function iscrivi(riquadro) {
     };
     vv.addEventListener('resize', adatta);
     vv.addEventListener('scroll', adatta);
+    window.addEventListener('scroll', () => { if (window.scrollY) window.scrollTo(0, 0); }, { passive: true });
+    document.addEventListener('focusin', e => { if (e.target.closest('.wa-scrivi')) { setTimeout(adatta, 60); setTimeout(adatta, 350); } });
     adatta();
   }
   // bacheca: tocco sul fumetto (per l'ufficio) compare "Elimina"

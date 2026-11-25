@@ -74,7 +74,7 @@
     </div>
 
     <div class="wa-sfondo" id="chat" data-ultimo="{{ ultimo_id }}" data-url="{% url 'turni:chat_nuovi' %}?chat={{ chat_aperta.pk }}" data-direzione="{{ direzione|yesno:'1,' }}" data-reazione="{% url 'turni:reazione_chat' 0 %}">
-      <p class="wa-info">Per ritardi e uscite usa <a href="{% url 'turni:nuovo_avviso' %}">Ritardo / uscita</a>: lo vedono solo ufficio e Capo Turno.</p>
+      {# tolto il promemoria su ritardi e uscite: non serve (Giulia, 25/11/2026) #}
       {% for m in chat %}
         {% if m.nuovo_giorno %}<div class="wa-data" data-giorno="{{ m.giorno }}"><span>{{ m.etichetta_giorno }}</span></div>{% endif %}
         {# tocca un fumetto: reazioni, Rispondi, Chi l'ha letto, Elimina. Scorri a destra = rispondi, scorri a sinistra un tuo messaggio = chi l'ha letto (Giulia, 22/11) #}
