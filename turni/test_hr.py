@@ -164,6 +164,20 @@ class UfficioNuovoTest(TestCase):
         self.client.post(reverse('turni:accessi'), {'azione': 'disattiva', 'dipendente': self.nuovo.pk})
         self.nuovo.utente.refresh_from_db()
         self.assertFalse(self.nuovo.utente.is_active)
+        # «Accesso per tutti» non riattiva chi è stato disattivato (25/11/2026)
+        self.client.post(reverse('turni:accessi'), {'azione': 'tutti'})
+        self.nuovo.utente.refresh_from_db()
+        self.assertFalse(self.nuovo.utente.is_active)
+        r = self.client.get(reverse('turni:accessi'))
+        self.assertContains(r, ' · disattivato</option>')
+        self.assertContains(r, 'data-ruolo="UFFICIO"')  # il ruolo attuale, da preselezionare
+
+    def test_non_si_disattiva_il_proprio_accesso(self):
+        mio = Dipendente.objects.create(nome='SPANO GIULIA', utente=self.uff, ruolo_app='RESP_TURNI')
+        r = self.client.post(reverse('turni:accessi'), {'azione': 'disattiva', 'dipendente': mio.pk}, follow=True)
+        self.assertContains(r, 'Non puoi disattivare il tuo accesso.')
+        self.uff.refresh_from_db()
+        self.assertTrue(self.uff.is_active)
 
     def test_anagrafica_e_pdf(self):
         r = self.client.get(reverse('turni:anagrafica'), {'dip': self.op.pk})

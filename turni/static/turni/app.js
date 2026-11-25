@@ -42,10 +42,41 @@ document.querySelectorAll('input[type=file][data-riduci]').forEach(input => {
 // Menu a tendina che salvano subito appena si sceglie
 document.querySelectorAll('select[data-invia], input[data-invia]').forEach(s => s.addEventListener('change', () => s.form.submit()));
 
-// Azioni irreversibili: chiedi conferma (il click arriva prima dell'invio del modulo)
+// Azioni irreversibili: chiedi conferma con una finestra dell'app, non con confirm() del browser,
+// che alcuni browser (anche quello integrato di Claude) bloccano rispondendo «Annulla» (Giulia, 25/11/2026)
+window.chiediConferma = function (testo, conferma) {
+  return new Promise(risolvi => {
+    const d = document.createElement('dialog');
+    d.className = 'conferma-dlg';
+    const p = document.createElement('p');
+    p.textContent = testo;
+    const tasti = document.createElement('div');
+    tasti.className = 'conferma-tasti';
+    const no = document.createElement('button');
+    no.type = 'button'; no.className = 'bottone'; no.textContent = 'Annulla';
+    const si = document.createElement('button');
+    si.type = 'button'; si.className = 'bottone conferma-si'; si.textContent = conferma || 'Conferma';
+    tasti.append(no, si);
+    d.append(p, tasti);
+    document.body.appendChild(d);
+    let esito = false;
+    const chiudi = v => { esito = v; d.close(); };
+    no.addEventListener('click', () => chiudi(false));
+    si.addEventListener('click', () => chiudi(true));
+    d.addEventListener('close', () => { d.remove(); risolvi(esito); });
+    if (typeof d.showModal === 'function') { d.showModal(); si.focus(); }
+    else { d.remove(); risolvi(window.confirm(testo)); }  // browser molto vecchi
+  });
+};
 document.querySelectorAll('[data-conferma]').forEach(b => {
   b.addEventListener('click', e => {
-    if (!confirm(b.dataset.conferma)) e.preventDefault();
+    if (b.dataset.confermato) { delete b.dataset.confermato; return; }
+    e.preventDefault();
+    window.chiediConferma(b.dataset.conferma, b.textContent.trim()).then(ok => {
+      if (!ok) return;
+      b.dataset.confermato = '1';
+      if (b.form && b.form.requestSubmit) b.form.requestSubmit(b); else b.click();
+    });
   });
 });
 
@@ -369,7 +400,7 @@ async function iscrivi(riquadro) {
       if (azione.dataset.azione === 'rispondi') { e.preventDefault(); chiudi(); rispondi(b); }
       else if (azione.dataset.azione === 'elimina') {
         e.preventDefault(); chiudi();
-        if (confirm('Eliminare questo messaggio per tutti?')) b.querySelector('.wa-elimina').submit();
+        window.chiediConferma('Eliminare questo messaggio per tutti?', 'Elimina').then(ok => { if (ok) b.querySelector('.wa-elimina').submit(); });
       }
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') chiudi(); });
@@ -935,4 +966,11 @@ document.querySelectorAll('[data-ex-ruoli]').forEach(box => {
   });
   righe.forEach(r => r.querySelector('[data-ex-togli]').addEventListener('click', () => { mostra(r, false); aggiorna(); }));
   aggiorna();
+});
+
+// Gestione accessi: scelto il nome, il ruolo va su quello attuale della persona (così un nuovo PIN non la declassa)
+document.querySelectorAll('select[data-ruolo-in]').forEach(s => {
+  const ruolo = document.querySelector(s.dataset.ruoloIn);
+  if (!ruolo) return;
+  s.addEventListener('change', () => { const o = s.selectedOptions[0]; if (o && o.dataset.ruolo) ruolo.value = o.dataset.ruolo; });
 });

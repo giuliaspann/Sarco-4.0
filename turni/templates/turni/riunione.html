@@ -40,8 +40,8 @@
   {% endfor %}
 </div>
 {% if not r.annullata and not finita %}
-<form method="post" class="rn-annulla" onsubmit="return confirm('Annullare la riunione? Gli invitati vengono avvisati.');">{% csrf_token %}
-  <button class="bottone avviso-btn piena-larghezza" name="azione" value="annulla">Annulla riunione</button>
+<form method="post" class="rn-annulla">{% csrf_token %}
+  <button class="bottone avviso-btn piena-larghezza" name="azione" value="annulla" data-conferma="Annullare la riunione? Gli invitati vengono avvisati.">Annulla riunione</button>
 </form>
 {% endif %}
 {% endif %}

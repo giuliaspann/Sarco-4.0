@@ -235,9 +235,10 @@ def accessi_view(request):
                     messages.success(request, f'Elenco aggiornato: {len(nuovi)} nuovi dipendenti, {len(presenti)} già presenti.')
             return redirect('turni:accessi')
         if azione == 'tutti':
-            senza = list(Dipendente.objects.filter(attivo=True).filter(Q(utente__isnull=True) | Q(utente__is_active=False)).order_by('nome'))
+            # solo chi non ha mai avuto l'accesso: chi è stato disattivato si riattiva uno per uno (25/11/2026)
+            senza = list(Dipendente.objects.filter(attivo=True, utente__isnull=True).order_by('nome'))
             if not senza:
-                messages.info(request, "Tutti i dipendenti hanno già l'accesso.")
+                messages.info(request, "Tutti i dipendenti hanno già avuto l'accesso: chi è disattivato si riattiva da «Attiva accesso».")
                 return redirect('turni:accessi')
             from .views import _consegna_credenziali
             return _consegna_credenziali(request, senza)  # le tessere di tutti, una volta sola
@@ -252,15 +253,24 @@ def accessi_view(request):
             dip.save(update_fields=['attivo'])
             from .views import _consegna_credenziali
             return _consegna_credenziali(request, [dip])  # la tessera con nome utente e PIN, una volta sola
-        if dip.utente:
+        if azione != 'disattiva':
+            return redirect('turni:accessi')
+        if dip.utente_id == request.user.pk:
+            messages.error(request, 'Non puoi disattivare il tuo accesso.')
+        elif dip.utente:
             dip.utente.is_active = False
             dip.utente.save(update_fields=['is_active'])
             messages.success(request, f'Accesso di {dip.nome_breve} disattivato: lo storico resta.')
         return redirect('turni:accessi')
+    from .accessi import codice_ruolo
+
     tutti = list(Dipendente.objects.filter(attivo=True).select_related('utente').order_by('nome'))
+    for d in tutti:
+        d.codice_ruolo = codice_ruolo(d)
     return render(request, 'turni/uff_accessi.html', {
-        'da_attivare': [d for d in tutti if not d.utente or not d.utente.is_active],
-        'attivi': [d for d in tutti if d.utente and d.utente.is_active],
+        'da_attivare': [d for d in tutti if not d.utente],
+        'disattivati': [d for d in tutti if d.utente and not d.utente.is_active],
+        'attivi': [d for d in tutti if d.utente and d.utente.is_active and d.utente_id != request.user.pk],
         'tutti': tutti,
         'ruoli': __import__('turni.accessi', fromlist=['RUOLI_ACCESSO']).RUOLI_ACCESSO,
     })

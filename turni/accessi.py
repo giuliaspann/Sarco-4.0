@@ -66,6 +66,12 @@ def ruolo_accesso(dip):
     return 'Operaio'
 
 
+def codice_ruolo(dip):
+    """Il codice di RUOLI_ACCESSO che corrisponde al ruolo attuale (per preselezionarlo)."""
+    return {'Ufficio': 'UFFICIO', 'Responsabile Impianto': 'RI', 'Responsabile Piazzale': 'RP',
+            'Manutentore': 'MAN'}.get(ruolo_accesso(dip), 'OPERAIO')
+
+
 def imposta_ruolo(dip, ruolo, ufficio=''):
     """Applica il ruolo scelto in Gestione accessi."""
     mansioni = [m for m in dip.mansioni if m != 'MANUTENTORE']

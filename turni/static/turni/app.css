@@ -2931,3 +2931,12 @@ body.in-chat .avviso { position: fixed; z-index: 30; left: 12px; right: 12px; to
 .ex-togli svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; }
 .ex-aggiungi { min-height: 46px; border-radius: 12px; border: 1.5px dashed var(--verde, #3aaa35); background: color-mix(in srgb, #3aaa35 8%, var(--carta)); color: #2f7a12; font-weight: 700; font-size: .95rem; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit; }
 @media (prefers-color-scheme: dark) { .ex-togli { background: #5a2222; color: #ffd4d4; border-color: #7a3030; } .ex-aggiungi { color: #a6e08f; } }
+
+/* Finestra di conferma dell'app al posto di confirm() del browser (Giulia, 25/11/2026) */
+.conferma-dlg { border: 0; border-radius: 18px; padding: 20px; width: min(340px, calc(100vw - 32px)); background: var(--carta); color: var(--testo); box-shadow: 0 10px 40px rgba(0, 0, 0, .25); }
+.conferma-dlg::backdrop { background: rgba(0, 20, 30, .45); }
+.conferma-dlg p { margin: 0 0 18px; font-size: 1.05rem; font-weight: 600; text-align: center; line-height: 1.35; }
+.conferma-tasti { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.conferma-tasti .bottone { min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center; }
+.conferma-tasti .conferma-si { background: #fcd9d9; color: #9b1c1c; border: 1px solid #f5b5b5; font-weight: 700; }
+@media (prefers-color-scheme: dark) { .conferma-tasti .conferma-si { background: #5a2222; color: #ffd4d4; border-color: #7a3030; } }

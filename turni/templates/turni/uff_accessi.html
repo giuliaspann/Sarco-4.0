@@ -14,16 +14,16 @@
 {% if da_attivare %}
 <form method="post" class="scheda mc-form">{% csrf_token %}
   <h2>Accesso per tutti</h2>
-  <p class="tenue piccolo">{{ da_attivare|length }} dipendent{{ da_attivare|length|pluralize:'e,i' }} senza accesso. L'app crea nome utente e PIN per ognuno e mostra le tessere da stampare, una sola volta.</p>
+  <p class="tenue piccolo">{{ da_attivare|length }} dipendent{{ da_attivare|length|pluralize:'e,i' }} senza accesso. L'app crea nome utente e PIN per ognuno e mostra le tessere da stampare, una sola volta.{% if disattivati %} Chi è stato disattivato ({{ disattivati|length }}) non viene riattivato: si fa da «Attiva accesso».{% endif %}</p>
   <button class="bottone pieno piena-larghezza" name="azione" value="tutti" data-conferma="Creare l'accesso per {{ da_attivare|length }} dipendenti?">Attiva accesso per tutti ({{ da_attivare|length }})</button>
 </form>
 {% endif %}
 
 <form method="post" class="scheda mc-form">{% csrf_token %}
   <h2>Attiva accesso</h2>
-  <label class="mc-campo">Nome<select name="dipendente" required><option value="">Scegli…</option>{% for d in tutti %}<option value="{{ d.pk }}">{{ d.nome_breve }}{% if d.utente and d.utente.is_active %} · ha già l'accesso: nuovo PIN{% endif %}</option>{% endfor %}</select></label>
-  <label class="mc-campo">Ruolo<select name="ruolo">{% for v, n in ruoli %}<option value="{{ v }}"{% if v == 'OPERAIO' %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
-  <p class="tenue piccolo">L'app crea nome utente e PIN e li mostra una sola volta, da stampare o consegnare. Per chi ha già l'accesso crea un PIN nuovo e quello vecchio smette di funzionare.</p>
+  <label class="mc-campo">Nome<select name="dipendente" required data-ruolo-in="#ruolo-accesso"><option value="">Scegli…</option>{% for d in tutti %}<option value="{{ d.pk }}" data-ruolo="{{ d.codice_ruolo }}">{{ d.nome_breve }}{% if d.utente and d.utente.is_active %} · ha già l'accesso: nuovo PIN{% elif d.utente %} · disattivato{% endif %}</option>{% endfor %}</select></label>
+  <label class="mc-campo">Ruolo<select name="ruolo" id="ruolo-accesso">{% for v, n in ruoli %}<option value="{{ v }}"{% if v == 'OPERAIO' %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></label>
+  <p class="tenue piccolo">Scelto il nome, il ruolo va su quello che la persona ha già: cambialo solo se serve. L'app crea nome utente e PIN e li mostra una sola volta, da stampare o consegnare. Per chi ha già l'accesso crea un PIN nuovo e quello vecchio smette di funzionare.</p>
   <button class="bottone pieno piena-larghezza" name="azione" value="attiva">Attiva accesso</button>
 </form>
 
