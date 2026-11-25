@@ -127,6 +127,18 @@ class CaricamentoLayoutTest(TestCase):
         m = Turno.objects.get(dipendente__nome='MODELLO FRANCESCO', data=LUNEDI)
         self.assertIn('Sabbia - Sarco', m.descrizione)
 
+    def test_pubblicare_aggiorna_anche_l_elenco_dipendenti(self):
+        """L'elenco dipendenti si prende dal file turni (25/11/2026): chi è nell'Elenco e manca viene aggiunto."""
+        self.client.force_login(self.ufficio)
+        self.client.post(reverse('turni:importa'), {'file': file_layout()})
+        s = self.client.session
+        s['import_mo'] = [['VERDI ANNA', None], ['ODDO FEDERICO', 1]]  # come lo salva la sessione (JSON)
+        s.save()
+        r = self.client.post(reverse('turni:anteprima'), follow=True)
+        self.assertTrue(Dipendente.objects.filter(nome='VERDI ANNA').exists())
+        self.assertEqual(Dipendente.objects.get(nome='ODDO FEDERICO').livello_mo, 1)
+        self.assertContains(r, 'VERDI ANNA')
+
     def test_ricaricare_aggiorna_senza_doppioni(self):
         importa.salva_settimana(importa.leggi_file(file_layout(), LUNEDI))
         righe = [list(r) for r in RIGHE]

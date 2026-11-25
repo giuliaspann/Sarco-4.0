@@ -172,6 +172,20 @@ class UfficioNuovoTest(TestCase):
         self.assertContains(r, ' · disattivato</option>')
         self.assertContains(r, 'data-ruolo="UFFICIO"')  # il ruolo attuale, da preselezionare
 
+    def test_tutto_l_ufficio_ha_le_funzioni_del_profilo_ufficio(self):
+        """Anche Direzione e Amministrazione caricano i turni e gestiscono gli accessi (25/11/2026)."""
+        for ruolo_app in ('DIREZIONE', 'AMMINIS'):
+            d = Dipendente.objects.create(nome=f'PROVA {ruolo_app}', ruolo_app=ruolo_app)
+            self.client.force_login(self.uff)
+            self.client.post(reverse('turni:accessi'), {'azione': 'attiva', 'dipendente': d.pk, 'ruolo': 'UFFICIO'})
+            d.refresh_from_db()
+            self.assertEqual(d.ruolo_app, ruolo_app)
+            self.assertTrue(d.utente.is_staff)
+            self.assertTrue(d.utente.has_perm('turni.approva_richieste'))
+            self.client.force_login(d.utente)
+            self.assertEqual(self.client.get(reverse('turni:importa')).status_code, 200)
+            self.assertEqual(self.client.get(reverse('turni:accessi')).status_code, 200)
+
     def test_non_si_disattiva_il_proprio_accesso(self):
         mio = Dipendente.objects.create(nome='SPANO GIULIA', utente=self.uff, ruolo_app='RESP_TURNI')
         r = self.client.post(reverse('turni:accessi'), {'azione': 'disattiva', 'dipendente': mio.pk}, follow=True)

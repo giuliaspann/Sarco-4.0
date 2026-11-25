@@ -98,10 +98,13 @@ def crea_credenziali(dip):
         dip.save(update_fields=['utente'])
     utente.set_password(pin)  # cambia anche l'impronta di sessione: il vecchio PIN smette di valere ovunque
     utente.is_active = True
+    ufficio = dip.ruolo_app in dict(UFFICI)
     if not utente.is_superuser:
-        utente.is_staff = dip.ruolo_app == 'RESP_TURNI'  # pagine dell'ufficio HR solo per HR / ufficio turni
+        # tutto l'ufficio ha le stesse funzioni del profilo «ufficio»: carica turni, gestione accessi,
+        # richieste da approvare (Giulia, 25/11/2026; prima solo HR / ufficio turni)
+        utente.is_staff = ufficio
     utente.save()
-    if dip.ruolo_app == 'RESP_TURNI':
+    if ufficio:
         from django.contrib.auth.models import Permission
 
         utente.user_permissions.add(Permission.objects.get(codename='approva_richieste', content_type__app_label='turni'))

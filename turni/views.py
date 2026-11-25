@@ -1300,7 +1300,12 @@ def anteprima(request):
             avvisa_modifiche(settimana, modifiche)
             messages.info(request, (lambda n: f'Turni cambiati a {n} persona: deve dare la presa visione.' if n == 1 else f'Turni cambiati a {n} persone: devono dare la presa visione.')(len({m.dipendente_id for m in modifiche})))
         del request.session['import_turni']
-        n_mo = importa.aggiorna_mo(request.session.pop('import_mo', None) or [])
+        # l'elenco dipendenti si prende dal file turni (Giulia, 25/11/2026): chi è nell'Elenco e manca nell'app
+        # viene aggiunto, e la competenza macchine ottiche segue la colonna MO
+        elenco = [tuple(v) for v in request.session.pop('import_mo', None) or []]
+        n_mo = importa.aggiorna_mo(elenco)
+        dall_elenco, _ = importa.aggiorna_elenco_dipendenti(elenco)
+        nuovi = list(nuovi) + [d.nome for d in dall_elenco]
         messages.success(request, f'Turni caricati: {settimana}.' + (f' Aggiornata la competenza macchine ottiche di {n_mo} persone.' if n_mo else ''))
         if nuovi:
             messages.info(request, f'Nuovi dipendenti: {", ".join(nuovi)}. Ricorda di creare il loro PIN.')
